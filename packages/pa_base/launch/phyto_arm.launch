@@ -1,0 +1,12 @@
+<launch>
+  <!-- Most settings are in config.yaml, which is easier to edit -->
+  <rosparam command="load" file="$(find pa_base)/launch/config.yaml"/>
+
+  <!--
+    Node: nmea_listener
+    
+    This node receives UDP packets from the AirLink MP70 and rebroadcasts them
+    as ROS messages.
+    -->
+  <node name="nmea_listener" pkg="ds_util_nodes" type="bridge_node" />
+</launch>

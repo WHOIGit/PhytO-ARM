@@ -1,0 +1,11 @@
+- git:
+    local-name: ds_base
+    uri: https://bitbucket.org/whoidsl/ds_base.git
+
+- git:
+    local-name: ds_msgs
+    uri: https://bitbucket.org/whoidsl/ds_msgs.git
+
+#- git:
+#    local-name: ds_sensors
+#    uri: https://bitbucket.org/whoidsl/ds_sensors.git
