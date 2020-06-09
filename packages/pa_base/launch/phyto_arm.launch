@@ -9,4 +9,11 @@
     as ROS messages.
     -->
   <node name="nmea_listener" pkg="ds_util_nodes" type="bridge_node" />
+
+  <!--
+    Node: web
+
+    This node serves a website for testing purposes.
+    -->
+  <node name="web" pkg="pa_base" type="web_node.py" />
 </launch>
