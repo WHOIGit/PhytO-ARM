@@ -12,13 +12,16 @@ RUN mkdir ./src \
 COPY ./deps.rosinstall ./
 RUN wstool init --shallow src deps.rosinstall
 
-# Copy packages
-COPY ./packages ./src
+# Copy package.xml file only
+COPY ./packages/pa_base/package.xml ./src/pa_base/package.xml
 
 # Install dependencies
 RUN apt-get update \
     && rosdep install --default-yes --from-paths ./src --ignore-src \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy the rest of the sources
+COPY ./packages ./src
 
 # Build
 RUN rosexec catkin_make
