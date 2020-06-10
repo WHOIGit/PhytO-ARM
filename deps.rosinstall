@@ -6,6 +6,7 @@
     local-name: ds_msgs
     uri: https://bitbucket.org/whoidsl/ds_msgs.git
 
-#- git:
-#    local-name: ds_sensors
-#    uri: https://bitbucket.org/whoidsl/ds_sensors.git
+- git:
+    local-name: ds_sensors
+    uri: https://bitbucket.org/whoidsl/ds_sensors.git
+    version: bug/tf2-dep

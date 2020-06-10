@@ -8,7 +8,7 @@
     This node receives UDP packets from the AirLink MP70 and rebroadcasts them
     as ROS messages.
     -->
-  <node name="nmea_listener" pkg="ds_util_nodes" type="bridge_node" />
+  <node name="nmea_listener" pkg="ds_sensors" type="sensor" args="--sensor=xeos_gps" />
 
   <!--
     Node: web

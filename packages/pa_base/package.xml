@@ -53,7 +53,9 @@
 
   <build_depend>ds_base</build_depend>
   <build_depend>ds_core_msgs</build_depend>
+  <build_depend>ds_nmea_msgs</build_depend>
 
+  <exec_depend>ds_sensors</exec_depend>
   <exec_depend>ds_util_nodes</exec_depend>
 
   <exec_depend>python-flask</exec_depend>

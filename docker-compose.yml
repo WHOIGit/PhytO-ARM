@@ -27,7 +27,7 @@ services:
             - "22335:22335/udp"
 
             # Port we serve a webserver on
-            - "8000:8000/tcp"
+            - "8092:8092/tcp"
 
 volumes:
     rosbags:

@@ -1,6 +1,7 @@
 nmea_listener:
-    connection:
+    instrument:
         type: "UDP"
         udp_rx: 22335
         udp_tx: 22335  # unused
         udp_address: "127.0.0.1"
+    message_timeout: 2
