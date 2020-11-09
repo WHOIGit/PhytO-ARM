@@ -9,4 +9,3 @@
 - git:
     local-name: ds_sensors
     uri: https://bitbucket.org/whoidsl/ds_sensors.git
-    version: bug/tf2-dep
