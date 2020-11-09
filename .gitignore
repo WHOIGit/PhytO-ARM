@@ -1,0 +1,6 @@
+# Catkin workspace files
+.catkin_workspace
+build
+build_isolated
+devel
+devel_isolated
