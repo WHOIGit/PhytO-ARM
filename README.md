@@ -37,6 +37,14 @@ This directory contains ROS nodes for the PhytO-ARM project. The supported ROS r
     roslaunch pa_base phyto_arm.launch
 
 
+## Install
+
+    sudo ln -sf $(pwd)/phyto-arm.service /etc/systemd/system/phyto-arm.service
+    sudo systemctl daemon-reload
+    sudo systemctl enable phyto-arm
+    sudo systemctl start phyto-arm
+
+
 ## Docker
 
 Install [Docker Engine][] and [Docker Compose][], for example:
