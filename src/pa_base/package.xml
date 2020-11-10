@@ -9,7 +9,6 @@
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
   <maintainer email="pi@todo.todo">pi</maintainer>
 
-
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
@@ -57,6 +56,11 @@
 
   <exec_depend>ds_sensors</exec_depend>
   <exec_depend>ds_util_nodes</exec_depend>
+
+  <!--
+    Provides the rosbridge_server node, which communicates with Webviz.
+  -->
+  <exec_depend>rosbridge-server</exec_depend>
 
   <exec_depend>python-flask</exec_depend>
 
