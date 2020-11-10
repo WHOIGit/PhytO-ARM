@@ -1,0 +1,14 @@
+# Copy or link this file into /etc/systemd/system
+
+[Unit]
+Description=PhytO-ARM ROS Application
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+WorkingDirectory=/home/hablab/PhytO-ARM/ros
+ExecStart=/bin/sh -c ". devel/setup.sh; roslaunch pa_base phyto_arm.launch"
+
+[Install]
+WantedBy=multi-user.target
