@@ -1,4 +1,2 @@
-# System dependencies should be declared in the package.xml file, but
-# dependencies on third-party ROS packages must be listed here.
-
-ros-${ROS_DISTRO}-rosbridge-server
+# Dependencies should usually be declared in the package.xml file, to be
+# automatically installed by rosdep.
