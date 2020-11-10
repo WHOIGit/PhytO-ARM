@@ -15,12 +15,12 @@ This directory contains ROS nodes for the PhytO-ARM project. The supported ROS r
     # Clone source dependencies
     wstool init --shallow src deps.rosinstall
 
-    # Install system dependencies
+    # Install ROS dependencies
     sudo rosdep init
     rosdep update
     rosdep install --default-yes --from-paths ./src --ignore-src
 
-    # Install ROS package dependencies
+    # Install additional dependencies
     sed 's/#.*//' apt-requirements.txt | envsubst \
         | xargs sudo apt install -y
 

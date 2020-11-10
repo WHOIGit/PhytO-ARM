@@ -60,7 +60,7 @@
   <!--
     Provides the rosbridge_server node, which communicates with Webviz.
   -->
-  <exec_depend>rosbridge-server</exec_depend>
+  <exec_depend>rosbridge_server</exec_depend>
 
   <exec_depend>python-flask</exec_depend>
 
