@@ -1,0 +1,8 @@
+# ROS Melodic supports Python 2, but by installing these packages, we can use
+# the rospy module in Python 3.
+#
+# https://medium.com/@beta_b0t/how-to-setup-ros-with-python-3-44a69ca36674
+catkin_pkg==0.4.22
+rospkg==1.2.8
+
+pyModbusTCP-0.1.8

@@ -5,3 +5,15 @@ nmea_listener:
         udp_tx: 22335  # unused
         udp_address: "127.0.0.1"
     message_timeout: 2
+
+jvl_motor:
+    address: "hablab-jvl.whoi.edu"
+    port: 502
+    refresh_rate: 1  # hz
+    registers:
+        - P_IST
+        - V_IST_16
+        - FLWERR
+        - U_24V
+        - ERR_STAT
+        - U_BUS
