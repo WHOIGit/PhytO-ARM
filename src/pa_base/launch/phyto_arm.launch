@@ -11,6 +11,13 @@
   <node name="nmea_listener" pkg="ds_sensors" type="sensor" args="--sensor=xeos_gps" />
 
   <!--
+    Node: jvl_motor
+
+    This node communicates with a JVL motor and publishes register status.
+    -->
+  <node name="jvl_motor" pkg="pa_base" type="jvl_motor_node.py" />
+
+  <!--
     Node: web
 
     This node serves a website for testing purposes.
