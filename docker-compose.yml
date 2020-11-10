@@ -29,5 +29,16 @@ services:
             # Port we serve a webserver on
             - "8092:8092/tcp"
 
+    webviz:
+        image: cruise/webviz
+        
+        # Note: On x86_64, we can use officially published Webviz images 
+        build:
+            context: ./webviz
+            dockerfile: Dockerfile-static-webviz
+
+        ports:
+            - "8080:8080/tcp"
+
 volumes:
     rosbags:

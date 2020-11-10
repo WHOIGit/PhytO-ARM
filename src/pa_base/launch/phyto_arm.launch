@@ -16,4 +16,12 @@
     This node serves a website for testing purposes.
     -->
   <node name="web" pkg="pa_base" type="web_node.py" />
+
+  <!--
+    Node: rosbridge_server
+
+    This node runs the Rosbridge (http://wiki.ros.org/rosbridge_suite) 
+    WebSocket server on port 9090 and is necessary for connecting from Webviz.
+  -->
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" /> 
 </launch>
