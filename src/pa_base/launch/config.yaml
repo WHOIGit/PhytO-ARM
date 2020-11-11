@@ -6,6 +6,13 @@ nmea_listener:
         udp_address: "127.0.0.1"
     message_timeout: 2
 
+rbr_comms:
+    connection:
+        type: "SERIAL"
+        port: "/dev/ttyUSB0"
+        baud: 115200
+        data_bits: 8
+
 jvl_motor:
     address: "hablab-jvl.whoi.edu"
     port: 502
