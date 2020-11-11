@@ -4,6 +4,12 @@ import collections
 Register = collections.namedtuple('Register', ('name', 'num', 'addr'))
 
 
+# XXX Dummy decode method to be replaced
+def decode(self, lo, hi):
+    return (hi << 16) | lo
+Register.decode = decode
+
+
 # Register numbers are taken from the user manual, listing 5.12.3. All registers
 # are 32-bits, stored as two 16-bit half-words in big endian order.
 all_registers = [
