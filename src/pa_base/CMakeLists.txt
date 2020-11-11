@@ -154,7 +154,8 @@ include_directories(
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
 ## Mark executable scripts (Python etc.) for installation
-catkin_install_python(PROGRAMS src/web_node.py
+catkin_install_python(
+  PROGRAMS src/jvl_motor_node.py src/rbr_maestro3_node.py src/web_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
