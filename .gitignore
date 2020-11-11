@@ -1,4 +1,5 @@
 # Catkin workspace files
+.catkin_tools
 .catkin_workspace
 build
 build_isolated

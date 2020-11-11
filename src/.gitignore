@@ -1,6 +1,3 @@
-# Ignore everything
-*
-
-# Except these
-!.gitignore
-!pa_base
+ds_base
+ds_msgs
+ds_sensors
