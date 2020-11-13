@@ -1,0 +1,16 @@
+<!--
+This launch file describes nodes involved in recording messages to rosbags.
+
+The principal node is `rosbag record` which saves messages to disk, rolling 
+over to a new rosbag on regular intervals.
+
+In the future, we might process inactive rosbags to, for example, correct
+timestamps, or generate reports. See http://wiki.ros.org/rosbag/Cookbook
+-->
+<launch>
+    <arg name="rosbag_prefix" default="/home/hablab/PhytO-ARM/ros/rosbags/phyto-arm" />
+    <arg name="rosbag_duration" default="6h" />
+
+    <node name="rosbag_record" pkg="rosbag" type="record"
+        args="record --all --output-prefix $(arg rosbag_prefix) --split --duration $(arg rosbag_duration) --publish --lz4" />
+</launch>

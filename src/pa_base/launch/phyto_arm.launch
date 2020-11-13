@@ -2,6 +2,9 @@
   <!-- Most settings are in config.yaml, which is easier to edit -->
   <rosparam command="load" file="$(find pa_base)/launch/config.yaml"/>
 
+  <!-- Launch file for recording rosbags -->
+  <include file="$(find pa_base)/launch/rosbag.launch" />
+
   <!--
     Node: nmea_listener
     
