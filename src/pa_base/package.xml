@@ -62,7 +62,7 @@
   -->
   <exec_depend>rosbridge_server</exec_depend>
 
-  <exec_depend>python-flask</exec_depend>
+  <!-- The web node depends on aiohttp which is not in rosdistro yet. -->
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

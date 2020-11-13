@@ -5,4 +5,5 @@
 catkin_pkg==0.4.22
 rospkg==1.2.8
 
-pyModbusTCP-0.1.8
+aiohttp==3.7.2
+pyModbusTCP==0.1.8

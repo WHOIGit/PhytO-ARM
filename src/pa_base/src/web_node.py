@@ -1,7 +1,7 @@
-#!/usr/bin/env python2.7
-import flask
+#!/usr/bin/env python3
 import rospy
 
+from aiohttp import web
 from ds_nmea_msgs.msg import Gga
 
 
@@ -16,13 +16,18 @@ def on_message(msg):
     }
 
 
-app = flask.Flask(__name__)
+app = web.Application()
+routes = web.RouteTableDef()
 
-@app.route('/')
-def index():
-    return flask.jsonify({
+
+@routes.get('/')
+async def index(request):
+    return web.json_response({
         'location': last_location,
     })
+
+
+app.add_routes(routes)
 
 
 def main():
@@ -30,7 +35,7 @@ def main():
     rospy.init_node('web_node')
     rospy.Subscriber('/nmea_listener/nmea_gga', Gga, on_message)
 
-    app.run(host='0.0.0.0', port=8092)
+    web.run_app(app, port=8092)
 
 
 if __name__ == '__main__':
