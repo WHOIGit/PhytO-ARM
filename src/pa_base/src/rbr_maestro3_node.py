@@ -2,6 +2,7 @@
 import asyncio
 import datetime
 import functools
+import math
 
 import rospy
 
@@ -41,7 +42,7 @@ def on_shutdown(loop, *args):
 
 
 async def main():
-    # XXX Prefer async.get_running_loop() on Python >= 3.7
+    # XXX Prefer asyncio.get_running_loop() on Python >= 3.7
     loop = asyncio.get_event_loop()
 
     # We will publish CTD messages
@@ -78,6 +79,14 @@ async def main():
         ctd.conductivity = conductivity
         ctd.temperature = temperature
         ctd.pressure = pressure
+
+        # Clear fields with no measurement
+        ctd.salinity = math.nan
+        ctd.sound_speed = math.nan
+
+        # Set covariance fields to -1, the standard "not valid" value
+        ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
+            ctd.salinity_covar, ctd.sound_speed_covar = -1
 
         # The standard ROS header timestamp reflects when the instrument
         # says the sample was taken. The DsHeader reflects the I/O time.
