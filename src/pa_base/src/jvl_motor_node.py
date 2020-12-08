@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
+import functools
 
 import rospy
 
-import mac400registers
+import mac400
+import pa_base.srv as srv
 
 from pyModbusTCP.client import ModbusClient
 
 from pa_base.msg import JVLMotorRegisterRaw
+
+
+WATCH_REGISTERS = [
+    mac400.P_IST,
+    mac400.V_IST_16,
+    mac400.FLWERR,
+    mac400.U_24V,
+    mac400.ERR_STAT,
+    mac400.U_BUS,
+]
 
 
 def read_registers(client, registers):
@@ -40,29 +52,33 @@ def read_registers(client, registers):
     return output
 
 
+def cmd_move(client, request):
+    rospy.loginfo('Moving motor')
+    client.write_multiple_registers(
+        mac400.MODE_REG.addr[0],
+        [
+            *mac400.MODE_REG.encode(mac400.MODE.VELOCITY),
+            *mac400.P_SOLL.encode(0),
+            *mac400.P_NEW.encode(0),
+            *mac400.V_SOLL.encode(request.velocity),
+            *mac400.A_SOLL.encode(request.acceleration),
+            *mac400.T_SOLL.encode(request.torque),
+        ]
+    )
+    return srv.JVLMotorMoveCmdResponse()
+
+
+def cmd_stop(client, request):
+    rospy.loginfo('Stopping motor')
+    client.write_multiple_registers(
+        mac400.MODE_REG.addr[0],
+        mac400.MODE_REG.encode(mac400.MODE.PASSIVE),
+    )
+    return srv.JVLMotorStopCmdResponse()
+
+
+
 def main():
-    # Initialize this node
-    rospy.init_node('jvl_motor', anonymous=True)
-
-    # Look up the requested registers
-    registers = [
-        mac400registers.P_IST,
-        mac400registers.V_IST_16,
-        mac400registers.FLWERR,
-        mac400registers.U_24V,
-        mac400registers.ERR_STAT,
-        mac400registers.U_BUS,
-    ]
-
-    # Create a publisher for each register we are monitoring
-    publishers = {}
-    for reg in registers:
-        publishers[reg] = rospy.Publisher(
-            f'{rospy.get_name()}/register/{reg.name}',
-            JVLMotorRegisterRaw,
-            queue_size=1
-        )
-
     # Connect to the Modbus server
     client = ModbusClient(
         host=rospy.get_param('/jvl_motor/address'),
@@ -70,9 +86,35 @@ def main():
         auto_open=True  # keep us connected
     )
 
+    # Initialize this node
+    rospy.init_node('jvl_motor', anonymous=True)
+
+    # Create a publisher for each register we are monitoring
+    publishers = {}
+    for reg in WATCH_REGISTERS:
+        publishers[reg] = rospy.Publisher(
+            f'{rospy.get_name()}/register/{reg.name}',
+            JVLMotorRegisterRaw,
+            queue_size=1
+        )
+    
+    # Create services for start and stop
+    services = [
+        rospy.Service(
+            f'{rospy.get_name()}/move',
+            srv.JVLMotorMoveCmd,
+            functools.partial(cmd_move, client)
+        ),
+        rospy.Service(
+            f'{rospy.get_name()}/stop',
+            srv.JVLMotorStopCmd,
+            functools.partial(cmd_stop, client)
+        ),
+    ]
+
     rate = rospy.Rate(rospy.get_param('/jvl_motor/refresh_rate', 1))  # hz
     while not rospy.is_shutdown():
-        reg_values = read_registers(client, registers)
+        reg_values = read_registers(client, WATCH_REGISTERS)
         for reg, (values, timestamp) in reg_values.items():
             msg = JVLMotorRegisterRaw()
             msg.header.stamp = msg.ds_header.io_time = timestamp
@@ -80,6 +122,9 @@ def main():
 
             publishers[reg].publish(msg)
         rate.sleep()
+
+    for service in services:
+        service.shutdown('node shutting down')
 
 
 if __name__ == '__main__':
