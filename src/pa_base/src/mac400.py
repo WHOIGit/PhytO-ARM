@@ -1,3 +1,4 @@
+import enum
 import functools
 import struct
 
@@ -10,6 +11,14 @@ def unpack(pattern, lo, hi):
     '''Convenience function to unpack from two unsigned 16-bit values'''
     values = struct.unpack(f'<{pattern}', struct.pack('<HH', lo, hi))
     return values[0] if len(pattern) == 1 else values
+
+
+def explode_bits(x, n):
+    return [ (x >> i) & 1 for i in range(n) ]
+
+def implode_bits(bits):
+    n = len(bits)
+    return functools.reduce(lambda acc, bit: (bit << (n-1)) | (acc >> 1), bits)
 
 
 class Register:
@@ -35,17 +44,34 @@ class Register:
         return (2*self.num, 2*self.num+1)
 
 
+class MODE(enum.Enum):
+    '''Modes for the MODE_REG register.'''
+    # More modes are described in table 5.12.3 of the user manual.
+    #
+    # NOTE: If the motor gets into a mode which is not captured by this list,
+    # the code is likely to throw an exception.
+    PASSIVE = 0
+    VELOCITY = 1
+    POSITION = 2
+
+
 # Register numbers are taken from the user manual, listing 5.12.3. All registers
 # are 32-bits, stored as two 16-bit half-words in big endian order.
 all_registers = [
     # register 0 is reserved
     Register(name='PROG_VERSION',    num=1),
-    Register(name='MODE_REG',        num=2),
+    Register(name='MODE_REG',        num=2,
+        decode=lambda lo, hi: MODE(unpack('L', lo, hi)),
+        encode=lambda x: pack('L', x.value),
+    ),
     Register(name='P_SOLL',          num=3,
         decode=lambda lo, hi: unpack('l', lo, hi),  # encoder counts
         encode=lambda x: pack('l', x),
     ),
-    Register(name='P_NEW',           num=4),
+    Register(name='P_NEW',           num=4,
+        decode=lambda lo, hi: unpack('l', lo, hi),  # see P_SOLL
+        encode=lambda x: pack('l', x),
+    ),
     Register(name='V_SOLL',          num=5,
         decode=lambda lo, hi: unpack('l', lo, hi) / 2.77056,  # RPM
         encode=lambda x: pack('l', int(x * 2.77056)),
@@ -94,7 +120,10 @@ all_registers = [
     Register(name='ACC_EMERG',       num=32),
     Register(name='INPOSWIN',        num=33),
     Register(name='INPOSCNT',        num=34),
-    Register(name='ERR_STAT',        num=35),
+    Register(name='ERR_STAT',        num=35,
+        decode=lambda lo, hi: explode_bits(unpack('L', lo, hi)),
+        encode=lambda x: pack('L', implode_bits(x)),
+    ),
     Register(name='CNTRL_BITS',      num=36),
     Register(name='START_MODE',      num=37),
     Register(name='P_HOME',          num=38),

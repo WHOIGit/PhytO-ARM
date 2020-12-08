@@ -47,10 +47,15 @@ find_package(
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
 add_message_files(
   FILES
   JVLMotorRegisterRaw.msg
+)
+
+add_service_files(
+  FILES
+  JVLMotorMoveCmd.srv
+  JVLMotorStopCmd.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
