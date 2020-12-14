@@ -68,9 +68,11 @@ async def main():
         # Crummy parser
         fields = [ x.strip() for x in msg.data.split(b',') ]
 
-        # outputformat channelslist = [timestamp|]conductivity(mS/cm)|temperature(C)|pressure(dbar)|chlorophyll(ug/L)|dissolved-O2(%)|PAR(umol/m2/s)|turbidity(NTU)|phycocyanin(cells/mL)
-        conductivity, temperature, pressure, chlorophyll, \
-            dissolved_O2, PAR, turbidity, phycocyanin = \
+        # outputformat channelslist = [timestamp|]conductivity(mS/cm)|temperature(C)|pressure(dbar)|chlorophyll(ug/L)|phycoerythrin(cells/mL)|temperature(C)|O2_concentration(umol/L)|PAR(umol/m2/s)|turbidity(NTU)|pressure(dbar)|depth(m)|salinity(PSU)|speed_of_sound(m/s)|specific_conductivity(uS/cm)|O2_air_saturation(%)
+        conductivity, temperature, pressure, chlorophyll, phycoerythrin, \
+            temperature_again, o2_concentration, par, turbidity, \
+            pressure_again, depth, salinity, speed_of_sound, \
+            specific_conductivity, o2_air_saturation = \
             [ float(x) for x in fields[1:] ]
 
         # Parse the timestamp as UTC
@@ -102,15 +104,15 @@ async def main():
         dp.pressure = pressure
 
         # Set the appropriate message timestamps
-        for msg in [ctd, dp]:
+        for m in [ctd, dp]:
             # The standard ROS header timestamp reflects when the instrument
             # says the sample was taken. The DsHeader reflects the I/O time.
-            msg.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
-            msg.ds_header.io_time = msg.ds_header.io_time
+            m.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
+            m.ds_header.io_time = msg.ds_header.io_time
 
         # Publish the messages
-        for msg in [ctd, dp]:
-            publishers[type(msg)].publish(msg)
+        for m in [ctd, dp]:
+            publishers[type(m)].publish(m)
 
 
 if __name__ == '__main__':
