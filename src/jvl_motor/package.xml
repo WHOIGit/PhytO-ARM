@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-    <name>pa_base</name>
-    <version>0.0.0</version>
-    <description>The pa_base package</description>
+    <name>jvl_motor</name>
+    <version>1.0.0</version>
+    <description>Controls a JVL MAC400 servo motor</description>
     <license>TODO</license>
 
     <url type="repository">https://github.com/whoigit/PhytO-ARM</url>
@@ -16,19 +16,6 @@
 
     <buildtool_depend>catkin</buildtool_depend>
 
-    <build_depend>ds_base</build_depend>
+    <!-- We use the DsHeader message type -->
     <build_depend>ds_core_msgs</build_depend>
-    <build_depend>ds_nmea_msgs</build_depend>
-
-    <exec_depend>ds_sensors</exec_depend>
-    <exec_depend>ds_util_nodes</exec_depend>
-
-    <exec_depend>jvl_motor</exec_depend>
-
-    <!--
-        Provides the rosbridge_server node, which communicates with Webviz.
-    -->
-    <exec_depend>rosbridge_server</exec_depend>
-
-    <!-- The web node depends on aiohttp which is not in rosdistro yet. -->
 </package>

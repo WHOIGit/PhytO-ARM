@@ -1,0 +1,9 @@
+# MoveCmd
+# Sets the motor into motion at the given velocity, without exceeding the
+# maximum acceleration or torque.
+
+float32 velocity  # RPM
+float32 acceleration  # RPM/s
+float32 torque  # 1.0 = rated torque
+
+---

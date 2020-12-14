@@ -121,7 +121,7 @@ all_registers = [
     Register(name='INPOSWIN',        num=33),
     Register(name='INPOSCNT',        num=34),
     Register(name='ERR_STAT',        num=35,
-        decode=lambda lo, hi: explode_bits(unpack('L', lo, hi)),
+        decode=lambda lo, hi: explode_bits(unpack('L', lo, hi), n=32),
         encode=lambda x: pack('L', implode_bits(x)),
     ),
     Register(name='CNTRL_BITS',      num=36),
