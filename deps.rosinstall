@@ -9,3 +9,7 @@
 - git:
     local-name: ds_sensors
     uri: https://bitbucket.org/whoidsl/ds_sensors.git
+
+- git:
+    local-name: rocon_devices
+    uri: https://github.com/robotics-in-concert/rocon_devices.git

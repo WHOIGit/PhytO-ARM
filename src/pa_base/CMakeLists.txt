@@ -10,6 +10,7 @@ project(pa_base)
 find_package(
   catkin REQUIRED COMPONENTS
     message_generation
+    sensor_msgs
     std_msgs
     ds_core_msgs
 )
@@ -52,9 +53,10 @@ find_package(
 #  JVLMotorRegisterRaw.msg
 #)
 
-#add_service_files(
-#  FILES
-#)
+add_service_files(
+  FILES
+  InstantReplayCaptureCmd.srv
+)
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
@@ -150,6 +152,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 catkin_install_python(
   PROGRAMS
+    src/instant_replay_node.py
     src/rbr_maestro3_node.py
     src/web_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
