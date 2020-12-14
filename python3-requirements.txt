@@ -5,5 +5,10 @@
 catkin_pkg==0.4.22
 rospkg==1.2.8
 
+# These package are needed to use the rosbag module on Python 3.
+gnupg==2.3.1
+pycryptodomex==3.9.9
+
+
 aiohttp==3.7.2
 pyModbusTCP==0.1.8
