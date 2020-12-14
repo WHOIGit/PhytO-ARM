@@ -7,7 +7,7 @@ import math
 import rospy
 
 from ds_core_msgs.msg import RawData
-from ds_sensor_msgs.msg import Ctd
+from ds_sensor_msgs.msg import Ctd, DepthPressure
 
 
 # All messages received from ROS are placed into this queue. Note that
@@ -45,17 +45,21 @@ async def main():
     # XXX Prefer asyncio.get_running_loop() on Python >= 3.7
     loop = asyncio.get_event_loop()
 
-    # We will publish CTD messages
-    publisher = rospy.Publisher(f'/rbr_maestro3/ctd', Ctd, queue_size=5)
-
     # Initialize the ROS node
     rospy.init_node('rbr_maestro3', anonymous=True, disable_signals=True)
     rospy.core.add_preshutdown_hook(functools.partial(on_shutdown, loop))
 
+    # Create a mapping of topics to publish on
+    publishers = {
+        Ctd: rospy.Publisher(f'{rospy.get_name()}/ctd', Ctd, queue_size=5),
+        DepthPressure: rospy.Publisher(f'{rospy.get_name()}/depth',
+            DepthPressure, queue_size=5),
+    }
+
     # Subscribe to incoming comms messages
-    rospy.Subscriber('/rbr_comms/in', RawData,
-                     lambda msg: asyncio.run_coroutine_threadsafe(
-                         ros_msg_q.put(msg), loop))
+    handler = lambda msg: asyncio.run_coroutine_threadsafe(ros_msg_q.put(msg),
+                                                           loop)
+    rospy.Subscriber('/rbr_comms/in', RawData, handler)
 
     # Process incoming messages in a loop
     while True:
@@ -74,7 +78,7 @@ async def main():
                                                '%Y-%m-%d %H:%M:%S.%f')
         timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
 
-        # Construct the CTD message
+        # Construct the Ctd message
         ctd = Ctd()
         ctd.conductivity = conductivity
         ctd.temperature = temperature
@@ -86,15 +90,27 @@ async def main():
 
         # Set covariance fields to -1, the standard "not valid" value
         ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
-            ctd.salinity_covar, ctd.sound_speed_covar = -1
+            ctd.salinity_covar = ctd.sound_speed_covar = -1
+        
+        # Construct the DepthPressure message
+        dp = DepthPressure()
+        dp.depth = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.latitude = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.tare = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.pressure_raw = pressure
+        dp.pressure_raw_unit = DepthPressure.UNIT_PRESSURE_DBAR
+        dp.pressure = pressure
 
-        # The standard ROS header timestamp reflects when the instrument
-        # says the sample was taken. The DsHeader reflects the I/O time.
-        ctd.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
-        ctd.ds_header.io_time = msg.ds_header.io_time
+        # Set the appropriate message timestamps
+        for msg in [ctd, dp]:
+            # The standard ROS header timestamp reflects when the instrument
+            # says the sample was taken. The DsHeader reflects the I/O time.
+            msg.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
+            msg.ds_header.io_time = msg.ds_header.io_time
 
-        # Publish it
-        publisher.publish(ctd)
+        # Publish the messages
+        for msg in [ctd, dp]:
+            publishers[type(msg)].publish(msg)
 
 
 if __name__ == '__main__':
