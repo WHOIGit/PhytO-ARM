@@ -12,5 +12,5 @@ timestamps, or generate reports. See http://wiki.ros.org/rosbag/Cookbook
     <arg name="rosbag_duration" default="6h" />
 
     <node name="rosbag_record" pkg="rosbag" type="record"
-        args="record --all --output-prefix $(arg rosbag_prefix) --split --duration $(arg rosbag_duration) --publish --lz4" />
+        args="record --all --exclude /rtsp_camera_relay/image --output-prefix $(arg rosbag_prefix) --split --duration $(arg rosbag_duration) --publish --lz4" />
 </launch>
