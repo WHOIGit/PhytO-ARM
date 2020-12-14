@@ -153,7 +153,6 @@ include_directories(
 catkin_install_python(
   PROGRAMS
     src/instant_replay_node.py
-    src/rbr_maestro3_node.py
     src/web_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
