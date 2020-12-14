@@ -15,6 +15,13 @@
         args="--sensor=xeos_gps" />
 
     <!--
+        Node: instant_replay
+
+        This node makes historical video clips available for diagnostics.
+    -->
+    <node name="instant_replay" pkg="pa_base" type="instant_replay_node.py" />
+
+    <!--
         Node: jvl_motor
 
         This node communicates with a JVL motor and publishes register status.
@@ -51,4 +58,13 @@
     -->
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"
         />
+
+    <!--
+        Node: rtsp_camera_relay
+
+        This node relays frames from the RTSP camera feed.
+    -->
+    <include file="$(find rocon_rtsp_camera_relay)/launch/rtsp_camera_relay.launch">
+        <arg name="video_stream_url" value="rtsp://admin:password@example.com/camera" />
+    </include>
 </launch>
