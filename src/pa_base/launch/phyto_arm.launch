@@ -40,7 +40,7 @@
 
         This node controls the RBR maestro3.
     -->
-    <node name="rbr_maestro3" pkg="pa_base" type="rbr_maestro3_node.py" />
+    <node name="rbr_maestro3" pkg="rbr_maestro3" type="rbr_maestro3_node.py" />
 
     <!--
         Node: web

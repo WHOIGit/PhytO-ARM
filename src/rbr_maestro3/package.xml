@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>rbr_maestro3</name>
+    <version>1.0.0</version>
+    <description>Captures data from an RBR maestro3 CTD</description>
+    <license>TODO</license>
+
+    <url type="repository">https://github.com/whoigit/PhytO-ARM</url>
+
+    <maintainer email="mbrosnahan@whoi.edu">Michael Brosnahan</maintainer>
+    <maintainer email="rgovostes@whoi.edu">Ryan Govostes</maintainer>
+
+    <author email="mbrosnahan@whoi.edu">Michael Brosnahan</author>
+    <author email="rgovostes@whoi.edu">Ryan Govostes</author>
+    <author email="vlucke@whoi.edu">Verena Lucke</author>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <!-- We use the DsHeader message type -->
+    <build_depend>ds_core_msgs</build_depend>
+
+    <!-- We use the Ctd and DepthPressure message types -->
+    <build_depend>ds_sensor_msgs</build_depend>
+</package>
