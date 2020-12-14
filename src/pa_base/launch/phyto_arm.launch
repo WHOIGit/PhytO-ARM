@@ -19,7 +19,7 @@
 
         This node communicates with a JVL motor and publishes register status.
     -->
-    <node name="jvl_motor" pkg="pa_base" type="jvl_motor_node.py" />
+    <node name="jvl_motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
     <!--
         Node: rbr_comms

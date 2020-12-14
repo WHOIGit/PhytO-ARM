@@ -47,16 +47,14 @@ find_package(
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-add_message_files(
-  FILES
-  JVLMotorRegisterRaw.msg
-)
+#add_message_files(
+#  FILES
+#  JVLMotorRegisterRaw.msg
+#)
 
-add_service_files(
-  FILES
-  JVLMotorMoveCmd.srv
-  JVLMotorStopCmd.srv
-)
+#add_service_files(
+#  FILES
+#)
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
@@ -151,7 +149,9 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 catkin_install_python(
-  PROGRAMS src/jvl_motor_node.py src/rbr_maestro3_node.py src/web_node.py
+  PROGRAMS
+    src/rbr_maestro3_node.py
+    src/web_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
