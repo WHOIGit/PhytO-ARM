@@ -1,9 +1,9 @@
 <launch>
     <!-- Most settings are in config.yaml, which is easier to edit -->
-    <rosparam command="load" file="$(find pa_base)/launch/config.yaml" />
+    <rosparam command="load" file="$(find phyto_arm)/launch/config.yaml" />
 
     <!-- Launch file for recording rosbags -->
-    <include file="$(find pa_base)/launch/rosbag.launch" />
+    <include file="$(find phyto_arm)/launch/rosbag.launch" />
 
     <!--
         Node: nmea_listener
@@ -19,7 +19,7 @@
 
         This node makes historical video clips available for diagnostics.
     -->
-    <node name="instant_replay" pkg="pa_base" type="instant_replay_node.py" />
+    <node name="instant_replay" pkg="phyto_arm" type="instant_replay_node.py" />
 
     <!--
         Node: jvl_motor
@@ -47,7 +47,7 @@
 
         This node serves a website for testing purposes.
     -->
-    <node name="web" pkg="pa_base" type="web_node.py" />
+    <node name="web" pkg="phyto_arm" type="web_node.py" />
 
     <!--
         Node: rosbridge_server

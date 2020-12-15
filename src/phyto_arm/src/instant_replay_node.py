@@ -17,7 +17,7 @@ import rospy
 
 from sensor_msgs.msg import Image
 
-import pa_base.srv as srv
+import phyto_arm.srv as srv
 
 
 SECONDS_BEFORE = SECONDS_AFTER = 5
