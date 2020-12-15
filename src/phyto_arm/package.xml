@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-    <name>pa_base</name>
-    <version>0.0.0</version>
-    <description>The pa_base package</description>
+    <name>phyto_arm</name>
+    <version>1.0.0</version>
+    <description>The PhytO-ARM project base package</description>
     <license>TODO</license>
 
     <url type="repository">https://github.com/whoigit/PhytO-ARM</url>

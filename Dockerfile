@@ -6,14 +6,14 @@ COPY rosexec /usr/bin/
 # Create an empty catkin workspace
 WORKDIR /root
 RUN mkdir ./src \
-    && rosexec catkin_make
+    && rosexec catkin init
 
 # Install third-party dependencies
 COPY ./deps.rosinstall ./
 RUN wstool init --shallow src deps.rosinstall
 
 # Copy package.xml file only
-COPY ./src/pa_base/package.xml ./src/pa_base/package.xml
+COPY ./src/phyto_arm/package.xml ./src/phyto_arm/package.xml
 
 # Install dependencies
 RUN apt-get update \
@@ -24,6 +24,6 @@ RUN apt-get update \
 COPY ./src ./src
 
 # Build
-RUN rosexec catkin_make
+RUN rosexec catkin build phyto_arm
 
-CMD rosexec roslaunch --wait pa_base phyto_arm.launch
+CMD rosexec roslaunch --wait phyto_arm phyto_arm.launch
