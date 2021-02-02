@@ -33,7 +33,7 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
 
 4. To set up remote access directly to the Win 10 NUC, select the “Security” tab and check the port forwarding table. There should be two entries for Win 10 NUC (IP address 192.168.13.2), one for remote desktop and one for SSH. If these aren’t there, they need to be added.
 
-![Alt]((https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC3.png)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC3.png)
 
   * The public start port for remote access will be 3932, the private port will be 3389 (default Remote Desktop port)
   * The public start port for SSH will be 3922, the private port will be 20 (the default SSH port)
@@ -58,7 +58,7 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
   * Subnet is 255.255.255.0
   * Default gateway is the IP address for the modem (192.168.13.31)
 
-![Alt]((https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC5.png)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC5.png)
 
 4.	Click Apply and Save, this will save all the changes you made, the module will reboot and the new IP address should show up in the lower right corner along with the motor icon
 5.	Check the box that says Use DHCP and then Apply & Save
