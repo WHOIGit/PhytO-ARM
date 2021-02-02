@@ -45,13 +45,13 @@ If using the RBR on-board Wi-Fi, there may be issues connecting to the network a
 Here are the steps to try:
 
 1. Try forgetting the network and reconnecting with the "Connect automatically" box checked
-   * In Settings, under Wireless Network Connections, select Manage Known Networks, find the network and click "Forget"
-   * Restart the computer and reconnect, being sure to check the "Connect automatically" box. You can confirm this under network properties once connected
+  * In Settings, under Wireless Network Connections, select Manage Known Networks, find the network and click "Forget"
+  * Restart the computer and reconnect, being sure to check the "Connect automatically" box. You can confirm this under network properties once connected
 2. Sometimes the computer will turn off the network adapter to save power
-   * To disable this, click the start menu and type "Device Manager". Click on the Device Manager icon and select "Network Adpaters" from the list. Right click and select "Properties" from the menu.
-   * Under the "Power Management" tab, uncheck the box next to "Allow the computer to turn off this device to save power" and click "Okay" to save
-   * Restart the computer and check if the network will connect automatically
+  * To disable this, click the start menu and type "Device Manager". Click on the Device Manager icon and select "Network Adpaters" from the list. Right click and select "Properties" from the menu.
+  * Under the "Power Management" tab, uncheck the box next to "Allow the computer to turn off this device to save power" and click "Okay" to save
+  * Restart the computer and check if the network will connect automatically
 3. Modify the Group Policy in the Registry Editor, or create one if there isn't one
-   * In the start menu, type "regedit" and select the Registry Editor App
-   * Navigate to HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\WcmSvc, and check for a GroupPolicy. If one doesn't exist, right click on WcmSvc and choose "New", select "Key" and name it GroupPolicy. 
-   * Click on GroupPolicy, and right click on the right pane. Choose "New", select DWORD (32 bit), and create the value. Name it fMinimizeConnections, click "Okay" to save and then reboot the computer.
+  * In the start menu, type "regedit" and select the Registry Editor App
+  * Navigate to HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\WcmSvc, and check for a GroupPolicy. If one doesn't exist, right click on WcmSvc and choose "New", select "Key" and name it GroupPolicy. 
+  * Click on GroupPolicy, and right click on the right pane. Choose "New", select DWORD (32 bit), and create the value. Name it fMinimizeConnections, click "Okay" to save and then reboot the computer.
