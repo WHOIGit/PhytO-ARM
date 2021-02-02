@@ -28,7 +28,11 @@ To do this, go to Settings > Updates & Security > Recovery and click "Restart no
 
 From the options on the next screen, select "Troubleshoot", then "Advanced Options". Finally, select "UEFI Firmware settings" and click "Restart". This will take you to the BIOS on restart.
 
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/NUC1.png)
+
 Once in BIOS, click the "Advanced" tab and then select the "Power" tab towards the right of the screen. Under Secondary Power settings, locate "After Power Failure". From the pull down menu, select Power On. 
+
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/NUC2.png)
 
 From there, you can hit F10 to save and exit, or click the 'x' in the upper right corner. A popup will ask if you want to save, click yes and continue.
 
