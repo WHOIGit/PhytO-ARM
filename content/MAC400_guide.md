@@ -76,3 +76,6 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
   * Disconnect from any other Wi-Fi networks, and ensure your Ethernet connection is working
   * Try launching a web page. Sometimes the Ethernet connection gets reset and needs to be reconfigured. If you can’t connect but should have Internet access, run the Network Connection Troubleshooter. This should automatically reconfigure the Ethernet port and allow you access, the most common reason for this is “Ethernet doesn’t have a valid IP configuration”. Running the troubleshooter will resolve this.
   * Restart MacTalk. If you’ve just connected the computer, the network connection may still be configuring when you launch MacTalk. Close the program and reopen it, check to see if the new IP address has shown up.
+
+#### Updating Firmware
+The Ethernet module can be programmed to use a range of Ethernet protocols
