@@ -73,7 +73,9 @@ At the site, check all cable connections and ensure you can control the motor. I
 
 Make sure the boom is properly aligned. When doing longer casts, the line may wrap differently than over short distances. Make sure the line feeds evenly from one side back to the other and does not favor one side. If this happens, the line will pile up against the side of the spool and slip, resulting in loops of line getting stuck underneath the line being fed onto the spool. This will result in the line jumping suddenly during a downcast, jerking the logger and preventing smooth, steady data collection.
 
-When making site visits, bring all tools and equipment neccessary for repairs and maintenance. This includes:
+When adjusting or replacing the coupler, check for any signs of galling or grinding along the input shaft. If there appears to be galling or you're not sure, apply some additional Molykote to the shaft in the coupler, key, and input shaft. Use a swab to get the Molykote all the way to the back of the input shaft. Bolts should also be examined for signs of corrosion; apply more Aquashield to the bolt threads if needed.
+
+When making site visits, bring all tools and equipment necessary for repairs and maintenance. This includes:
 
 - Box wrench set & socket set
 - Adjustable wrench
@@ -88,5 +90,7 @@ When making site visits, bring all tools and equipment neccessary for repairs an
 - Spare couplers
 - Flathead & Philips screwdrivers
 - Jeweler's screwdriver set
+- Hex key set
 - Needlenose pliers
 - Spare shackles
+- Spare couplers
