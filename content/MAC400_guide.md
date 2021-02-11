@@ -78,4 +78,22 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
   * Restart MacTalk. If you’ve just connected the computer, the network connection may still be configuring when you launch MacTalk. Close the program and reopen it, check to see if the new IP address has shown up.
 
 #### Updating Firmware
-The Ethernet module can be programmed to use a range of Ethernet protocols
+The Ethernet module can be programmed to use a range of Ethernet protocols, and reprogramming the module can be done in a few minutes through MacTalk. If a seemingly functional motor is not responsive or a connection cannot be esablished over a known Ethernet connection, one common issue is having incorrect or outdated firmware on the module. 
+
+To change or update the firmware on a module, click on the Updates menu from the top menu bar and select Update Firmware. A warning will appear that old firmware will be erased, click OK to proceed.
+
+A pop-up window should show firmware update options. If the firmware you need is not immediately listed, check the box that says "Show all files", and select the appropriate file. Alternatively, you can browse the firmware folder using the button on the right. 
+
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC7.png)
+
+Choose the firmware you would like installed on the module by selecting it, and click the "Start" button at the bottom of the window. Once you start the installation, the window should display the current firmware on the module, the new version being loaded, and the download progress. The installer will run, alerting you when the installation is complete. 
+
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC8.png)
+
+Once the firmware is updated, click the "Exit" button to close the window. MacTalk will restart automatically, and the module tab will now display the new firmware.
+
+#### Running the Motor in MacTalk
+- Select the mode in the upper left menu. If you want to look at the settings in a different mode but not have the motor move, uncheck the box that says “Change Actual Mode”. After adjusting the settings for that mode, make sure you are in the original mode and check the box to enable mode switching again.
+- Flipping between position & passive, the encoder jumps 10-15 counts, this is normal and is a result of the motor no longer using power to maintain position. This change is also extremely small in terms of distance from the target position (8192 counts per rotation)
+- Use the toggle arrows next to the values to adjust target speed, position, acceleration, and other values in real time
+
