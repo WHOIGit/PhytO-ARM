@@ -93,7 +93,55 @@ Choose the firmware you would like installed on the module by selecting it, and 
 Once the firmware is updated, click the "Exit" button to close the window. MacTalk will restart automatically, and the module tab will now display the new firmware.
 
 #### Running the Motor in MacTalk
-- Select the mode in the upper left menu. If you want to look at the settings in a different mode but not have the motor move, uncheck the box that says “Change Actual Mode”. After adjusting the settings for that mode, make sure you are in the original mode and check the box to enable mode switching again.
+- Select the mode in the upper left menu. If you want to look at the settings in a different mode but not have the motor move, uncheck the box that says “Change Actual Mode”. After adjusting the settings for that mode, make sure you are in the original mode and check the box to enable mode switching again
 - Flipping between position & passive, the encoder jumps 10-15 counts, this is normal and is a result of the motor no longer using power to maintain position. This change is also extremely small in terms of distance from the target position (8192 counts per rotation)
 - Use the toggle arrows next to the values to adjust target speed, position, acceleration, and other values in real time
+
+##### Motor Status
+The Status bar at the top of the will show most of the information about the motor status.
+Some key values:
+
+- Actual Mode: the mode the motor is currently set to (Passive, Position, Velocity, etc.)
+- Actual Position: the current position of the encoder
+- Motor Load (mean): motor load is the I2T value that is reported in register 16, and cannot exceed 100%. Mean load is related to torque; if the motor load is too great and torque reaches 300%, the motor will enter passive mode
+- Temperature: motor internal temperature. While testing, the temperature levels out around 38/40°C. If the temperature exceeds 84°C/183°F, there will be a Temperature Too High error. See Errors & Troubleshooting for more details
+
+##### Inputs
+- Bus Voltage: Voltage in the motor circuit. This value is in VDC and will be higher than your VAC input of 115VAC. A typical range would be about 350-380VDC, an Overvoltage on bus error will occur if the internal bus voltage exceeds 450VDC. See Errors & Troubleshooting for more details
+- Control Voltage: Voltage in the control circuit
+
+##### Errors
+All errors will be displayed in the Errors bar above Status. You may need to expand the list by clicking the red arrow to display any errors.
+
+##### Status
+This section displays a list of status readings and warnings, current statuses will appear in bold. If any errors occur they will appear in the Errors panel directly above.
+
+- Motor in position: the motor is at the specified position (in Position mode)
+- Control Voltage: Voltage in the control circuit
+- Motor is accelerating/decelerating: either of these can be bolded when the motor is functioning depending on the direction of motion (accelerating is clockwise, decelerating is counter clockwise)
+- Intermediate Power DC voltage low: this will appear when only the control circuit has power (or power supplied to the motor is too low). This should go away when AC voltage is applied to the motor circuit. If it does not, check the control circuit voltage reading, as it may be below the required range, which will strain the motor and ultimately cause problems leading to a shutdown
+- Supervision of position limits disabled: position limits will be temporarily disabled if the motor runs outside the position limits set in the registers. Supervision is re-enabled when the motor comes back inside the position limits that were set
+- VAC On: AC voltage is supplied to the motor. This status message will be on unless AC power is removed, and is one of the constant messages displayed during normal operations
+- Driver stage disabled: An error has occurred and the motor will not run properly
+
+#### Errors & Troubleshooting
+
+Common Errors
+
+##### Connection over Python script fails
+
+|Possible Cause            | Solution |
+| ---- | ---- |
+|Motor is not powered appropriately      |Check that the control circuit is connected to adequate power (18-30VDC), and the motor circuit is plugged in to AC power      |
+|Incorrect or out of date firmware is installed on the module      |Make sure the module has the correct firmware installed      |
+| Computer can't connect to the right port                     |The default port is 502, be sure this is the requested port      |
+| IP address is incorrect                                      |Try to ping the motor from the command line. If it doesn't respond, check the IP address in MacTalk. <br />Reset your network connection or reconfigure the IP address using the serial connection |
+
+##### Motion is jerky or seems out of control
+
+| Possible Cause                                               | Solution                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Position controls are on                                     | If the motor is position-limited, it will stop if directed to exceed the limit. Return the motor to the limits and/or disable the limits |
+| The tuning has not been adjusted for the current load        | Adjust the load factor in MacTalk or by changing the register value |
+| Some other setting has been inappropriately changed (this has happened before) | Do a complete reset of the motor in MacTalk                  |
 
