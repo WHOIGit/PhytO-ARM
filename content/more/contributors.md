@@ -3,7 +3,7 @@ title: Contributors
 ---
 
 # Project Lead
-## ![test image](https://github.com/WHOIGit/PhytO-ARM/blob/master/markdown/images/test.png)Michael Brosnahan
+## Michael Brosnahan
 Assistant Scientist in the Biology Department at Woods Hole Oceanographic Institution [Lab website](https://www2.whoi.edu/site/brosnahanlab/), [Twitter](http://www.twitter.com/BrosnahanLab)
 
 # Contributors

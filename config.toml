@@ -2,4 +2,4 @@ baseURL = "https://hablab.whoi.edu/phyto-arm/"
 languageCode = "en-us"
 title = "PhytO-ARM"
 
-theme = "hugo-theme-techdoc"
+theme = "hugo-geekdoc"
