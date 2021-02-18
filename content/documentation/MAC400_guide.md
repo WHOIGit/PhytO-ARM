@@ -31,7 +31,7 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
 
 3. Create a new entry and enter the MAC address for the module. If the motor is the only one on the network, assign it to 192.168.13.105. If there is more than 1 motor on the network, increase the IP address by 1, so 192.68.13.106, 192.168.13.107, etc. 
 
-![Alt](/static/images/MAC2.png)
+![Alt](/images/MAC2.png)
 
 4. To set up remote access directly to the Win 10 NUC, select the “Security” tab and check the port forwarding table. There should be two entries for Win 10 NUC (IP address 192.168.13.2), one for remote desktop and one for SSH. If these aren’t there, they need to be added.
 
