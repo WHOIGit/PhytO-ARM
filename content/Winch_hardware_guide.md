@@ -42,11 +42,13 @@ Secure the motor shaft coupler with the two set screws. Coat the set screws in L
 
 To mount the motor to the gearbox, the bores on the plastic spacer and gearbox input shaft need to aligned. Apply a small amount of Molykote to the gearbox input shaft with a cotton swab (be careful, it is very messy if it gets on clothing or skin). Filp the case so the open end is facing down. Coat the 3" long 3/8" bolts in Aquashield and run through the outer bores on the metal plate. Slide the spacer over the bolts and make sure the shaft coupler components are tight.  
 
-Line up the bolts and keyed shaft. You may need to turn the input shaft or adjust the coupler to align the shafts. Slip the bolts through the gearbox flange, and while supporting the motor and case, fit the bolts with washers and lock nuts. This is easiest with two people, or with the hardware in your pocket bracing the case with your knee. Be careful to not jostle the case too much as you secure it, this can cause the shaft coupler to come out of alignment.
+Line up the bolts and keyed shaft. You may need to turn the input shaft or adjust the coupler to align the shafts. Slip the bolts through the gearbox flange, and while supporting the motor and case, fit the bolts with washers and lock nuts. This is easiest with two people, or with the hardware in your pocket bracing the case with your knee to keep it from slipping backwards. Be careful to not jostle the case too much as you secure it, this can cause the shaft coupler to come out of alignment.
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch8.jpg)
 
-Use a wrench to hold the bolt heads in place while you tighten down the nuts. Fully assembled, the motor case and spacer should fit snugly against the gearbox flange. If any bolts are loose, the load can sag, putting strain on the coupler.
+Use a wrench to hold the bolt heads in place while you tighten down the nuts. Fully assembled, the motor case and spacer should fit snugly against the gearbox flange. If any bolts are loose, the load can sag, putting strain on the coupler or causing misalignment between the shafts.
+
+**If the motor is properly fitted to the gearbox, there should be no noise when the motor runs. If you hear whining, grinding, or mechanical clicking, the coupler is not properly aligned. New users may need to refit the motor several times to achieve a good fit. **
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch9.jpg)
 
@@ -62,7 +64,7 @@ Fit the metal ring with the tab over the end of the output shaft, and slide the 
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch12.jpg)
 
-If the boom is not already fitted onto the gearbox, do so now. Each slat should have a hole near the end, if using more than one, line them up and secure with the eye bolt and lock nut. Loosen the bolts holding the plates on top of the gearbox together, but note that you will need to use longer bolts than the standard ones Hiliner provides if you use more than two slats. Tighten the bolts down step by step, so the boom is under more or less even pressure on all sides while you adjust it. When properly aligned, the end of the boom should be in line with the center of the spool. Feed the line through the chock secure on the end of the boom.
+If the boom is not already fitted onto the gearbox, do so now. Each slat should have a hole near the end, if using more than one, line them up and secure with the eye bolt and lock nut. Loosen the bolts holding the plates on top of the gearbox together, but note that you will need to use longer bolts than the standard ones Hiliner provides if you use more than two slats. Tighten the bolts down bit by bit in an X pattern, so the boom is under more or less even pressure on all sides while you adjust it. When properly aligned, the end of the boom should be in line with the center of the spool. Feed the line through the chock secured on the end of the boom.
 
 Tune the winch before deploying. Check the alignment on the boom by placing a weight at the end of the line and raising and lowering it several times. The line should feed cleanly through the chock and wrap across the spool evenly. If the boom (and therefore the line) is properly centered, the line will wrap to one side of the spool and then back across to the other. 
 
