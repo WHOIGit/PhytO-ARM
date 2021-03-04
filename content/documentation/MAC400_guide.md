@@ -1,4 +1,6 @@
-# MAC 400 Motor Guide
+---
+title: "MAC 400 Motor Guide"
+---
 
 This guide serves as a reference manual for the MAC 400 motor and its use with PhytO-ARM applications.
 
@@ -25,15 +27,15 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
 
 2. Log in to Sierra Wireless ACE manager and select the “LAN” tab, and expand the 3rd list titled DHCP Reservation List
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC1.png)
+![Alt](/images/MAC1.png)
 
 3. Create a new entry and enter the MAC address for the module. If the motor is the only one on the network, assign it to 192.168.13.105. If there is more than 1 motor on the network, increase the IP address by 1, so 192.68.13.106, 192.168.13.107, etc. 
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC2.png)
+![Alt](/images/MAC2.png)
 
 4. To set up remote access directly to the Win 10 NUC, select the “Security” tab and check the port forwarding table. There should be two entries for Win 10 NUC (IP address 192.168.13.2), one for remote desktop and one for SSH. If these aren’t there, they need to be added.
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC3.png)
+![Alt](/images/MAC3.png)
 
   * The public start port for remote access will be 3932, the private port will be 3389 (default Remote Desktop port)
   * The public start port for SSH will be 3922, the private port will be 20 (the default SSH port)
@@ -49,7 +51,7 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
 2.	Connect serial cable with serial/USB adapter
   * If the motor does not appear in MacTalk, make sure you’ve selected “Serial port” from the dropdown menu in the upper left corner. Select the appropriate COM port in the next menu, and make sure the baudrate is set to the MacTalk default of 19200
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC4.png)
+![Alt](/images/MAC4.png)
 
   * If there is no green circle next to the selected COM port, open Device Manager on Windows (click the Windows icon on the bottom left and type “Device Manager”). Click “Ports (COM & LPT)” to expand the list of available ports. The USB Serial Port will have a COM port number listed next to it, select that COM port in MacTalk
   * If the green circle still doesn’t show up, restart MacTalk
@@ -58,7 +60,7 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
   * Subnet is 255.255.255.0
   * Default gateway is the IP address for the modem (192.168.13.31)
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC5.png)
+![Alt](/images/MAC5.png)
 
 4.	Click Apply and Save, this will save all the changes you made, the module will reboot and the new IP address should show up in the lower right corner along with the motor icon
 5.	Check the box that says Use DHCP and then Apply & Save
@@ -70,7 +72,7 @@ Note: this setup guide uses IP addresses specific to the modem and SIM card used
   * Displayed with a green icon next to it, and
   * Listed with the address 192.168.13.2, which is the address of the computer
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC6.png)
+![Alt](/images/MAC6.png)
 
 3.	If you don’t see the green icon or the IP address is something else (like 10.0.0.80 or 169.254.15.44), check your Ethernet connection
   * Disconnect from any other Wi-Fi networks, and ensure your Ethernet connection is working
@@ -84,11 +86,11 @@ To change or update the firmware on a module, click on the Updates menu from the
 
 A pop-up window should show firmware update options. If the firmware you need is not immediately listed, check the box that says "Show all files", and select the appropriate file. Alternatively, you can browse the firmware folder using the button on the right. 
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC7.png)
+![Alt](/images/MAC7.png)
 
 Choose the firmware you would like installed on the module by selecting it, and click the "Start" button at the bottom of the window. Once you start the installation, the window should display the current firmware on the module, the new version being loaded, and the download progress. The installer will run, alerting you when the installation is complete. 
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC8.png)
+![Alt](/images/MAC8.png)
 
 Once the firmware is updated, click the "Exit" button to close the window. MacTalk will restart automatically, and the module tab will now display the new firmware.
 

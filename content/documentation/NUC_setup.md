@@ -1,4 +1,7 @@
-# NUC Information & Setup
+---
+title: "NUC Information & Setup"
+---
+
 The on-board computer is the fundamental control device for the winch systems. The NUC is a compact PC running Windows10 and acts as the control device for all the onboard winches. There are few programs required to control the winches:
 -	TeraTerm: Serial port software for communicating with the RBR via serial cable
 -	Serial Port Monitor: monitoring software to capture traffic between the computer and RBR via serial cable
@@ -28,11 +31,11 @@ To do this, go to Settings > Updates & Security > Recovery and click "Restart no
 
 From the options on the next screen, select "Troubleshoot", then "Advanced Options". Finally, select "UEFI Firmware settings" and click "Restart". This will take you to the BIOS on restart.
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/NUC1.png)
+![Alt](/images/NUC1.png)
 
 Once in BIOS, click the "Advanced" tab and then select the "Power" tab towards the right of the screen. Under Secondary Power settings, locate "After Power Failure". From the pull down menu, select Power On. 
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/NUC2.png)
+![Alt](/images/NUC2.png)
 
 From there, you can hit F10 to save and exit, or click the 'x' in the upper right corner. A popup will ask if you want to save, click yes and continue.
 
