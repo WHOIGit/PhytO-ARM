@@ -151,9 +151,49 @@ Since we're running a Python script, we need to specify what program to open the
 
 Once all this is in place, save your changes. Since it runs with highest privileges, you need to save the changes with an admin account. On some machines, you need to differentiate between the local account and the admin account. To do this, type  "Computer Name\User Name" in the account box, e.g. URANIA\Hablab or BUCCINUM\Hablab, then enter the password to save the changes.
 
-### Troubleshooting the Profiler
+### Configuring the Scripts 
+
+Modifying the config files
+
+Changing the target depth & speed
+
+Note on direction: know your hardware!
+
+### Troubleshooting 
 
 Between power, hardware, and software, there are a number of reasons the profiler may have issues. Before deploying a new system, try to test the system as many times as possible to work out any bugs.
+
+#### Profiler Won't Start
+
+If the profile won't start, there are several potential causes. The issue may be a software setting or configuration, bad network connection, or a hardware disconnect.
+
+| Issue                                                        | Possible Fixes                                               |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Profile does not begin at scheduled time                     | Confirm the task is enabled<br />Check that the task is set to repeat on the correct schedule<br />Check to make sure all devices are on<br />Try running the script outside Task Scheduler: check for errors<br />If this happens after an email/text alert, power may be too low to switch the motor into position mode. Check power levels and try when there's a better state of charge |
+| Script returns 'nonetype object is not iterable' error or 'Cannot connect to 192.168.xx.xx' | Both indicate the NUC cannot locate the motor module (these errors may co-occur). The 'nonetype' error occurs because the script queries the motor registers. If the motor fails to connect, the query returns an N/A<br />Check that the motor module is on and has adequate power.<br />Open MacTalk and check the firmware on the module. Most of the time this error occurs because the wrong firmware has been loaded.<br />Update the module firmware |
+| Script stalls out when connecting to the RBR                 | Check that the RBR is properly connected and has power<br />The serial port can only accept one connection at a time. Make sure any Tera Term or Ruskin windows have been closed |
+|                                                              |                                                              |
+|                                                              |                                                              |
+
+
+
+#### File Issues
+
+| Issue                                                        | Possible Fixes                                               |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Binary files won't open in Ruskin                            | Try importing after opening Ruskin, selecting the file and choosing "Open with Ruskin" will not work<br />The file may be formatted incorrectly. Check that the settings in Ruskin are for Desktop and not Mobile |
+| The profiler was working, but my most recent files only have headers and no data |                                                              |
+|                                                              |                                                              |
+
+#### Motor Errors
+
+| Issue                     | Possible Fixes |
+| ------------------------- | -------------- |
+| Motor won't connect       |                |
+| Motor reports fatal error |                |
+|                           |                |
+
+
 
 #### How to Deal with an Error Text/Email
 
