@@ -1,16 +1,19 @@
 # PhytO-ARM on ROS
 
-This directory contains ROS nodes for the PhytO-ARM project. The supported ROS release is [Melodic Morenia][melodic].
+This directory contains ROS nodes for the PhytO-ARM project. The supported ROS release is [Noetic Ninjemys][noetic].
 
-[melodic]: http://wiki.ros.org/melodic
+[noetic]: http://wiki.ros.org/noetic
 
 
 ## Setup
 
+    source /opt/ros/noetic/setup.bash
+
     sudo apt install -y \
-        python-catkin-tools \
-        python-rosdep \
-        python-wstool
+        build-essential \
+        python3-catkin-tools \
+        python3-rosdep \
+        python3-wstool
 
     # Clone source dependencies
     wstool init --shallow src deps.rosinstall
@@ -23,7 +26,7 @@ This directory contains ROS nodes for the PhytO-ARM project. The supported ROS r
     # Patch build configuration for cv_bridge
     # https://github.com/ros-perception/vision_opencv/issues/345
     sudo sed -i 's,/usr/include/opencv,/usr/include/opencv4,g' \
-        /opt/ros/melodic/share/cv_bridge/cmake/cv_bridgeConfig.cmake
+        /opt/ros/noetic/share/cv_bridge/cmake/cv_bridgeConfig.cmake
 
     # Install additional dependencies
     sed 's/#.*//' apt-requirements.txt | envsubst \
