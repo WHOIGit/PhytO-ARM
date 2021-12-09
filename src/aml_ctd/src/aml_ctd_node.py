@@ -63,6 +63,9 @@ async def main():
                                                            loop)
     rospy.Subscriber('/aml_comms/in', RawData, handler)
 
+    # TODO:
+    # To start logging we should just need to send b"\r\r\rMMONITOR\r" (sic)
+
     # Process incoming messages in a loop
     while True:
         msg = await ros_msg_q.get()
