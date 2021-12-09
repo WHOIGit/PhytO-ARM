@@ -24,7 +24,7 @@
     <exec_depend>ds_util_nodes</exec_depend>
 
     <exec_depend>jvl_motor</exec_depend>
-    <exec_depend>rbr_maestro3</exec_depend>
+    <exec_depend>rbr_maestro3_ctd</exec_depend>
 
     <!--
         Provides a node for recording data from an IP camera.
