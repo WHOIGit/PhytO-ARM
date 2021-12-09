@@ -46,7 +46,7 @@ async def main():
     loop = asyncio.get_event_loop()
 
     # Initialize the ROS node
-    rospy.init_node('rbr_maestro3', anonymous=True, disable_signals=True)
+    rospy.init_node('rbr_maestro3_ctd', anonymous=True, disable_signals=True)
     rospy.core.add_preshutdown_hook(functools.partial(on_shutdown, loop))
 
     # Create a mapping of topics to publish on

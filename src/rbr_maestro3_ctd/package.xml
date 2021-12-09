@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-    <name>rbr_maestro3</name>
+    <name>rbr_maestro3_ctd</name>
     <version>1.0.0</version>
     <description>Captures data from an RBR maestro3 CTD</description>
     <license>TODO</license>
