@@ -56,13 +56,13 @@ Apply a small amount of Molykote to the gearbox input shaft with a cotton swab (
 
 The gearbox has a small setscrew that will tighten a clamp around the motor output shaft, located underneath a small rubber insert. Remove the over and take out the setscrew to open the input shaft.
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE1.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE1.jpeg)
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE2.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE2.jpeg)
 
 Remove the nuts from the ends of the bolts around the motor face, and carefully line up the motor output shaft with the gearbox input. Run the bolts through the bores on the gearbox face, using the hex key to keep them in place. 
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE3.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE3.jpeg)
 
 Use a small wrench to secure the bolts with lock nuts, tightening evenly as you go. Coat the setscrew in Loctite and insert back into the gearbox to tighten the input shaft and secure the shaft connection. Set it in place with a hex key. When fitted properly, the motor and case should lie flush against the gearbox face, the motor should feel securely in place, and the motor will run smoothly. If any bolts are loose, the load can sag, putting strain on the motor or causing misalignment between the motor and gearbox.
 
