@@ -155,7 +155,7 @@ Common Errors
 | The tuning has not been adjusted for the current load        | Adjust the load factor in MacTalk or by changing the register value |
 | Some other setting has been inappropriately changed (this has happened before) | Do a complete reset of the motor in MacTalk                  |
 
-##### Motor seems fine in MacTalk but won't run
+##### MacTalk doesn't display any obvious errors but the motor does not run
 
 | Possible Cause                                               | Solution                                                     |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
