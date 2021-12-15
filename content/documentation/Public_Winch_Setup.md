@@ -37,8 +37,6 @@ To begin, secure the lower section of the winch stand to the mounting block or d
 
 Once the stand is installed, attach the stand insert to the base of the gearbox using the threaded bores. Fit the bolts with washers and coat the threads in Aquashield to prevent corrosion.
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch2.jpg)
-
 Seat the gearbox and post in the stand base, and adjust the height as needed. To secure the stand at the appropriate height, run a bolt or pin through the paired holes in the stand base and post. Tighten with a lock nut.
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch3.jpg)
