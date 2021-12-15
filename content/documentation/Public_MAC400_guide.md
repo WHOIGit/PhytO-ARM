@@ -21,7 +21,7 @@ The motor is easily added to a network by reserving an IP address and modifying 
 For the steps outlined here, you will need to use the serial connection and an RS232 to USB adapter for much of the setup. Once the motor has an IP address assigned, you can switch to using the LAN cable and connecting to the motor via Ethernet.
 
 #### Setting up the module in Sierra Wireless ACE Manager
-Note: this setup guide uses IP addresses specific to the modem and SIM card used in this deployment. Please modify the last pair of digits to match the IP address for the SIM card in use.
+Our current deployments use the Sierra Wireless MP70 Cellular modem, which can be found [here](https://novotech.com/mp70-105.html). This modem is compatible with several antennae, but we use the six connector [sharkfin antenna](https://novotech.com/6-in-1-airlink-antenna-294.html) to provide Wi-Fi, cellular link, and GPS fix. Note: this setup guide uses IP addresses specific to the modem and SIM card used in this deployment. Please modify the last pair of digits to match the IP address for the SIM card in use.
 
 1. Look up MAC address for module, this will be listed on a sticker at the bottom edge
 
