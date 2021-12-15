@@ -33,20 +33,20 @@ This step-by-step guide reflects our current setup, and may need to be adapted d
 
 To begin, secure the lower section of the winch stand to the mounting block or deck with lag screws or use bolts with lock nuts if the underside of the decking is easily accessible. Since the load will be centered past the front of the stand, be sure the back leg is secure and will not tip.
 
-![Alt](/images/Winch1.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch1.jpg)
 
 Once the stand is installed, attach the stand insert to the base of the gearbox using the threaded bores. Fit the bolts with washers and coat the threads in Aquashield to prevent corrosion.
 
-![Alt](/images/Winch2.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch2.jpg)
 
 Seat the gearbox and post in the stand base, and adjust the height as needed. To secure the stand at the appropriate height, run a bolt or pin through the paired holes in the stand base and post. Tighten with a lock nut.
 
-![Alt](/images/Winch3.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch3.jpg)
 
 Next, fit the motor in the aluminum case. 
 Set two #10 bolts in the bottom two holes on the motor face with washers between the bolt head and the motor casing. 
 
-![Alt](/images/Winch4.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch4.jpg)
 
 With these in place, carefully tip the motor forward and guide the motor shaft at an angle through the face of the case. Press the back of the motor down until it is in place at the bottom of the case, and adjust so the motor face is seated in the opening in the case. Tip forward so the bolts slide through the bores in the case. 
 
@@ -58,13 +58,13 @@ Apply a small amount of Molykote to the gearbox input shaft with a cotton swab (
 
 The gearbox has a small setscrew that will tighten a clamp around the motor output shaft, located underneath a small rubber insert. Remove the over and take out the setscrew to open the input shaft.
 
-![Alt](/images/CONE1.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE1.jpg)
 
-![Alt](/images/CONE2.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE2.jpg)
 
 Remove the nuts from the ends of the bolts around the motor face, and carefully line up the motor output shaft with the gearbox input. Run the bolts through the bores on the gearbox face, using the hex key to keep them in place. 
 
-![Alt](/images/CONE3.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE3.jpg)
 
 Use a small wrench to secure the bolts with lock nuts, tightening evenly as you go. Coat the setscrew in Loctite and insert back into the gearbox to tighten the input shaft and secure the shaft connection. Set it in place with a hex key. When fitted properly, the motor and case should lie flush against the gearbox face, the motor should feel securely in place, and the motor will run smoothly. If any bolts are loose, the load can sag, putting strain on the motor or causing misalignment between the motor and gearbox.
 
@@ -72,27 +72,27 @@ Use a small wrench to secure the bolts with lock nuts, tightening evenly as you 
 
 Cover the slots on either side of the case with electrical tape to prevent water from leaking in. The motor and control module are both highly resistant to spraying or splashing water, but we want to keep it to a minimum.
 
-![Alt](/images/Winch10.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch10.jpg)
 
 Next, fit the spindle over the output shaft on the gearbox. Remove the setscrew from the spindle and set aside. Give the input on the spindle a coat of Blue Grease HT or Molykote to prevent grinding and galling, and apply some to the gearbox output shaft as well.
 
-![Alt](/images/CONE4.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE4.jpg)
 
-![Alt](/images/CONE5.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE5.jpg)
 
 Mount the spindle, and apply some Loctite to the setscrew before tightening it in place. If the spindle isn't properly fitted or is loose, there will be increased wear on the key from moving the winch up and down. 
 
 Remove the knob from the end of the output shaft and mount the spool. Be sure the spool has a teal nonslip pad on either side as you mount it. 
 
-![Alt](/images/Winch11.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch11.jpg)
 
 Fit the metal ring with the tab over the end of the output shaft, and slide the flat key through the slot. Run a small bolt through the key and tab, and tighten with a lock nut. This nut does not need to be tightened down completely, but to keep the key from slipping. Replace the knob on the end and tighten down. The knob presses into the key, securing the spool on the shaft. If the knob is not tight, the spool may slip on the shaft.
 
-![Alt](/images/Winch12.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch12.jpg)
 
 Apply the non-slip decking tape to the inside of the spool to increase the grip the line will have. If played out too far without enough friction on the spool, the line may simply rotate around the spool as it turns. Secure your line on the spool by running the line through a loop at the end around the center of the spool.
 
-![Alt](/images/CONE6.jpg)
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/CONE6.jpg)
 
 If the boom is not already fitted onto the gearbox, do so now. Each slat should have a hole near the end, if using more than one, line them up and secure with the eye bolt and lock nut. Loosen the bolts holding the plates on top of the gearbox together, but note that you will need to use longer bolts than the standard ones Hiliner provides if you use more than two slats. Tighten the bolts down bit by bit in an X pattern, so the boom is under more or less even pressure on all sides while you adjust it. When properly aligned, the end of the boom should be in line with the center of the spool. Feed the line through the pulley secured on the end of the boom.
 
