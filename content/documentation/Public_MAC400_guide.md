@@ -16,37 +16,12 @@ The control module sits inside the opening on the top of the motor. It has a few
 
 All the connections on the control module are threaded M12 connectors. The control circuit power, LAN, and serial connectors all have slightly different hole patterns, so double check the cables before attempting to connect them to the motor. The control circuit power, Local Area Network, and serial connectors all have slightly different hole patterns, and corresponding LED lights.
 
+#### MacTalk Setup & Addressing
+
 The motor is easily added to a network by reserving an IP address and modifying the internal motor setting via serial cable to match the network reservation. Once this process is complete, the motor can be controlled over Ethernet using a range of Ethernet protocols including EtherNet/IP, ModbusTCP, PowerLink, EtherCAT, and others.
 
 For the steps outlined here, you will need to use the serial connection and an RS232 to USB adapter for much of the setup. Once the motor has an IP address assigned, you can switch to using the LAN cable and connecting to the motor via Ethernet.
 
-#### Setting up the module in Sierra Wireless ACE Manager
-Our current deployments use the Sierra Wireless MP70 Cellular modem, which can be found [here](https://novotech.com/mp70-105.html). This modem is compatible with several antennae, but we use the six connector [sharkfin antenna](https://novotech.com/6-in-1-airlink-antenna-294.html) to provide Wi-Fi, cellular link, and GPS fix. Note: this setup guide uses IP addresses specific to the modem and SIM card used in this deployment. Please modify the last pair of digits to match the IP address for the SIM card in use.
-
-1. Look up MAC address for module, this will be listed on a sticker at the bottom edge
-
-2. Log in to Sierra Wireless ACE manager and select the “LAN” tab, and expand the 3rd list titled DHCP Reservation List
-
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC1.png)
-
-3. Create a new entry and enter the MAC address for the module. If the motor is the only one on the network, assign it to 192.xxx.xx.105. If there is more than 1 motor on the network, increase the IP address by 1, so 192.xxx.xx.106, 192.xxx.xx.107, etc. 
-
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC2.png)
-
-4. To set up remote access directly to the Win 10 NUC, select the “Security” tab and check the port forwarding table. There should be two entries for Win 10 NUC, one for remote desktop (Port 3389) and one for SSH (Port 22). If these aren’t there, they need to be added.
-
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC3.png)
-
-  * The public start port for remote access will be 3932, the private port will be 3389 (default Remote Desktop port)
-  * The public start port for SSH will be 3922, the private port will be 20 (the default SSH port)
-  * The motor does not have any port forwarding set up as it should never need to be remotely accessed, all access will be through the Win 10 machine.
-
-5. The module does not need to be connected via Ethernet for reserving the address in ACE Manager, however you do need the physical network set up for the next steps. Be sure to connect all the components via Ethernet to a switch
-  * Ensure the Win10 machine, motor, and modem are all plugged into the same switch OR
-  * All components are plugged in any switch that has been daisy chained to another
-  * There are many components that all require power: the modem, switch, Win10 NUC, adjustable DC power supply for the motor control circuit, and AC power for the motor drive circuit, plus any additional computers or monitors.
-
-#### MacTalk Setup & Addressing
 1.	Connect to power (control circuit and motor power circuit)
 2.	Connect serial cable with serial/USB adapter
   * If the motor does not appear in MacTalk, make sure you’ve selected “Serial port” from the dropdown menu in the upper left corner. Select the appropriate COM port in the next menu, and make sure the baudrate is set to the MacTalk default of 19200
