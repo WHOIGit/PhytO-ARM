@@ -77,6 +77,20 @@ The motor is configured to behave differently depending on the other hardware it
 
 If left on the default settings, the motor will quickly begin skipping or making lots of shaky, jerky movements. This is because the default tolerance for follow error, or the number of counts between the target and actual count, is nearly 0. Servo motors will generally make several small, rapid adjustments to maintain a position or speed, which can be useful in many other applications; here we want a smooth ascent and descent with precise stopping points. 
 
+To fix this, we need to make 2 adjustments. First, adjust the motor tuning by selecting the "Filter Setup" icon in MacTalk. This will bring up a small floating menu.
+
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC9.png)
+
+Here, we need to adjust the Position/Velocity filter. The default setting will be at the 5,3 position on the x,y grid. This needs to move to the 3,3 position, where there is more stability but still relatively quick corrections to the movement. After this has been changed, click "Load Filter" to save the changes. Check to make sure the new filter is in place by closing the window and reopening it to ensure the same setting are selected.
+
+Secondly, we need to open up the In Position Window for the motor. With more stability and a quick response time, the motor occasionally will approach the target count and get close, but not within the 100 counts needed to be "In Position". When this happens, the motor does not reach the target position and any script needing the "In Position" bit feedback will be left running without ending.
+
+To change the In Position Window, we need to put the motor into Position Mode. This can be done by either changing the actual mode, or you can uncheck the box next to "Change Actual Mode".
+
+![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC10.png)
+
+Once in Position Mode, a box will appear under Motion Parameters that says "In position window". The default value is 100, enter 200 in the box and hit enter. This will update the register for this value. If you want to be sure your changes have been saved, click "Save in Motor" along the top menu bar. This will save the register values to the motor and restart the module. Confirm when you switch into Position Mode that this value remains set at 200.
+
 #### Running the Motor in MacTalk
 - Select the mode in the upper left menu. If you want to look at the settings in a different mode but not have the motor move, uncheck the box that says “Change Actual Mode”. After adjusting the settings for that mode, make sure you are in the original mode and check the box to enable mode switching again
 - Flipping between position & passive, the encoder jumps 10-15 counts, this is normal and is a result of the motor no longer using power to maintain position. This change is also extremely small in terms of distance from the target position (8192 counts per rotation)
@@ -130,11 +144,11 @@ Common Errors
 | The tuning has not been adjusted for the current load        | Adjust the load factor in MacTalk or by changing the register value |
 | Some other setting has been inappropriately changed (this has happened before) | Do a complete reset of the motor in MacTalk                  |
 
-##### MacTalk doesn't display any obvious errors but the motor does not run
+##### I can't identify a problem but the motor does not run
 
 | Possible Cause                                               | Solution                                                     |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| Insufficient power                                           | If battery levels are low, the motor may have enough power to stay on, but not enough to run. Let the system charge and try again |
+| Insufficient power                                           | If battery levels are low, the motor may have enough power to stay on, but not enough to run. Switch into position mode and see if a power error pops up in the lower right corner. Let the system charge and try again |
 | Previous cast did not end normally or there was an error during the cast | If using the script, an error on the previous cast may cause issues. If the script is still running, the next profile won't be able to connect to the motor or RBR. Stop the running task, disable the RBR, and try again |
 | Incorrect firmware installed on the module                   | Make sure the module has the correct firmware installed      |
 
