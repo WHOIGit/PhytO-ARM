@@ -104,23 +104,3 @@ At the site, check all cable connections and ensure you can control the motor. I
 Make sure the boom is properly aligned. When doing longer casts, the line may wrap differently than over short distances. Make sure the line feeds evenly from one side back to the other and does not favor one side. If this happens, the line will pile up against the side of the spool and slip, resulting in loops of line getting stuck underneath the line being fed onto the spool. This will result in the line jumping suddenly during a downcast, jerking the logger and preventing smooth, steady data collection.
 
   Bolts should also be examined for signs of corrosion; apply more Aquashield to the bolt threads if needed.
-
-When making site visits, bring all tools and equipment necessary for repairs and maintenance. This includes:
-
-- Box wrench set & socket set
-- Adjustable wrench
-- Electrical tape
-- Spare nuts & washers
-- Aquashield
-- Molykote
-- Cotton swabs
-- Zip ties, large and small
-- Small snips or scissors
-- Rubber mallet
-- Spare couplers
-- Flathead & Philips screwdrivers
-- Jeweler's screwdriver set
-- Hex key set
-- Needlenose pliers
-- Spare shackles
-- Spare couplers
