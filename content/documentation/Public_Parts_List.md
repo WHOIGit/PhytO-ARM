@@ -20,15 +20,19 @@ This document reviews the equipment needed for basic deployments, parts numbers 
    1. Worm drive gearbox: S050S-A265
 
       S05,SOLID, SERVO WHITE EPOXY
+   
       GEARSET 60:1,SGL EXT.,HOLLOW
+   
       GSHAFT R/D SGL EXT SOLID S05
+
       ADAPTER & PLATE MP1B-AL-CDB
+
       COUPLING FOR 14MM MOTOR SHAFT
 
       Base Kit - B05-BE  Horizontal base kit
-
+   
    2. Mounting hardware, spindle, spool, and boom: [Waterman Industries Gear Box Bottom Reel with Aluminum Spool (No motor, gear box, stand pipe, or base plate)](https://hiliner.com/product-catalog/deep-water-reels/waterman-industries-deep-water-reels-manual-electric-or-hydraulic/) from Hiliner Fishing Gear & Tackle, Inc.
-
+   
    3. Additional fiberglass boom slats: Waterman Industries 5/16" x 2" x 36" Fiberglass Spring Arm (for Gear Box Bottom Reel)
 
 
