@@ -13,10 +13,10 @@ This directory contains ROS nodes for the PhytO-ARM project. The supported ROS r
         build-essential \
         python3-catkin-tools \
         python3-rosdep \
-        python3-wstool
+        python3-vcstool
 
     # Clone source dependencies
-    wstool init --shallow src deps.rosinstall
+    vcs import src < deps.rosinstall
 
     # Install ROS dependencies
     sudo rosdep init
