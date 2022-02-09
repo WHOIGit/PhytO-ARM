@@ -113,9 +113,15 @@ all_registers = [
     Register(name='P_IST_TURNTAB',   num=25),
     Register(name='FNCERRMAX',       num=26),
     Register(name='TURNTAB_COUNT',   num=27),
-    Register(name='MIN_P_PIST',      num=28),
+    Register(name='MIN_P_PIST',      num=28,
+        decode=lambda lo, hi: unpack('l', lo, hi),  # encoder counts
+        encode=lambda x: pack('l', x),
+    ),
     Register(name='DEGC',            num=29),
-    Register(name='MAX_P_IST',       num=30),
+    Register(name='MAX_P_IST',       num=30,
+        decode=lambda lo, hi: unpack('l', lo, hi),  # encoder counts
+        encode=lambda x: pack('l', x),
+    ),
     Register(name='DEGCMAX',         num=31),
     Register(name='ACC_EMERG',       num=32),
     Register(name='INPOSWIN',        num=33),

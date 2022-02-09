@@ -68,6 +68,17 @@ def cmd_move(client, request):
     return srv.MoveCmdResponse()
 
 
+def cmd_set_position_envelope(client, request):
+    rospy.loginfo('Setting position envelope')
+    write_registers(client, {
+        mac400.MIN_P_PIST:  request.min
+    })
+    write_registers(client, {
+        mac400.MAX_P_PIST:  request.max
+    })
+    return srv.SetPositionEnvelopeCmdResponse()
+
+
 def cmd_stop(client, request):
     rospy.loginfo('Stopping motor')
     write_registers(client, {
@@ -110,6 +121,11 @@ def main():
             f'{rospy.get_name()}/move',
             srv.MoveCmd,
             functools.partial(cmd_move, client)
+        ),
+        rospy.Service(
+            f'{rospy.get_name()}/set_position_envelope',
+            srv.SetPositionEnvelopeCmd,
+            functools.partial(cmd_set_position_envelope, client)
         ),
         rospy.Service(
             f'{rospy.get_name()}/stop',

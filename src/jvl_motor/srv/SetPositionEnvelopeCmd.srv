@@ -1,0 +1,8 @@
+# SetPositionEnvelopeCmd
+# Sets (or disables with 0) the bounds for the motor position (P_IST). If the
+# position exceeds these bounds, the motor will switch to passive mode.
+
+int32 min  # encoder counts
+int32 max  # encoder counts
+
+---
