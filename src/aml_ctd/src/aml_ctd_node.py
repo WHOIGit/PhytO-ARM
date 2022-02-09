@@ -61,7 +61,7 @@ async def main():
     # Subscribe to incoming comms messages
     handler = lambda msg: asyncio.run_coroutine_threadsafe(ros_msg_q.put(msg),
                                                            loop)
-    rospy.Subscriber('/aml_comms/in', RawData, handler)
+    rospy.Subscriber('/ctd_comms/in', RawData, handler)
 
     # TODO:
     # To start logging we should just need to send b"\r\r\rMMONITOR\r" (sic)
