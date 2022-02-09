@@ -18,6 +18,7 @@ add_message_files(
 add_service_files(
   FILES
   MoveCmd.srv
+  SetPositionEnvelopeCmd.srv
   StopCmd.srv
 )
 
