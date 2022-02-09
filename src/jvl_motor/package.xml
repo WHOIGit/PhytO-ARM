@@ -17,5 +17,5 @@
     <buildtool_depend>catkin</buildtool_depend>
 
     <!-- We use the DsHeader message type -->
-    <build_depend>ds_core_msgs</build_depend>
+    <depend>ds_core_msgs</depend>
 </package>

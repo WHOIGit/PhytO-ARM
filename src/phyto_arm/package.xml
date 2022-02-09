@@ -16,13 +16,13 @@
 
     <buildtool_depend>catkin</buildtool_depend>
 
-    <build_depend>ds_base</build_depend>
-    <build_depend>ds_core_msgs</build_depend>
-    <build_depend>ds_nmea_msgs</build_depend>
+    <depend>ds_core_msgs</depend>
+    <depend>ds_nmea_msgs</depend>
 
     <exec_depend>ds_sensors</exec_depend>
     <exec_depend>ds_util_nodes</exec_depend>
 
+    <exec_depend>aml_ctd</exec_depend>
     <exec_depend>jvl_motor</exec_depend>
     <exec_depend>rbr_maestro3_ctd</exec_depend>
 
