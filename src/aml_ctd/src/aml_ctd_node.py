@@ -53,9 +53,9 @@ async def main():
 
     # Create a mapping of topics to publish on
     publishers = {
-        Ctd: rospy.Publisher(f'{rospy.get_name()}/ctd', Ctd, queue_size=5),
-        DepthPressure: rospy.Publisher(f'{rospy.get_name()}/depth',
-            DepthPressure, queue_size=5),
+        Ctd: rospy.Publisher('/ctd', Ctd, queue_size=5),
+        DepthPressure: rospy.Publisher('/ctd/depth', DepthPressure,
+            queue_size=5),
     }
 
     # Subscribe to incoming comms messages
