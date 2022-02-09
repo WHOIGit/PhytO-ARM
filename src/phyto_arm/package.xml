@@ -16,6 +16,10 @@
 
     <buildtool_depend>catkin</buildtool_depend>
 
+    <depend>actionlib</depend>
+    <depend>actionlib_msgs</depend>
+    <depend>python-scipy</depend>
+
     <depend>ds_core_msgs</depend>
     <depend>ds_nmea_msgs</depend>
 
