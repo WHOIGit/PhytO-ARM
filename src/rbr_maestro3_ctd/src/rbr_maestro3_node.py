@@ -59,7 +59,7 @@ async def main():
     # Subscribe to incoming comms messages
     handler = lambda msg: asyncio.run_coroutine_threadsafe(ros_msg_q.put(msg),
                                                            loop)
-    rospy.Subscriber('/rbr_comms/in', RawData, handler)
+    rospy.Subscriber('/ctd_comms/in', RawData, handler)
 
     # Process incoming messages in a loop
     while True:

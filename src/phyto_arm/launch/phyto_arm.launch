@@ -29,11 +29,11 @@
     <node name="jvl_motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
     <!--
-        Node: rbr_comms
+        Node: ctd_comms
 
-        This node bridges the RBR maestro3 serial connection to ROS.
+        This node bridges the CTD serial connection to ROS.
     -->
-    <node name="rbr_comms" pkg="ds_util_nodes" type="bridge_node" />
+    <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
 
     <!--
         Node: rbr_maestro3_ctd
