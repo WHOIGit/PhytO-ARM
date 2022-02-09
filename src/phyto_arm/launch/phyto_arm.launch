@@ -58,6 +58,13 @@
     <node name="web" pkg="phyto_arm" type="web_node.py" />
 
     <!--
+        Node: winch
+
+        This node provides winch control.
+    -->
+    <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+
+    <!--
         Node: rosbridge_server
 
         This node runs the Rosbridge (http://wiki.ros.org/rosbridge_suite) 

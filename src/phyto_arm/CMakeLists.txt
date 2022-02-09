@@ -10,6 +10,7 @@ project(phyto_arm)
 find_package(
   catkin REQUIRED COMPONENTS
     message_generation
+    actionlib_msgs
     sensor_msgs
     std_msgs
     ds_core_msgs
@@ -53,9 +54,16 @@ find_package(
 #  JVLMotorRegisterRaw.msg
 #)
 
+add_action_files(
+  DIRECTORY action
+  FILES
+    MoveToDepth.action
+)
+
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
+  actionlib_msgs
   std_msgs
   ds_core_msgs
 )
@@ -149,6 +157,7 @@ catkin_install_python(
   PROGRAMS
     src/instant_replay_node.py
     src/web_node.py
+    src/winch_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
