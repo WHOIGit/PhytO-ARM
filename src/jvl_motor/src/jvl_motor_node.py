@@ -127,6 +127,7 @@ def main():
         # The range of register addresses is too wide, so we need to do this in
         # two calls.
         reg_values, timestamp1 = read_registers(client, [
+            mac400.MODE_REG,
             mac400.P_IST,
             mac400.V_IST_16,
             mac400.FLWERR,
@@ -148,6 +149,7 @@ def main():
         # Publish information about motion
         m = msg.Motion()
         m.header.stamp = m.ds_header.io_time = timestamp1
+        m.mode = reg_values[mac400.MODE_REG].value
         m.position = reg_values[mac400.P_IST]
         m.velocity = reg_values[mac400.V_IST_16]
         # TODO: FLWERR
