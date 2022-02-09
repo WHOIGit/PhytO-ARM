@@ -1,9 +1,10 @@
 <launch>
     <!-- Most settings are in config.yaml, which is easier to edit -->
-    <rosparam command="load" file="$(find phyto_arm)/launch/config.yaml" />
+    <rosparam command="load" file="$(arg config_file)" />
 
     <!-- Launch file for recording rosbags -->
-    <include file="$(find phyto_arm)/launch/rosbag.launch" />
+    <include file="$(find phyto_arm)/launch/rosbag.launch"
+        pass_all_args="true" />
 
     <!--
         Node: nmea_listener
@@ -40,8 +41,14 @@
 
         This node controls the RBR maestro3 CTD.
     -->
-    <node name="rbr_maestro3_ctd" pkg="rbr_maestro3_ctd"
-          type="rbr_maestro3_node.py" />
+    <group if="$(eval arg('ctd') == 'rbr_maestro3')">
+        <node name="rbr_maestro3_ctd" pkg="rbr_maestro3_ctd"
+            type="rbr_maestro3_node.py" />
+    </group>
+
+    <group if="$(eval arg('ctd') == 'aml')">
+        <node name="aml_ctd" pkg="aml_ctd" type="aml_ctd_node.py" />
+    </group>
 
     <!--
         Node: web
