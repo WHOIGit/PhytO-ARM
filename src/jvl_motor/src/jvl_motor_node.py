@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import functools
+import time
 
 import rospy
 
@@ -32,6 +33,9 @@ def read_registers(client, registers):
     values = client.read_holding_registers(min_addr, count)
     timestamp = rospy.Time.now()
 
+    if values is None:
+        raise RuntimeError('Failed to read registers')
+
     # Return a mapping of register -> decoded value, and the timestamp
     output = {}
     for reg in registers:
@@ -48,42 +52,59 @@ def write_registers(client, reg_values):
     for r, v in reg_values.items():
         encoded.extend(r.encode(v))
 
-    client.write_multiple_registers(
+    success = client.write_multiple_registers(
         list(reg_values.keys())[0].addr[0],
         encoded
     )
 
+    if not success:
+        raise RuntimeError('Failed to write registers')
 
 
 def cmd_move(client, request):
     rospy.loginfo('Moving motor')
-    write_registers(client, {
-        mac400.MODE_REG:  mac400.MODE.VELOCITY,
-        mac400.P_SOLL:    0,
-        mac400.P_NEW:     0,
-        mac400.V_SOLL:    request.velocity,
-        mac400.A_SOLL:    request.acceleration,
-        mac400.T_SOLL:    request.torque,
-    })
+    try:
+        write_registers(client, {
+            mac400.MODE_REG:  mac400.MODE.VELOCITY,
+            mac400.P_SOLL:    0,
+            mac400.P_NEW:     0,
+            mac400.V_SOLL:    request.velocity,
+            mac400.A_SOLL:    request.acceleration,
+            mac400.T_SOLL:    request.torque,
+        })
+    except RuntimeError:
+        rospy.logerr('Failed to command motor movement')
     return srv.MoveCmdResponse()
 
 
 def cmd_set_position_envelope(client, request):
     rospy.loginfo('Setting position envelope')
-    write_registers(client, {
-        mac400.MIN_P_IST:  request.min
-    })
-    write_registers(client, {
-        mac400.MAX_P_IST:  request.max
-    })
+    try:
+        write_registers(client, {
+            mac400.MIN_P_IST:  request.min
+        })
+        write_registers(client, {
+            mac400.MAX_P_IST:  request.max
+        })
+    except RuntimeError:
+        rospy.logerr('Failed to set position envelope')
     return srv.SetPositionEnvelopeCmdResponse()
 
 
 def cmd_stop(client, request):
     rospy.loginfo('Stopping motor')
-    write_registers(client, {
-        mac400.MODE_REG:  mac400.MODE.PASSIVE
-    })
+
+    # Try continually to stop the motor, this is important
+    while True:
+        try:
+            write_registers(client, {
+                mac400.MODE_REG:  mac400.MODE.PASSIVE
+            })
+            break
+        except RuntimeError:
+            rospy.logerr('Failed to stop motor!!')
+            time.sleep(0.1)
+
     return srv.StopCmdResponse()
 
 
@@ -142,18 +163,23 @@ def main():
     while not rospy.is_shutdown():
         # The range of register addresses is too wide, so we need to do this in
         # two calls.
-        reg_values, timestamp1 = read_registers(client, [
-            mac400.MODE_REG,
-            mac400.P_IST,
-            mac400.V_IST_16,
-            mac400.FLWERR,
-            mac400.U_24V,
-            mac400.ERR_STAT,
-        ])
-        reg_values2, timestamp2 = read_registers(client, [
-            mac400.U_BUS,
-        ])
-        reg_values.update(reg_values2)
+        try:
+            reg_values, timestamp1 = read_registers(client, [
+                mac400.MODE_REG,
+                mac400.P_IST,
+                mac400.V_IST_16,
+                mac400.FLWERR,
+                mac400.U_24V,
+                mac400.ERR_STAT,
+            ])
+            reg_values2, timestamp2 = read_registers(client, [
+                mac400.U_BUS,
+            ])
+            reg_values.update(reg_values2)
+        except RuntimeError:
+            rospy.logerr('Failed to read registers')
+            rate.sleep()
+            continue
 
         # Publish information about the electrical state
         m = msg.Electrical()
