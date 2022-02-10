@@ -180,7 +180,7 @@ async def move_to_depth(server, goal):
         expected_time + rospy.Duration.from_sec(10.0)
     )
 
-    rospy.loginfo(f'Set movement time limit to {time_limit.to_sec():.0f} s')
+    rospy.loginfo(f'Setting time limit to {time_limit.to_sec():.0f} s')
 
     # Set some position bounds on the motor itself
     if goal.depth < start_depth:
@@ -225,6 +225,9 @@ async def move_to_depth(server, goal):
         if started and motor.value.mode == Motion.MODE_PASSIVE:
             server.set_aborted(text='Motor unexpectedly stopped')
             break
+        elif not started and motor.value.mode == Motion.MODE_VELOCITY:
+            # We started moving, so turn on the check above
+            started = True
 
         # If too much time has elapsed, stop
         if elapsed > time_limit:
@@ -240,7 +243,7 @@ async def move_to_depth(server, goal):
         velocity = v(depth.value.depth)
         rpm = 60 * (60 / 0.6) * velocity
 
-        if False:
+        if True:
             move(
                 velocity=rpm,       # RPM
                 acceleration=1000,  # RPM/s
@@ -254,11 +257,14 @@ async def move_to_depth(server, goal):
         feedback.velocity = velocity
         server.publish_feedback(feedback)
 
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1.0)
 
     # However we broke out of the loop, stop the motor immediately
     rospy.loginfo('Loop finished, stopping motor')
     stop()  # blocking
+
+    # Disable the position envelope
+    set_position_envelope(min=0, max=0)
 
     # If we fell out of the loop unsuccessfully for any reason, end here
     if not success:
