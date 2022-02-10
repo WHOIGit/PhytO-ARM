@@ -202,6 +202,11 @@ async def move_to_depth(server, goal):
     # Complete the position envelope calculation including checking for
     # overflow.
 
+    # TODO: Calculate the RPM to m/s ratio
+    gear_ratio = 60.0
+    spool_circumference = 0.6707
+    rpm_ratio = 60 * gear_ratio / spool_circumference
+
     # Record the time that we start moving
     start_time = rospy.Time.now()
 
@@ -241,7 +246,7 @@ async def move_to_depth(server, goal):
 
         # Compute and command a new velocity according to our current depth
         velocity = v(depth.value.depth)
-        rpm = 60 * (60 / 0.6) * velocity
+        rpm = rpm_ratio * velocity
 
         if True:
             move(
@@ -259,6 +264,9 @@ async def move_to_depth(server, goal):
 
         await asyncio.sleep(1.0)
 
+    # Record duration of movement
+    elapsed_time = rospy.Time.now() - start_time
+
     # However we broke out of the loop, stop the motor immediately
     rospy.loginfo('Loop finished, stopping motor')
     stop()  # blocking
@@ -274,8 +282,13 @@ async def move_to_depth(server, goal):
 
     # Send a success message
     result = MoveToDepthResult()
-    result.time_elapsed.data = rospy.Time.now() - start_time
+    result.time_elapsed.data = elapsed_time
     server.set_succeeded(result)
+
+    # Suggest a new conversion factor
+    time_ratio = expected_time / elapsed_time
+    rospy.loginfo(f'Calculated RPM ratio is {rpm_ratio}')
+    rospy.loginfo(f'Suggested RPM ratio is {rpm_ratio / time_ratio}')
 
 
 async def main():
