@@ -71,10 +71,10 @@ def cmd_move(client, request):
 def cmd_set_position_envelope(client, request):
     rospy.loginfo('Setting position envelope')
     write_registers(client, {
-        mac400.MIN_P_PIST:  request.min
+        mac400.MIN_P_IST:  request.min
     })
     write_registers(client, {
-        mac400.MAX_P_PIST:  request.max
+        mac400.MAX_P_IST:  request.max
     })
     return srv.SetPositionEnvelopeCmdResponse()
 
