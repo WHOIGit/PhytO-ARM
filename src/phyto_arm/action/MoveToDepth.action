@@ -18,4 +18,4 @@ std_msgs/Duration time_elapsed
 std_msgs/Duration time_elapsed
 
 float32 depth  # m
-float32 speed  # m/s
+float32 velocity  # m/s
