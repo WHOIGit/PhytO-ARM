@@ -113,7 +113,7 @@ all_registers = [
     Register(name='P_IST_TURNTAB',   num=25),
     Register(name='FNCERRMAX',       num=26),
     Register(name='TURNTAB_COUNT',   num=27),
-    Register(name='MIN_P_PIST',      num=28,
+    Register(name='MIN_P_IST',       num=28,
         decode=lambda lo, hi: unpack('l', lo, hi),  # encoder counts
         encode=lambda x: pack('l', x),
     ),
