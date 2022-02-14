@@ -3,6 +3,7 @@ import asyncio
 import datetime
 import functools
 import math
+import re
 
 import rospy
 
@@ -11,11 +12,30 @@ import amlxparser
 from ds_core_msgs.msg import RawData
 from ds_sensor_msgs.msg import Ctd, DepthPressure
 
+from aml_ctd.msg import AmlMeasurement
+
+
+# Converts an arbitrary string to a ROS-safe name per http://wiki.ros.org/Names.
+def ros_safe(s, keep_slashes=False):
+    # Spaces and optionally slashes to underscores
+    s = s.replace(' ', '_')
+    if not keep_slashes:
+        s = s.replace('/', '_')
+
+    # Split up camelCase, without breaking acronyms
+    s = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\g<1>_\g<2>', s)
+    s = re.sub(r'([a-z])([A-Z])', r'\g<1>_\g<2>', s)
+
+    # Drop other characters and reduce to lowercase
+    s = re.sub(r'[^a-z0-9_]', '', s.lower())
+    if not re.match(r'^[a-z]', s):
+        s = 'x' + s  # must start with a letter
+    return s
+
 
 # All messages received from ROS are placed into this queue. Note that
 # asyncio.Queue is _not_ thread safe.
 ros_msg_q = asyncio.Queue()
-
 
 
 # Before ROS tears down our subscriptions, take time to clean up.
@@ -53,8 +73,8 @@ async def main():
 
     # Create a mapping of topics to publish on
     publishers = {
-        Ctd: rospy.Publisher('/ctd', Ctd, queue_size=5),
-        DepthPressure: rospy.Publisher('/ctd/depth', DepthPressure,
+        '/ctd': rospy.Publisher('/ctd', Ctd, queue_size=5),
+        '/ctd/depth': rospy.Publisher('/ctd/depth', DepthPressure,
             queue_size=5),
     }
 
@@ -82,7 +102,7 @@ async def main():
                     k: vv for k, vv in v.items()
                     if isinstance(vv, amlxparser.Measurement)
                 })
-        
+
         # Validate assumptions about the measurement units
         assert data['Depth'].unit == 'm' if 'Depth' in data else True
         assert data['Cond'].unit == 'mS/cm'
@@ -93,6 +113,29 @@ async def main():
         # Assume the timestamp is UTC
         timestamp = parsed['mux']['time']
         timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
+
+        # Construct AmlMeasurement messages from amlxparser.Measurement objects
+        aml_msgs = []
+        for obj in data.values():
+            aml_msg = AmlMeasurement()
+            for field in set(obj._fields) - {'rawvalue'}:
+                setattr(aml_msg, field, getattr(obj, field))
+
+            # Special case: String fields cannot be None
+            aml_msg.rawname = aml_msg.rawname or ''
+            aml_msg.rawunit = aml_msg.rawunit or ''
+
+            # Special case: rawvalue might be an integer or a float or None
+            if obj.rawvalue is None:
+                aml_msg.rawvalue_f = math.nan
+            elif isinstance(obj.rawvalue, float):
+                aml_msg.rawvalue_f = obj.rawvalue
+            elif isinstance(obj.rawvalue, int):
+                aml_msg.rawvalue_i = obj.rawvalue
+            else:
+                raise TypeError(f'Unexpected rawvalue {type(obj.rawvalue)}')
+
+            aml_msgs.append(aml_msg)
 
         # Construct the Ctd message
         ctd = Ctd()
@@ -107,7 +150,7 @@ async def main():
         # Set covariance fields to -1, the standard "not valid" value
         ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
             ctd.salinity_covar = ctd.sound_speed_covar = -1
-        
+
         # Construct the DepthPressure message
         dp = DepthPressure()
         dp.depth = data['Depth'].value if 'Depth' in data else \
@@ -118,16 +161,24 @@ async def main():
         dp.pressure_raw_unit = DepthPressure.UNIT_PRESSURE_DBAR
         dp.pressure = data['Pressure'].value
 
-        # Set the appropriate message timestamps
-        for m in [ctd, dp]:
+        # Set the appropriate message timestamps and metadata
+        for m in [ctd, dp] + aml_msgs:
+            # Associate a frame_id so we can connect these messages together
+            m.header.frame_id = f'msg{parsed["msgnum"]}'
+
             # The standard ROS header timestamp reflects when the instrument
             # says the sample was taken. The DsHeader reflects the I/O time.
             m.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
             m.ds_header.io_time = msg.ds_header.io_time
 
         # Publish the messages
-        for m in [ctd, dp]:
-            publishers[type(m)].publish(m)
+        publishers['/ctd'].publish(ctd)
+        publishers['/ctd/depth'].publish(dp)
+        for m in aml_msgs:
+            top = f'/ctd/aml/{ros_safe(m.port)}/{ros_safe(m.name)}'
+            if top not in publishers:
+                publishers[top] = rospy.Publisher(top, type(m), queue_size=5)
+            publishers[top].publish(m)
 
 
 if __name__ == '__main__':

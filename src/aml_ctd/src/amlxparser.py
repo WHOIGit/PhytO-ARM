@@ -5,7 +5,7 @@ import re
 
 Measurement = collections.namedtuple(
     'Measurement',
-    'value unit rawname rawvalue rawunit'
+    'port name value unit rawname rawvalue rawunit'
 )
 
 
@@ -28,11 +28,12 @@ def parseAMLx(s):
             assert rawsensor == sensor, rawkind in ('rawi', 'rawf')
             rawvalue = int(rawvalue) if rawkind == 'rawi' else float(rawvalue)
             parsed.setdefault(sensor, {})[name] = \
-                Measurement(float(value), unit, rawname, rawvalue, rawunit)
+                Measurement(sensor, name, float(value), unit, \
+                            rawname, rawvalue, rawunit)
         elif sensor == 'derive':
             assert kind == 'data'
             parsed.setdefault('derive', {})[name] = \
-                Measurement(float(value), unit, None, None, None)
+                Measurement(sensor, name, float(value), unit, None, None, None)
         else:
             raise ValueError("Unexpected sensor type")
 
