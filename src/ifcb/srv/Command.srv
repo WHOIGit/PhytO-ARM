@@ -1,0 +1,6 @@
+# Command
+# Sends an arbitrary command to the IFCB.
+
+string command
+
+---

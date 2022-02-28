@@ -23,6 +23,13 @@
     <node name="instant_replay" pkg="phyto_arm" type="instant_replay_node.py" />
 
     <!--
+        Node: ifcb
+
+        This node communicates with an IFCB.
+    -->
+    <node name="ifcb" pkg="ifcb" type="ifcb_node.py" />
+
+    <!--
         Node: jvl_motor
 
         This node communicates with a JVL motor and publishes register status.
