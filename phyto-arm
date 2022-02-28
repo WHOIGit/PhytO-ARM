@@ -37,13 +37,15 @@ for launch_arg, value in config.get('launch_args', {}).items():
 # This also needs to be an absolute path so that Python can locate packages.
 #
 # Ref: https://github.com/catkin/catkin_tools/issues/376
-setup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'devel'))
+parent_dir = os.path.dirname(__file__)
+setup_dir = os.path.abspath(os.path.join(parent_dir, 'devel'))
 env = {
     '_CATKIN_SETUP_DIR': setup_dir
 }
 
 # Build the command to invoke as an escaped string
-command = f'. {setup_dir}/setup.sh && env && ' + \
+command = f'. {parent_dir}/.venv/bin/activate && ' + \
+          f'. {setup_dir}/setup.sh && ' + \
           ' '.join(shlex.quote(a) for a in rl_args)
 
 # Exec the command, replacing this Python process
