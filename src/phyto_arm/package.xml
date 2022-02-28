@@ -27,6 +27,7 @@
     <exec_depend>ds_util_nodes</exec_depend>
 
     <exec_depend>aml_ctd</exec_depend>
+    <exec_depend>ifcb</exec_depend>
     <exec_depend>jvl_motor</exec_depend>
     <exec_depend>rbr_maestro3_ctd</exec_depend>
 

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>ifcb</name>
+    <version>1.0.0</version>
+    <description>Driver for an IFCB</description>
+    <license>TODO</license>
+
+    <url type="repository">https://github.com/whoigit/PhytO-ARM</url>
+
+    <maintainer email="mbrosnahan@whoi.edu">Michael Brosnahan</maintainer>
+    <maintainer email="rgovostes@whoi.edu">Ryan Govostes</maintainer>
+
+    <author email="mbrosnahan@whoi.edu">Michael Brosnahan</author>
+    <author email="rgovostes@whoi.edu">Ryan Govostes</author>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <!-- We use the DsHeader message type -->
+    <depend>ds_core_msgs</depend>
+</package>
