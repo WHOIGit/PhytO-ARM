@@ -183,6 +183,8 @@ async def move_to_depth(server, goal):
     rospy.loginfo(f'Setting time limit to {time_limit.to_sec():.0f} s')
 
     # Set some position bounds on the motor itself
+    rospy.loginfo(f'Current motor position is {motor.value.position}')
+
     if goal.depth < start_depth:
         lower_bound = motor.value.position - \
             dist_to_encoder_counts((start_depth - goal.depth) + 0.10)
@@ -192,15 +194,13 @@ async def move_to_depth(server, goal):
         upper_bound = motor.value.position + \
             dist_to_encoder_counts((goal.depth - start_depth) + 0.10)
 
-    rospy.loginfo(f'Current motor position is {motor.value.position}')
+    if lower_bound < -(2**24) + 1 or upper_bound > 2**24 - 1:
+        server.set_aborted(text='Encoder position could wrap -- reset offset')
+        return
+
     rospy.loginfo('Setting motor position envelope to '
                   f'({lower_bound}, {upper_bound})')
-
     set_position_envelope(min=lower_bound, max=upper_bound)
-
-    # TODO IMPORTANT:
-    # Complete the position envelope calculation including checking for
-    # overflow.
 
     # TODO: Calculate the RPM to m/s ratio
     gear_ratio = 60.0
