@@ -32,12 +32,13 @@
     <exec_depend>rbr_maestro3_ctd</exec_depend>
 
     <!--
-        Provides a node for recording data from an IP camera.
+        Dependencies related to republishing the RTSP feed.
     -->
+    <exec_depend>compressed_image_transport</exec_depend>
     <exec_depend>rocon_rtsp_camera_relay</exec_depend>
 
     <!--
-        Provides the rosbridge_server node, which communicates with Webviz.
+        Provides the rosbridge_server node, which communicates with Foxglove.
     -->
     <exec_depend>rosbridge_server</exec_depend>
 

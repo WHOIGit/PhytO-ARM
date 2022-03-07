@@ -86,7 +86,5 @@
 
         This node relays frames from the RTSP camera feed.
     -->
-    <include file="$(find rocon_rtsp_camera_relay)/launch/rtsp_camera_relay.launch">
-        <arg name="video_stream_url" value="rtsp://admin:password@example.com/camera" />
-    </include>
+    <node pkg="rocon_rtsp_camera_relay" name="rtsp_camera" type="rocon_rtsp_camera_relay_node" />
 </launch>
