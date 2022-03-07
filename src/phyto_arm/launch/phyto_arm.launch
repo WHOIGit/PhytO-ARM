@@ -78,8 +78,9 @@
         WebSocket server on port 9090 and is necessary for connecting from 
         Webviz.
     -->
-    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"
-        />
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+        <arg name="use_compression" value="true" />
+    </include>
 
     <!--
         Node: rtsp_camera_relay
