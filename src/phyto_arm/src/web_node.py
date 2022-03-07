@@ -35,7 +35,7 @@ def main():
     rospy.init_node('web_node')
     rospy.Subscriber('/nmea_listener/nmea_gga', Gga, on_message)
 
-    web.run_app(app, port=8092)
+    web.run_app(app, port=8098)
 
 
 if __name__ == '__main__':
