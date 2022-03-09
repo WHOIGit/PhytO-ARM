@@ -156,6 +156,7 @@ include_directories(
 catkin_install_python(
   PROGRAMS
     src/instant_replay_node.py
+    src/observer_node.py
     src/web_node.py
     src/winch_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
