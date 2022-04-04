@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import functools
+import threading
 import time
 
 import rospy
@@ -30,7 +31,8 @@ def read_registers(client, registers):
     if count >= 125:  # max per read
         raise ValueError('Register range is too wide')
 
-    values = client.read_holding_registers(min_addr, count)
+    with client.lock:
+        values = client.read_holding_registers(min_addr, count)
     timestamp = rospy.Time.now()
 
     if values is None:
@@ -52,10 +54,9 @@ def write_registers(client, reg_values):
     for r, v in reg_values.items():
         encoded.extend(r.encode(v))
 
-    success = client.write_multiple_registers(
-        list(reg_values.keys())[0].addr[0],
-        encoded
-    )
+    with client.lock:
+        min_addr = list(reg_values.keys())[0].addr[0]
+        success = client.write_multiple_registers(min_addr, encoded)
 
     if not success:
         raise RuntimeError('Failed to write registers')
@@ -109,15 +110,16 @@ def cmd_stop(client, request):
 
 
 def main():
+    # Initialize this node
+    rospy.init_node('jvl_motor', anonymous=True)
+
     # Connect to the Modbus server
     client = ModbusClient(
         host=rospy.get_param('/jvl_motor/address'),
         port=rospy.get_param('/jvl_motor/port', 502),
         auto_open=True  # keep us connected
     )
-
-    # Initialize this node
-    rospy.init_node('jvl_motor', anonymous=True)
+    client.lock = threading.Lock()
 
     # Create publishers for various message types
     electrical_pub = rospy.Publisher(
