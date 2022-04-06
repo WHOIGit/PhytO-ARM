@@ -7,13 +7,15 @@
         pass_all_args="true" />
 
     <!--
-        Node: nmea_listener
+        Node: gps
 
-        This node receives UDP packets from the AirLink MP70 and rebroadcasts
-        them as ROS messages.
+        This node connects to the locally-running gpsd service and publishes
+        sensor_msgs/NavSatFix messages.
     -->
-    <node name="nmea_listener" pkg="ds_sensors" type="sensor" 
-        args="--sensor=xeos_gps" />
+    <node name="gps" pkg="gpsd_client" type="gpsd_client">
+        <remap from="/fix" to="/gps/fix" />
+        <remap from="/extended_fix" to="/gps/extended_fix" />
+    </node>
 
     <!--
         Node: instant_replay

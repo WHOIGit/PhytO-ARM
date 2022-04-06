@@ -71,3 +71,18 @@ Install [Docker Engine][] and [Docker Compose][], for example:
 
 [Docker Engine]: https://docs.docker.com/engine/install/
 [Docker Compose]: https://docs.docker.com/compose/install/
+
+
+## Configuring GPS
+
+GPS tracking is provided via [gpsd][].
+
+  [gpsd]: https://gpsd.gitlab.io/gpsd/index.html
+
+    sudo apt install -y gpsd gpsd-clients
+
+On Ubuntu, edit `/etc/default/gpsd` to configure the GPS device or network source. For example, to listen for UDP packets broadcast on the local network:
+
+    DEVICES="udp://192.168.13.255:22335"
+
+Monitor that GPS updates are being received using `gpsmon`.
