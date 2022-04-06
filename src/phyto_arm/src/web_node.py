@@ -2,17 +2,16 @@
 import rospy
 
 from aiohttp import web
-from ds_nmea_msgs.msg import Gga
+from sensor_msgs.msg import NavSatFix
 
 
 last_location = {}
 
 def on_message(msg):
     global last_location
-    sign = { 'N': 1, 'E': 1, 'S': -1, 'W': -1 }
     last_location = {
-        'latitude':  msg.latitude * sign[chr(msg.latitude_dir)],
-        'longitude': msg.longitude * sign[chr(msg.longitude_dir)],
+        'latitude':  msg.latitude,
+        'longitude': msg.longitude,
     }
 
 
@@ -33,7 +32,7 @@ app.add_routes(routes)
 def main():
     # Note that rospy spawns threads for message dispatch, so we don't have to
     rospy.init_node('web_node')
-    rospy.Subscriber('/nmea_listener/nmea_gga', Gga, on_message)
+    rospy.Subscriber('/gps/fix', NavSatFix, on_message)
 
     web.run_app(app, port=8098)
 
