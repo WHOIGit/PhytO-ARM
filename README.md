@@ -2,10 +2,159 @@
 
 This directory contains ROS nodes for the PhytO-ARM project. The supported ROS release is [Noetic Ninjemys][noetic].
 
-[noetic]: http://wiki.ros.org/noetic
+  [noetic]: http://wiki.ros.org/noetic
 
 
-## Setup
+## Starting and Stopping
+
+The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
+
+    $ ./phyto-arm config/hades.yaml
+
+The ROS nodes will be shut down when the process is terminated. To run nodes in the background (so that you can disconnect from the system, for example), use the `screen` utility:
+
+    $ screen -dmS phyto-arm ./phyto-arm config/hades.yaml
+
+In the future you can shut down the nodes using:
+
+    $ screen -S phyto-arm -X quit
+
+**Note:** All instruments must already be logging data. Some notes on configuring instruments are included below.
+
+
+## Configuration
+
+Configuration files live in `configs/` and use the YAML format. It is recommended that each deployment get its own configuration.
+
+The entries in the config file are loaded into the ROS [Parameter Server][]. Some parameters can be dynamically changed while the nodes are running:
+
+    $ source devel/setup.bash
+    $ rosparam get /conductor/schedule/every
+    60
+    $ rosparam set /observer/data_topic /ctd/aml/port3/chloroblue
+
+Be sure to make the corresponding edits to the config file to persist changes beyond the current session.
+
+  [Parameter Server]: https://wiki.ros.org/Parameter%20Server
+
+
+## Observing with Foxglove Studio
+
+[Foxglove Studio][] is the recommended software for monitoring the PhytO-ARM system. To connect to a live system, use the "Rosbridge (ROS 1 & 2)" connection type.
+
+The Rosbridge node uses TCP port 9090. Ensure this port is forwarded in your router settings *for trusted clients only*, or use SSH port forwarding:
+
+    $ ssh -NL 9090:localhost:9090 hades.hablab.whoi.edu
+
+In Studio, the connection address is `ws://hades.hablab.whoi.edu:9090` if connecting directly or `ws://localhost:9090` if using the SSH tunnel.
+
+  [Foxglove Studio]: https://foxglove.dev
+
+
+## Data Logs
+
+Data is logged to the ROS bag format using the `rosbag record` command. Bag files can also be viewed with Foxglove Studio.
+
+Almost all internal ROS traffic is logged, with the exception of the camera feed (due to storage requirements) and ROS service calls (due to technical limtations).
+
+The config file controls where the bag files are written:
+
+    launch_args:
+        rosbag_prefix: /mnt/data/rosbags/phyto-arm_hades
+
+This results in files in the `/mnt/data/rosbags/` directory with names like `phyto-arm_hades_2022-04-01-14-47-11_0.bag`. The name includes the timestamp of when PhytO-ARM was started, plus a numeric counter. A new bag is created, incrementing the counter, when a configured size limit is reached.
+
+A bag file with the suffix `.active` is currently being written, or was left in an incomplete state by a previous session that was terminated abruptly. Such files can sometimes be repaired.
+
+
+## Overview of Nodes
+
+### PhytO-ARM behavior nodes
+
+These nodes implement the core PhytO-ARM "algorithm" for sampling and are specific to the design of the platform.
+
+  - `conductor`: Orchestrates sampling
+
+  - `observer`: Creates profiles of CTD data during a cast
+
+  - `web`: Web API for attaching metadata to IFCB bins
+    - Subscribes:
+      - `/gps/fix` for GPS fixes
+
+  - `winch`: Controls depth using the motor
+    - Subscribes:
+      - `/ctd/depth` for monitoring depth
+      - `/jvl_motor/motion` for monitoring motor state
+      - `/winch/move_to_depth/goal` for setting the goal depth
+      - `/winch/move_to_depth/cancel` for canceling the current goal
+    - Publishes:
+      - `/winch/move_to_depth/feedback` with progress updates
+      - `/winch/move_to_depth/status` with the status of the current goal
+      - `/winch/move_to_depth/result` with the result of the goal
+
+
+### Device driver nodes
+
+These nodes perform lower-level interactions with hardware components. These nodes are designed to be portable to future projects.
+
+  - `ctd_comms`: Bridge for CTD serial communications
+    - Publishes:
+      - `/ctd_comms/in` for messages received from the CTD's serial port
+      - `/ctd_comms/out` for messages sent to the CTD's serial port
+
+  - `aml_ctd`: Driver for the AML CTD
+    - Publishes:
+      - `/ctd` with conductivity, temperature, and pressure data
+      - `/ctd/depth` with depth and pressure data
+      - `/ctd/aml/derive/xyz` with derived values
+      - `/ctd/aml/port#/xyz` with measured values
+
+  - `rbr_maestro3_ctd`: Driver the RBR maestro3 CTD
+    - Publishes:
+      - `/ctd` and `/ctd/depth` as above
+
+  - `gps`: Provides GPS fixes to ROS from `gpsd`
+    - Publishes:
+      - `/gps/fix` and `/gps/extended_fix`
+
+  - `ifcb`: Bridge for the IFCB websocket API
+    - Publishes:
+      - `/ifcb/in` for messages received from the IFCB
+      - `/ifcb/out` for messages sent to the IFCB
+    - Services:
+      - `/ifcb/command` to send a message to the IFCB
+      - `/ifcb/run_routine` to send a routine to the IFCB
+
+  - `jvl_motor`: Driver for the JVL motor
+    - Publishes:
+      - `/jvl_motor/electrical` with electrical registers
+      - `/jvl_motor/error` with error registers
+      - `/jvl_motor/motion` with motion registers
+    - Services:
+      - `/jvl_motor/move` to set the motor's velocity
+      - `/jvl_motor/set_position_envelope` to set position limits
+      - `/jvl_motor/stop` to stop the motor
+
+  - `rtsp_camera`: Video stream
+    - Publishes:
+      - `/rtsp_camera/image` with the **uncompressed** video feed -- conserve bandwidth and avoid using this!
+      - `/rtsp_camera/image/compressed` with the compressed video feed
+
+
+### System nodes
+
+These nodes provide functionality for recording data and connecting to other tools like Foxglove Studio.
+
+  - `rosbag_record`: Records ROS traffic to ROS bag files
+    - Publishes:
+      - `/begin_write` when a new bag file is created
+
+  - `rosbridge_websocket`: Rosbridge server for Foxglove Studio
+
+
+## Installation
+
+These steps assume that ROS Noetic has been installed already.
 
     source /opt/ros/noetic/setup.bash
 
@@ -43,13 +192,7 @@ This directory contains ROS nodes for the PhytO-ARM project. The supported ROS r
     sudo usermod -a -G dialout $USER
 
 
-## Execute
-
-    source devel/setup.bash
-    roslaunch phyto_arm phyto_arm.launch
-
-
-## Install
+### Install as a service
 
     sudo ln -sf $(pwd)/phyto-arm.service /etc/systemd/system/phyto-arm.service
     sudo systemctl daemon-reload
@@ -57,23 +200,24 @@ This directory contains ROS nodes for the PhytO-ARM project. The supported ROS r
     sudo systemctl start phyto-arm
 
 
-## Docker
+## Configuring instruments
 
-Install [Docker Engine][] and [Docker Compose][], for example:
+### AML CTD
 
-    sudo apt install -y \
-        python3 \
-        python3-pip \
-        libffi-dev \
-        libssl-dev
-    curl -fsSL https://get.docker.com | sudo sh
-    sudo -H pip3 install docker-compose
+Use `picocom` to to talk to the appropriate serial device. Press <key>Enter</key> first to interrupt any current logging and get a prompt.
 
-[Docker Engine]: https://docs.docker.com/engine/install/
-[Docker Compose]: https://docs.docker.com/compose/install/
+    $ picocom -b 115200 /dev/ttyS3
+    > set derive depth y
+    > set scan dep
+    > set derive sv y
+    > set scan sound
+    > mmonitor
+    ...
+
+Press <key>Ctrl-A</key>, <key>Ctrl-X</key> to exit `picocom` while the device is logging.
 
 
-## Configuring GPS
+### GPS
 
 GPS tracking is provided via [gpsd][].
 
