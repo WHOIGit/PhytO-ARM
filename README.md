@@ -97,6 +97,10 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
 
 These nodes perform lower-level interactions with hardware components. These nodes are designed to be portable to future projects.
 
+  - `camera`: Video stream
+    - Publishes:
+      - `/camera/image/compressed` with the compressed video feed
+
   - `ctd_comms`: Bridge for CTD serial communications
     - Publishes:
       - `/ctd_comms/in` for messages received from the CTD's serial port
@@ -134,11 +138,6 @@ These nodes perform lower-level interactions with hardware components. These nod
       - `/motor/move` to set the motor's velocity
       - `/motor/set_position_envelope` to set position limits
       - `/motor/stop` to stop the motor
-
-  - `rtsp_camera`: Video stream
-    - Publishes:
-      - `/rtsp_camera/image` with the **uncompressed** video feed -- conserve bandwidth and avoid using this!
-      - `/rtsp_camera/image/compressed` with the compressed video feed
 
 
 ### System nodes

@@ -12,5 +12,5 @@ timestamps, or generate reports. See http://wiki.ros.org/rosbag/Cookbook
     <arg name="rosbag_size" default="1024" />
 
     <node name="rosbag_record" pkg="rosbag" type="record"
-        args="record --all --exclude /rtsp_camera/image --output-prefix $(arg rosbag_prefix) --split --size $(arg rosbag_size) --publish --lz4" />
+        args="record --all --exclude /camera/.* --output-prefix $(arg rosbag_prefix) --split --size $(arg rosbag_size) --publish --lz4" />
 </launch>
