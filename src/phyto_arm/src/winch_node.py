@@ -164,8 +164,8 @@ async def move_to_depth(server, goal):
     depth_min = min(start_depth, goal.depth) - 0.10  # m
     depth_max = max(start_depth, goal.depth) + 0.10  # m
 
-    rospy.loginfo(f'Starting depth is {start_depth} m')
-    rospy.loginfo(f'Setting depth envelope to ({depth_min}, {depth_max}) m')
+    rospy.logdebug(f'Starting depth is {start_depth} m')
+    rospy.logdebug(f'Setting depth envelope to ({depth_min}, {depth_max}) m')
 
     # Velocity function
     v = velocity_f(goal.depth, 0.02, 0.05)
@@ -173,7 +173,7 @@ async def move_to_depth(server, goal):
 
     # Estimate the time it should take to reach the destination
     expected_time = estimate_time(v, start_depth, goal.depth, epsilon)
-    rospy.loginfo(f'Estimated movement time is {expected_time.to_sec():.0f} s')
+    rospy.logdebug(f'Estimated movement time is {expected_time.to_sec():.0f} s')
 
     # Set a time limit based on the estimate
     time_limit = max(
@@ -181,10 +181,10 @@ async def move_to_depth(server, goal):
         expected_time + rospy.Duration.from_sec(10.0)
     )
 
-    rospy.loginfo(f'Setting time limit to {time_limit.to_sec():.0f} s')
+    rospy.logdebug(f'Setting time limit to {time_limit.to_sec():.0f} s')
 
     # Set some position bounds on the motor itself
-    rospy.loginfo(f'Current motor position is {motor.value.position}')
+    rospy.logdebug(f'Current motor position is {motor.value.position}')
 
     if goal.depth < start_depth:
         lower_bound = motor.value.position - \
@@ -199,8 +199,8 @@ async def move_to_depth(server, goal):
         server.set_aborted(text='Encoder position could wrap -- reset offset')
         return
 
-    rospy.loginfo('Setting motor position envelope to '
-                  f'({lower_bound}, {upper_bound})')
+    rospy.logdebug('Setting motor position envelope to '
+                   f'({lower_bound}, {upper_bound})')
     set_position_envelope(min=lower_bound, max=upper_bound)
 
     # TODO: Calculate the RPM to m/s ratio
@@ -269,7 +269,7 @@ async def move_to_depth(server, goal):
     elapsed_time = rospy.Time.now() - start_time
 
     # However we broke out of the loop, stop the motor immediately
-    rospy.loginfo('Loop finished, stopping motor')
+    rospy.logdebug('Loop finished, stopping motor')
     stop()  # blocking
 
     # Disable the position envelope
@@ -289,8 +289,8 @@ async def move_to_depth(server, goal):
 
     # Suggest a new conversion factor
     time_ratio = expected_time / elapsed_time
-    rospy.loginfo(f'Calculated RPM ratio is {rpm_ratio}')
-    rospy.loginfo(f'Suggested RPM ratio is {rpm_ratio / time_ratio}')
+    rospy.logdebug(f'Calculated RPM ratio is {rpm_ratio}')
+    rospy.logdebug(f'Suggested RPM ratio is {rpm_ratio / time_ratio}')
 
 
 async def main():

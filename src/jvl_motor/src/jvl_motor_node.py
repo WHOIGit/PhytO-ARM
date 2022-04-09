@@ -63,7 +63,6 @@ def write_registers(client, reg_values):
 
 
 def cmd_move(client, request):
-    rospy.loginfo('Moving motor')
     try:
         write_registers(client, {
             mac400.MODE_REG:  mac400.MODE.VELOCITY,
@@ -79,7 +78,6 @@ def cmd_move(client, request):
 
 
 def cmd_set_position_envelope(client, request):
-    rospy.loginfo('Setting position envelope')
     try:
         write_registers(client, {
             mac400.MIN_P_IST:  request.min
@@ -93,8 +91,6 @@ def cmd_set_position_envelope(client, request):
 
 
 def cmd_stop(client, request):
-    rospy.loginfo('Stopping motor')
-
     # Try continually to stop the motor, this is important
     while True:
         try:
