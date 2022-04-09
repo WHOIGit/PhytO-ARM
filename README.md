@@ -148,6 +148,12 @@ These nodes provide functionality for recording data and connecting to other too
 
   - `rosbridge_websocket`: Rosbridge server for Foxglove Studio
 
+  - `rosout`: Logging mechanism
+    - Subscribes:
+      - `/rosout` for log messages from each node
+    - Publishes:
+      - `/rosout_agg` with copies of all log messages
+
 
 ## Installation
 
