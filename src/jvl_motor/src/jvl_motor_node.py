@@ -123,17 +123,17 @@ def main():
 
     # Create publishers for various message types
     electrical_pub = rospy.Publisher(
-        f'{rospy.get_name()}/electrical',
+        '~electrical',
         msg.Electrical,
         queue_size=1
     )
     error_pub = rospy.Publisher(
-        f'{rospy.get_name()}/error',
+        '~error',
         msg.Error,
         queue_size=1
     )
     motion_pub = rospy.Publisher(
-        f'{rospy.get_name()}/motion',
+        '~motion',
         msg.Motion,
         queue_size=1
     )
@@ -141,17 +141,17 @@ def main():
     # Create services for start and stop
     services = [
         rospy.Service(
-            f'{rospy.get_name()}/move',
+            '~move',
             srv.MoveCmd,
             functools.partial(cmd_move, client)
         ),
         rospy.Service(
-            f'{rospy.get_name()}/set_position_envelope',
+            '~set_position_envelope',
             srv.SetPositionEnvelopeCmd,
             functools.partial(cmd_set_position_envelope, client)
         ),
         rospy.Service(
-            f'{rospy.get_name()}/stop',
+            '~stop',
             srv.StopCmd,
             functools.partial(cmd_stop, client)
         ),

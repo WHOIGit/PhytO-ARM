@@ -32,11 +32,11 @@
     <node name="ifcb" pkg="ifcb" type="ifcb_node.py" />
 
     <!--
-        Node: jvl_motor
+        Node: motor
 
         This node communicates with a JVL motor and publishes register status.
     -->
-    <node name="jvl_motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+    <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
     <!--
         Node: ctd_comms
