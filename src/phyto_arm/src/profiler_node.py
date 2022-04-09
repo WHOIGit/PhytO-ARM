@@ -5,32 +5,50 @@ import io
 import itertools
 import math
 
-import rospy
 import numpy as np
+import rospy
+import scipy.interpolate, scipy.signal
 
 from ds_sensor_msgs.msg import DepthPressure
 
-from phyto_arm.msg import MoveToDepthActionGoal, MoveToDepthActionResult
+from phyto_arm.msg import MoveToDepthActionGoal, MoveToDepthActionResult, \
+                          DepthProfile
 
 
 # Flag indicating whether a move_to_depth action is being performed and hence
 # depth messages should be recorded.
 is_recording = False
 
-# Lists of accumulated depth and data messages while recording
-data_msgs, depth_msgs = [], [] 
+# Lists of accumulated depth and data messages while recording.
+data_msgs, depth_msgs = [], []
+
+# Data topic Subscriber and associated message field
+data_field, data_sub = None, None
 
 
 def on_action_start(action_msg):
-    global is_recording, data_msgs, depth_msgs
+    global is_recording, data_msgs, data_field, data_sub, depth_msgs
+
+    # Subscribe to the desired topic. We do this here so that the operator can
+    # update the params between casts.
+    data_field = rospy.get_param('~data_field')
+    data_topic = rospy.get_param('~data_topic')
+    if data_sub is None or data_sub.name != data_topic:
+        if data_sub is not None:
+            rospy.loginfo(f'Unsubscribing from {data_sub.name}')
+            data_sub.unregister()
+
+        rospy.loginfo(f'Subscribing to {data_topic}')
+        data_sub = rospy.Subscriber(data_topic, rospy.AnyMsg,
+            lambda m: is_recording and data_msgs.append(m))
 
     # Clear buffers and start recording
     data_msgs, depth_msgs = [], []
     is_recording = True
 
 
-def on_action_stop(data_field, action_msg):
-    global is_recording, data_msgs, depth_msgs
+def on_action_stop(pub, action_msg):
+    global is_recording, data_field, data_msgs, data_sub, depth_msgs
 
     # Stop recording new data points
     is_recording = False
@@ -50,7 +68,7 @@ def on_action_stop(data_field, action_msg):
         buf = io.BytesIO()
         raw_msg.serialize(buf)
         parsed_data_msgs.append(msg_class().deserialize(buf.getvalue()))
-    
+
     # Group messages based on header time to correlate them. Assumptions:
     #   1. The configured message topic has a std_msg/Header with timestamp.
     #   2. The timestamps match up exactly (true of AML and RBR messages).
@@ -58,7 +76,7 @@ def on_action_stop(data_field, action_msg):
     groups = {}
     for m in itertools.chain(depth_msgs, parsed_data_msgs):
         groups.setdefault(m.header.stamp, {})[type(m)] = m
-    
+
     # Create an array of depth x data, discarding any mismatched pairs
     data = np.array([
         (v[DepthPressure].depth, getattr(v[msg_class], data_field))
@@ -69,42 +87,42 @@ def on_action_stop(data_field, action_msg):
 
     if len(groups) != data.shape[0]:
         rospy.logwarn(f'Discarded {len(groups) - data.shape[0]} data points')
-    
-    # Create regularly-spaced bins for the values
-    resolution = rospy.get_param('~bin_resolution')
-    range_min = resolution * math.floor(data[:,0].min() / resolution)
-    range_max = resolution * math.ceil(data[:,0].max() / resolution)
-    bins = np.linspace(  # numerically stable, whereas np.arange() is not
-        range_min, range_max,
-        int(round((range_max - range_min) / resolution)) + 1
-    )
 
-    # Compute the average measurement in each bin.
-    # See https://stackoverflow.com/a/6163403. Note that in our case the binning
-    # is done by depth but the weight is the data value.
-    bin_avgs = (np.histogram(data[:,0], bins, weights=data[:,1])[0] /
-        np.histogram(data[:,0], bins)[0])
-    
-    print(bins)
-    print(bin_avgs)
-    print()
+    # Create a function that linearly interpolates between points
+    f = scipy.interpolate.interp1d(data[:,0], data[:,1])
+
+    # Sample the interpolated function at a regular interval
+    res = rospy.get_param('~resolution')
+    x = np.arange(data[:,0].min(), data[:,0].max(), res)
+    y = f(x)
+
+    # TODO: Noise elimination, smoothing, etc.
+
+    # Publish the resampled profile data
+    profile = DepthProfile()
+    profile.header.stamp = action_msg.header.stamp
+    profile.data_topic = data_sub.name
+    profile.data_field = data_field
+    profile.depths = x
+    profile.values = y
+    pub.publish(profile)
 
 
 def main():
-    rospy.init_node('observer', anonymous=True)
+    rospy.init_node('profiler', anonymous=True)
 
-    # Accumulate depth and data messages while recording
+    # Publish DepthProfile messages
+    pub = rospy.Publisher('~', DepthProfile, queue_size=1)
+
+    # Accumulate depth messages while recording
     rospy.Subscriber('/ctd/depth', DepthPressure,
         lambda m: is_recording and depth_msgs.append(m))
-    rospy.Subscriber(rospy.get_param('~data_topic'), rospy.AnyMsg,
-        lambda m: is_recording and data_msgs.append(m))
 
     # Subscribe to the action start/stop messages
     rospy.Subscriber('/winch/move_to_depth/goal', MoveToDepthActionGoal,
         on_action_start)
     rospy.Subscriber('/winch/move_to_depth/result', MoveToDepthActionResult,
-        functools.partial(on_action_stop,
-            rospy.get_param('~data_field')))
+        functools.partial(on_action_stop, pub))
 
     rospy.spin()
 

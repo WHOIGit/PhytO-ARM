@@ -64,6 +64,11 @@
     </group>
 
     <!--
+        Node: profiler
+    -->
+    <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+
+    <!--
         Node: web
 
         This node serves a website for testing purposes.
