@@ -64,6 +64,11 @@
     </group>
 
     <!--
+        Node: conductor
+    -->
+    <node name="conductor" pkg="phyto_arm" type="conductor_node.py" />
+
+    <!--
         Node: profiler
     -->
     <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />

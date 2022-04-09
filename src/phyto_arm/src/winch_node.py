@@ -2,6 +2,7 @@
 import asyncio
 import functools
 import math
+import uuid
 
 import actionlib
 import rospy
@@ -282,6 +283,7 @@ async def move_to_depth(server, goal):
 
     # Send a success message
     result = MoveToDepthResult()
+    result.uuid = str(uuid.uuid4())  # for linking with simultaneous profile msg
     result.time_elapsed.data = elapsed_time
     server.set_succeeded(result)
 
