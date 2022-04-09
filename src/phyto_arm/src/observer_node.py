@@ -71,7 +71,7 @@ def on_action_stop(data_field, action_msg):
         rospy.logwarn(f'Discarded {len(groups) - data.shape[0]} data points')
     
     # Create regularly-spaced bins for the values
-    resolution = rospy.get_param('/observer/bin_resolution')
+    resolution = rospy.get_param('~bin_resolution')
     range_min = resolution * math.floor(data[:,0].min() / resolution)
     range_max = resolution * math.ceil(data[:,0].max() / resolution)
     bins = np.linspace(  # numerically stable, whereas np.arange() is not
@@ -96,7 +96,7 @@ def main():
     # Accumulate depth and data messages while recording
     rospy.Subscriber('/ctd/depth', DepthPressure,
         lambda m: is_recording and depth_msgs.append(m))
-    rospy.Subscriber(rospy.get_param('/observer/data_topic'), rospy.AnyMsg,
+    rospy.Subscriber(rospy.get_param('~data_topic'), rospy.AnyMsg,
         lambda m: is_recording and data_msgs.append(m))
 
     # Subscribe to the action start/stop messages
@@ -104,7 +104,7 @@ def main():
         on_action_start)
     rospy.Subscriber('/winch/move_to_depth/result', MoveToDepthActionResult,
         functools.partial(on_action_stop,
-            rospy.get_param('/observer/data_field')))
+            rospy.get_param('~data_field')))
 
     rospy.spin()
 

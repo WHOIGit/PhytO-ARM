@@ -55,9 +55,9 @@ def main():
 
     # Create an IFCB websocket API client
     client = IFCBClient(
-        f'ws://{rospy.get_param("/ifcb/address")}'\
-            f':{rospy.get_param("/ifcb/port", 8092)}/ifcbHub',
-        rospy.get_param('/ifcb/serial'),
+        f'ws://{rospy.get_param("~address")}'\
+            f':{rospy.get_param("~port", 8092)}/ifcbHub',
+        rospy.get_param('~serial'),
     )
 
     # Publish all messages that come in, prior to being parsed.
