@@ -86,7 +86,7 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
     - Subscribes:
       - user-chosen topic provided in config
     - Publishes:
-      - '/profiler' with *resampled* profile data
+      - `/profiler` with *resampled* profile data
 
   - `web`: Web API for attaching metadata to IFCB bins
     - Subscribes:
