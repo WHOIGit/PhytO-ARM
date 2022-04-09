@@ -18,6 +18,8 @@ add_action_files(
 
 add_message_files(
   FILES
+  ConductorState.msg
+  ConductorStates.msg
   DepthProfile.msg
 )
 
