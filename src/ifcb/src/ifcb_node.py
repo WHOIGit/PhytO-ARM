@@ -50,8 +50,8 @@ def main():
     rospy.init_node('ifcb', anonymous=True)
 
     # Publishers for raw messages coming in and out of the IFCB
-    rx_pub = rospy.Publisher('/ifcb/in',  RawData, queue_size=5)
-    tx_pub = rospy.Publisher('/ifcb/out', RawData, queue_size=5)
+    rx_pub = rospy.Publisher('~in',  RawData, queue_size=5)
+    tx_pub = rospy.Publisher('~out', RawData, queue_size=5)
 
     # Create an IFCB websocket API client
     client = IFCBClient(

@@ -13,8 +13,8 @@
         sensor_msgs/NavSatFix messages.
     -->
     <node name="gps" pkg="gpsd_client" type="gpsd_client">
-        <remap from="/fix" to="/gps/fix" />
-        <remap from="/extended_fix" to="/gps/extended_fix" />
+        <remap from="/fix" to="~fix" />
+        <remap from="/extended_fix" to="~extended_fix" />
     </node>
 
     <!--
@@ -51,12 +51,16 @@
         This node controls the RBR maestro3 CTD.
     -->
     <group if="$(eval arg('ctd') == 'rbr_maestro3')">
-        <node name="rbr_maestro3_ctd" pkg="rbr_maestro3_ctd"
-            type="rbr_maestro3_node.py" />
+        <node name="ctd" pkg="rbr_maestro3_ctd"
+            type="rbr_maestro3_node.py">
+            <remap from="~in" to="/ctd_comms/in" />
+        </node>
     </group>
 
     <group if="$(eval arg('ctd') == 'aml')">
-        <node name="aml_ctd" pkg="aml_ctd" type="aml_ctd_node.py" />
+        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+            <remap from="~in" to="/ctd_comms/in" />
+        </node>
     </group>
 
     <!--
