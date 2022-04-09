@@ -115,8 +115,8 @@ def main():
 
     # Connect to the Modbus server
     client = ModbusClient(
-        host=rospy.get_param('/jvl_motor/address'),
-        port=rospy.get_param('/jvl_motor/port', 502),
+        host=rospy.get_param('~address'),
+        port=rospy.get_param('~port', 502),
         auto_open=True  # keep us connected
     )
     client.lock = threading.Lock()
@@ -161,7 +161,7 @@ def main():
     last_error = None
 
 
-    rate = rospy.Rate(rospy.get_param('/jvl_motor/refresh_rate', 1))  # hz
+    rate = rospy.Rate(rospy.get_param('~refresh_rate', 1))  # hz
     while not rospy.is_shutdown():
         # The range of register addresses is too wide, so we need to do this in
         # two calls.
