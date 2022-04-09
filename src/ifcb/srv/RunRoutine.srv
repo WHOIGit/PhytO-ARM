@@ -1,0 +1,11 @@
+# RunRoutine
+# Instructs the IFCB to run a routine.
+
+string routine
+bool instrument
+
+---
+
+# This indicates that the command was sent successfully, not that the routine
+# completed successfully.
+bool success
