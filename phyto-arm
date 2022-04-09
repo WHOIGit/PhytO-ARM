@@ -43,6 +43,11 @@ env = {
     '_CATKIN_SETUP_DIR': setup_dir
 }
 
+# Allow the config to override where logs are stored
+log_dir = config.get('launch_args', {}).get('log_dir')
+if log_dir is not None:
+    env['ROS_LOG_DIR'] = log_dir
+
 # Build the command to invoke as an escaped string
 command = f'. {parent_dir}/.venv/bin/activate && ' + \
           f'. {setup_dir}/setup.sh && ' + \
