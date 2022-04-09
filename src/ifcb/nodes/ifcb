@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import ifcb.node
+
+
+if __name__ == '__main__':
+    try:
+        ifcb.node.main()
+    except rospy.ROSInterruptException:
+        pass

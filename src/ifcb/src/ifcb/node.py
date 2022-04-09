@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import functools
 import json
+import os
 
 import rospy
 
@@ -10,12 +11,43 @@ from ifcbclient import IFCBClient
 
 from ds_core_msgs.msg import RawData
 
+from .instrumentation import instrument
+
+
 
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
-def do_command(client, pub, command):
-    send_command(client, pub, command.command)
+def do_command(client, pub, req):
+    send_command(client, pub, req.command)
     return srv.CommandResponse()
+
+
+# The ROS service handler that runs a routine, optionally with instrumentation
+def do_runroutine(client, pub, req):
+    # Deny path traversal
+    if '/' in req.routine:
+        return srv.RunRoutineResponse(success=False)
+
+    # Simple case for when we don't want instrumentation
+    if not req.instrument:
+        send_command(client, pub, f'routine:{req.routine}')
+        return srv.RunRoutineResponse(success=True)
+    
+    # Attempt to load the file
+    path = f'~/IFCBacquire/Host/Routines/{req.routine}.json'
+    try:
+        with open(os.path.expanduser(path), 'rb') as f:
+            routine = json.load(f)
+    except:
+        return srv.RunRoutineResponse(success=False)
+
+    # Instrument the routine and send it
+    instrumented = instrument(routine, routine=req.routine)
+    encoded = json.dumps(instrumented, separators=(',', ':'))  # less whitespace
+    send_command(client, pub, f'interactive:load:{encoded}')
+    send_command(client, pub, 'interactive:start')
+
+    return srv.RunRoutineResponse(success=True)
 
 
 # Send a command to the IFCB host and publish it to ROS
@@ -67,13 +99,23 @@ def main():
     
     # Create a ROS service for sending commands
     rospy.Service(
-        f'{rospy.get_name()}/command',
+        '~command',
         srv.Command,
         functools.partial(do_command, client, tx_pub),
     )
 
-    # Connect the client and let other threads do their thing
+    # Create a ROS service for running routines
+    rospy.Service(
+        '~routine',
+        srv.RunRoutine,
+        functools.partial(do_runroutine, client, tx_pub),
+    )
+
+    # Connect the client and have it dump its routines to disk as JSON
     client.connect()
+    send_command(client, tx_pub, 'saveroutines')
+
+    # Keep the program alive while other threads work
     rospy.spin()
 
 

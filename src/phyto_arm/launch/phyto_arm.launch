@@ -29,7 +29,7 @@
 
         This node communicates with an IFCB.
     -->
-    <node name="ifcb" pkg="ifcb" type="ifcb_node.py" />
+    <node name="ifcb" pkg="ifcb" type="ifcb" />
 
     <!--
         Node: motor
