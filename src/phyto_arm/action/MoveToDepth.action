@@ -9,6 +9,17 @@ float32 depth  # m
 
 # Result
 
+# XXX
+# This is a bit of a hack. We need a way to match up profile messages to the
+# result of a MoveToDepth action. We use the timestamp for this.
+#
+# Unfortunately, although the generated MoveToDepthActionResult already has a
+# unique goal ID, and a header with timestamp, there's no API to access either.
+#
+# So instead we populate the result with a random UUID and copy this to the
+# simultaneous DepthProfile message.
+string uuid
+
 std_msgs/Duration time_elapsed
 
 ---

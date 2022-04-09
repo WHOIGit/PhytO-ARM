@@ -101,6 +101,7 @@ def on_action_stop(pub, action_msg):
     # Publish the resampled profile data
     profile = DepthProfile()
     profile.header.stamp = action_msg.header.stamp
+    profile.goal_uuid = action_msg.result.uuid
     profile.data_topic = data_sub.name
     profile.data_field = data_field
     profile.depths = x
