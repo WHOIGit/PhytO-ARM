@@ -93,5 +93,9 @@
 
         This node relays frames from the RTSP camera feed.
     -->
-    <node pkg="rocon_rtsp_camera_relay" name="rtsp_camera" type="rocon_rtsp_camera_relay_node" />
+    <node name="camera"
+          pkg="rocon_rtsp_camera_relay" type="rocon_rtsp_camera_relay_node">
+        <remap from="~image" to="~image/do_not_use" />
+        <remap from="~image/do_not_use/compressed" to="~image/compressed" />
+    </node>
 </launch>
