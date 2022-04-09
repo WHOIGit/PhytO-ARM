@@ -51,15 +51,14 @@ async def main():
 
     # Create a mapping of topics to publish on
     publishers = {
-        Ctd: rospy.Publisher('/ctd', Ctd, queue_size=5),
-        DepthPressure: rospy.Publisher('/ctd/depth', DepthPressure,
-            queue_size=5),
+        Ctd: rospy.Publisher('~', Ctd, queue_size=5),
+        DepthPressure: rospy.Publisher('~depth', DepthPressure, queue_size=5),
     }
 
     # Subscribe to incoming comms messages
     handler = lambda msg: asyncio.run_coroutine_threadsafe(ros_msg_q.put(msg),
                                                            loop)
-    rospy.Subscriber('/ctd_comms/in', RawData, handler)
+    rospy.Subscriber('~in', RawData, handler)
 
     # Process incoming messages in a loop
     while True:

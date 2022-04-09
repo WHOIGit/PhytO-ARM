@@ -73,15 +73,15 @@ async def main():
 
     # Create a mapping of topics to publish on
     publishers = {
-        '/ctd': rospy.Publisher('/ctd', Ctd, queue_size=5),
-        '/ctd/depth': rospy.Publisher('/ctd/depth', DepthPressure,
+        '~ctd': rospy.Publisher('~', Ctd, queue_size=5),
+        '~depth': rospy.Publisher('~depth', DepthPressure,
             queue_size=5),
     }
 
     # Subscribe to incoming comms messages
     handler = lambda msg: asyncio.run_coroutine_threadsafe(ros_msg_q.put(msg),
                                                            loop)
-    rospy.Subscriber('/ctd_comms/in', RawData, handler)
+    rospy.Subscriber('~in', RawData, handler)
 
     # TODO:
     # To start logging we should just need to send b"\r\r\rMMONITOR\r" (sic)
@@ -172,10 +172,10 @@ async def main():
             m.ds_header.io_time = msg.ds_header.io_time
 
         # Publish the messages
-        publishers['/ctd'].publish(ctd)
-        publishers['/ctd/depth'].publish(dp)
+        publishers['~ctd'].publish(ctd)
+        publishers['~depth'].publish(dp)
         for m in aml_msgs:
-            top = f'/ctd/aml/{ros_safe(m.port)}/{ros_safe(m.name)}'
+            top = f'~aml/{ros_safe(m.port)}/{ros_safe(m.name)}'
             if top not in publishers:
                 publishers[top] = rospy.Publisher(top, type(m), queue_size=5)
             publishers[top].publish(m)
