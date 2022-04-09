@@ -31,7 +31,7 @@ The entries in the config file are loaded into the ROS [Parameter Server][]. Som
     $ source devel/setup.bash
     $ rosparam get /conductor/schedule/every
     60
-    $ rosparam set /observer/data_topic /ctd/aml/port3/chloroblue
+    $ rosparam set /profiler/data_topic /ctd/aml/port3/chloroblue
 
 Be sure to make the corresponding edits to the config file to persist changes beyond the current session.
 
@@ -75,7 +75,11 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
 
   - `conductor`: Orchestrates sampling
 
-  - `observer`: Creates profiles of CTD data during a cast
+  - `profiler`: Creates profiles of CTD data during a cast
+    - Subscribes:
+      - user-chosen topic provided in config
+    - Publishes:
+      - '/profiler' with *resampled* profile data
 
   - `web`: Web API for attaching metadata to IFCB bins
     - Subscribes:
