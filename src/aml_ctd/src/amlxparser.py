@@ -12,7 +12,7 @@ Measurement = collections.namedtuple(
 def parseAMLx(s):
     parsed, msgnum = {}, None
     iterator = iterAMLx(s)
-    
+
     for msgnum, sensor, kind, name, value, unit in iterator:
         if sensor == 'mux':
             if kind == 'meta' and name == 'time' and unit == 's':
