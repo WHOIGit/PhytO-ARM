@@ -74,6 +74,13 @@ A bag file with the suffix `.active` is currently being written, or was left in 
 These nodes implement the core PhytO-ARM "algorithm" for sampling and are specific to the design of the platform.
 
   - `conductor`: Orchestrates sampling
+    - Subscribes:
+      - `/ifcb/in` for IFCB status messages
+      - `/profiler` for profile data
+      - `/winch/move_to_depth/result` to determine the success of a transit
+    - Publishes:
+      - `/conductor/state` with the current activity
+      - `/winch/move_to_depth/goal` to set a target depth
 
   - `profiler`: Creates profiles of CTD data during a cast
     - Subscribes:
@@ -129,7 +136,7 @@ These nodes perform lower-level interactions with hardware components. These nod
       - `/ifcb/out` for messages sent to the IFCB
     - Services:
       - `/ifcb/command` to send a message to the IFCB
-      - `/ifcb/run_routine` to send a routine to the IFCB
+      - `/ifcb/routine` to send a routine to the IFCB
 
   - `motor`: Driver for the JVL motor
     - Publishes:

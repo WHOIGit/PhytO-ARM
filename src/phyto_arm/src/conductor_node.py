@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys
+import functools
 import threading
 
 import actionlib
@@ -12,12 +12,21 @@ from ifcb.instrumentation import parse_marker as parse_ifcb_marker
 from ds_core_msgs.msg import RawData
 
 from ifcb.srv import RunRoutine
-from phyto_arm.msg import DepthProfile, MoveToDepthAction, MoveToDepthGoal
+from phyto_arm.msg import ConductorState, ConductorStates, DepthProfile, \
+                          MoveToDepthAction, MoveToDepthGoal
 
 
 # Global references to services/actions provided by other nodes
 ifcb_run_routine = None
 move_to_depth = None
+
+
+# Convenience function to publish state updates for debugging
+def set_state(pub, s):
+    m = ConductorState()
+    m.header.stamp = rospy.Time.now()
+    m.state = s
+    pub.publish(m)
 
 
 # N.B.: This is an abuse of Python syntax, don't do as I do!
@@ -86,14 +95,14 @@ def loop():
     global ifcb_run_routine, move_to_depth
 
     # Go to minimum depth
-    rospy.loginfo('Transiting to minimum depth')
+    set_state(ConductorStates.UPCAST)
     move_to_depth.send_goal(
         MoveToDepthGoal(depth=rospy.get_param('~range/min')))
     move_to_depth.wait_for_result()
     assert move_to_depth.get_state() == actionlib.GoalStatus.SUCCEEDED
 
     # Perform a downcast
-    rospy.loginfo('Performing downcast')
+    set_state(ConductorStates.DOWNCAST)
     move_to_depth.send_goal(
         MoveToDepthGoal(depth=rospy.get_param('~range/max')))
     move_to_depth.wait_for_result()
@@ -103,7 +112,6 @@ def loop():
     result = move_to_depth.get_result()
     while state.latest_profile is None or \
           state.latest_profile.goal_uuid != result.uuid:
-        rospy.loginfo('Waiting for next profile?')
         state.profile_activity.wait()
 
     # Find the maximal value in the profile
@@ -149,6 +157,12 @@ def loop():
         rospy.logerr('Refusing to exceed depth bounds')
         return
 
+    # Update state accordingly
+    if run_schedule:
+        set_state(ConductorStates.TRANSIT_TO_SCHEDULED_DEPTH)
+    else:
+        set_state(ConductorStates.TRANSIT_TO_PEAK_DEPTH)
+
     # Go to target depth
     move_to_depth.send_goal(MoveToDepthGoal(depth=target_depth))
     move_to_depth.wait_for_result()
@@ -166,6 +180,7 @@ def loop():
     return
 
     # Wait for current IFCB activity to finish
+    set_state(ConductorStates.WAIT_FOR_IFCB)
     with state.ifcb_busy_condition:
         state.ifcb_busy_condition.wait_for(lambda: not state.ifcb_is_busy)
 
@@ -192,9 +207,13 @@ def loop():
 
 
 def main():
-    global ifcb_run_routine, move_to_depth
+    global ifcb_run_routine, move_to_depth, set_state
 
     rospy.init_node('conductor', anonymous=True)
+
+    # Publish state messages useful for debugging
+    set_state = functools.partial(set_state,
+        rospy.Publisher('~state', ConductorState, queue_size=1, latch=True))
 
     # Subscribe to IFCB messages to track routine progress
     rospy.Subscriber('/ifcb/in', RawData, on_ifcb_msg)
