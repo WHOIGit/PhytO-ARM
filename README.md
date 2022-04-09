@@ -101,21 +101,19 @@ These nodes perform lower-level interactions with hardware components. These nod
     - Publishes:
       - `/camera/image/compressed` with the compressed video feed
 
+  - `ctd`: Driver for the AML or RBR maestro3 CTD
+    - Subscribes:
+      - `/ctd_comms/in` for receiving data from CTD
+    - Publishes:
+      - `/ctd` with conductivity, temperature, and pressure data
+      - `/ctd/depth` with depth and pressure data
+      - `/ctd/aml/derive/xyz` with derived values (for AML only)
+      - `/ctd/aml/port#/xyz` with measured values (for AML only)
+
   - `ctd_comms`: Bridge for CTD serial communications
     - Publishes:
       - `/ctd_comms/in` for messages received from the CTD's serial port
       - `/ctd_comms/out` for messages sent to the CTD's serial port
-
-  - `aml_ctd`: Driver for the AML CTD
-    - Publishes:
-      - `/ctd` with conductivity, temperature, and pressure data
-      - `/ctd/depth` with depth and pressure data
-      - `/ctd/aml/derive/xyz` with derived values
-      - `/ctd/aml/port#/xyz` with measured values
-
-  - `rbr_maestro3_ctd`: Driver the RBR maestro3 CTD
-    - Publishes:
-      - `/ctd` and `/ctd/depth` as above
 
   - `gps`: Provides GPS fixes to ROS from `gpsd`
     - Publishes:
