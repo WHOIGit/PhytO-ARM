@@ -83,10 +83,10 @@ motor = None
 
 
 # Service proxies for interacting with the motor
-move = rospy.ServiceProxy('/jvl_motor/move', MoveCmd)
-set_position_envelope = rospy.ServiceProxy('/jvl_motor/set_position_envelope',
+move = rospy.ServiceProxy('/motor/move', MoveCmd)
+set_position_envelope = rospy.ServiceProxy('/motor/set_position_envelope',
     SetPositionEnvelopeCmd)
-stop = rospy.ServiceProxy('/jvl_motor/stop', StopCmd)
+stop = rospy.ServiceProxy('/motor/stop', StopCmd)
 
 
 # This function returns a velocity function with the given parameters.
@@ -306,7 +306,7 @@ async def main():
 
     # Subscribe to incoming messages
     rospy.Subscriber('/ctd/depth', DepthPressure, depth.update_soon)
-    rospy.Subscriber('/jvl_motor/motion', Motion, motor.update_soon)
+    rospy.Subscriber('/motor/motion', Motion, motor.update_soon)
 
     # Create an action server for the MoveToDepth action
     server = AsyncSimpleActionServer(

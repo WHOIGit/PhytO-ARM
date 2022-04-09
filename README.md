@@ -84,7 +84,7 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
   - `winch`: Controls depth using the motor
     - Subscribes:
       - `/ctd/depth` for monitoring depth
-      - `/jvl_motor/motion` for monitoring motor state
+      - `/motor/motion` for monitoring motor state
       - `/winch/move_to_depth/goal` for setting the goal depth
       - `/winch/move_to_depth/cancel` for canceling the current goal
     - Publishes:
@@ -125,15 +125,15 @@ These nodes perform lower-level interactions with hardware components. These nod
       - `/ifcb/command` to send a message to the IFCB
       - `/ifcb/run_routine` to send a routine to the IFCB
 
-  - `jvl_motor`: Driver for the JVL motor
+  - `motor`: Driver for the JVL motor
     - Publishes:
-      - `/jvl_motor/electrical` with electrical registers
-      - `/jvl_motor/error` with error registers
-      - `/jvl_motor/motion` with motion registers
+      - `/motor/electrical` with electrical registers
+      - `/motor/error` with error registers
+      - `/motor/motion` with motion registers
     - Services:
-      - `/jvl_motor/move` to set the motor's velocity
-      - `/jvl_motor/set_position_envelope` to set position limits
-      - `/jvl_motor/stop` to stop the motor
+      - `/motor/move` to set the motor's velocity
+      - `/motor/set_position_envelope` to set position limits
+      - `/motor/stop` to stop the motor
 
   - `rtsp_camera`: Video stream
     - Publishes:
