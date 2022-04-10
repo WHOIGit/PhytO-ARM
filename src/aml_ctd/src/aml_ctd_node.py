@@ -110,9 +110,8 @@ async def main():
         assert data['Pressure'].unit == 'dbar'
         assert data['SV'].unit == 'm/s'
 
-        # Assume the timestamp is UTC
+        # The parser assumes the timestamp is in UTC
         timestamp = parsed['mux']['time']
-        timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
 
         # Construct AmlMeasurement messages from amlxparser.Measurement objects
         aml_msgs = []

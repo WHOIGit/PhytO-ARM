@@ -16,8 +16,10 @@ def parseAMLx(s):
     for msgnum, sensor, kind, name, value, unit in iterator:
         if sensor == 'mux':
             if kind == 'meta' and name == 'time' and unit == 's':
-                parsed.setdefault('mux', {})['time'] = \
-                    datetime.datetime.fromtimestamp(float(value))
+                # Assume the timestamp is in UTC
+                timestamp = datetime.datetime.fromtimestamp(
+                    float(value), datetime.timezone.utc)
+                parsed.setdefault('mux', {})['time'] = timestamp
             elif kind == 'data' and name == 'uv' and unit == '':
                 parsed.setdefault('mux', {})['uv'] = bool(value)
             else:
