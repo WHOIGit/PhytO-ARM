@@ -50,6 +50,8 @@ In Studio, the connection address is `ws://hades.hablab.whoi.edu:9090` if connec
 
   [Foxglove Studio]: https://foxglove.dev
 
+**Tip:** For the most accurate time series plots, configure plot lines to use a message's `header.stamp` rather than its receive time, which is affected by network latency.
+
 
 ## Data Logs
 
@@ -218,7 +220,7 @@ These steps assume that ROS Noetic has been installed already.
 
 ### AML CTD
 
-Use `picocom` to to talk to the appropriate serial device. Press <key>Enter</key> first to interrupt any current logging and get a prompt.
+Use `picocom` to to talk to the appropriate serial device. Press <kbd>Enter</kbd> first to interrupt any current logging and get a prompt.
 
     $ picocom -b 115200 /dev/ttyS3
     > set derive depth y
@@ -228,7 +230,12 @@ Use `picocom` to to talk to the appropriate serial device. Press <key>Enter</key
     > mmonitor
     ...
 
-Press <key>Ctrl-A</key>, <key>Ctrl-X</key> to exit `picocom` while the device is logging.
+Press <kbd>Ctrl-A</kbd>, <kbd>Ctrl-X</kbd> to exit `picocom` while the device is logging.
+
+The time must be set to UTC. To sync the clock, you can use:
+
+    (echo; echo "set fulltime $(date -u "+%Y-%m-%d %H:%M:%S")") \
+    | picocom -b 115200 /dev/ttyS3
 
 
 ### GPS
