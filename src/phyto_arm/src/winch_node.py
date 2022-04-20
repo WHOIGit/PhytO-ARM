@@ -199,9 +199,8 @@ async def move_to_depth(server, goal):
         server.set_aborted(text='Encoder position could wrap -- reset offset')
         return
 
-    rospy.logdebug('Setting motor position envelope to '
+    rospy.logdebug('Motor position envelope is '
                    f'({lower_bound}, {upper_bound})')
-    set_position_envelope(min=lower_bound, max=upper_bound)
 
     # TODO: Calculate the RPM to m/s ratio
     gear_ratio = 60.0
@@ -244,6 +243,14 @@ async def move_to_depth(server, goal):
         if not (depth_min <= depth.value.depth <= depth_max):
             server.set_aborted(text='Exceeded depth bounds')
             break
+
+        # Update bounds so we do not travel far from this position
+        set_position_envelope(
+            min=max(lower_bound,
+                    motor.value.position - dist_to_encoder_counts(0.10)),
+            max=min(upper_bound,
+                    motor.value.position + dist_to_encoder_counts(0.10)),
+        )
 
         # Compute and command a new velocity according to our current depth
         velocity = v(depth.value.depth)
