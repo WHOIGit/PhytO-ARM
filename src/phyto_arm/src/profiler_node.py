@@ -4,6 +4,7 @@ import importlib
 import io
 import itertools
 import math
+import threading
 
 import numpy as np
 import rospy
@@ -15,19 +16,57 @@ from phyto_arm.msg import MoveToDepthActionGoal, MoveToDepthActionResult, \
                           DepthProfile
 
 
+# This semaphore protects us from a data race when we get new data/depth
+# messages.
+NUM_COLLECTORS = 2
+S = threading.Semaphore(value=NUM_COLLECTORS)
+
+#
+action_stopped_ev = threading.Event()
+
+
 # Flag indicating whether a move_to_depth action is being performed and hence
 # depth messages should be recorded.
 is_recording = False
 
-# Lists of accumulated depth and data messages while recording.
+# Lists of accumulated depth and data messages while recording
 data_msgs, depth_msgs = [], []
 
 # Data topic Subscriber and associated message field
 data_field, data_sub = None, None
 
 
+# Non-racy way of recording incoming messages to a buffer; this acquires the
+# (global) semaphore S which allows multiple threads to record, but the
+# processing thread can acquire exclusive access to the buffers.
+def record_data(dest, msg):
+    S.acquire()
+    if is_recording:
+        dest.append(msg)
+    S.release()
+
+
 def on_action_start(action_msg):
-    global is_recording, data_msgs, data_field, data_sub, depth_msgs
+    global is_recording, data_field, data_sub
+
+    # Wait a short while to make sure that the 'result' message from the
+    # previous goal is processed first.
+    #
+    # The wait() call will block until the Event object's internal flag is set,
+    # or until the timeout occurs. The internal flag is set in the 'result'
+    # message handler, so this should block until we get a result.
+    action_stopped_ev.wait(timeout=1.0)
+
+    # Now clear the Event's internal flag so that the next time through it
+    # blocks again.
+    action_stopped_ev.clear()
+
+    # Acquire exclusive access to the buffers
+    for _ in range(NUM_COLLECTORS):
+        S.acquire()
+
+    # Clear them
+    del data_msgs[:], depth_msgs[:]
 
     # Subscribe to the desired topic. We do this here so that the operator can
     # update the params between casts.
@@ -40,21 +79,28 @@ def on_action_start(action_msg):
 
         rospy.loginfo(f'Subscribing to {data_topic}')
         data_sub = rospy.Subscriber(data_topic, rospy.AnyMsg,
-            lambda m: is_recording and data_msgs.append(m))
+            functools.partial(record_data, data_msgs))
 
-    # Clear buffers and start recording
-    data_msgs, depth_msgs = [], []
+    # Start recording
     is_recording = True
+
+    # Release exclusive access
+    for _ in range(NUM_COLLECTORS):
+        S.release()
 
 
 def on_action_stop(pub, action_msg):
-    global is_recording, data_field, data_msgs, data_sub, depth_msgs
+    global is_recording
 
-    # Stop recording new data points
+    # Acquire exclusive access to the buffers
+    for _ in range(NUM_COLLECTORS):
+        S.acquire()
     is_recording = False
 
     if not data_msgs or not depth_msgs:
         rospy.logerr('Did not receive any data')
+        for _ in range(NUM_COLLECTORS):
+            S.release()
         return
 
     # Since the data topic is dynamic, we need to re-interpret the data as the
@@ -108,6 +154,14 @@ def on_action_stop(pub, action_msg):
     profile.values = y
     pub.publish(profile)
 
+    # Set the Event's internal flag so that the waiting 'goal' message handler
+    # can process the next goal.
+    action_stopped_ev.set()
+
+    # Release the waiting collector threads
+    for _ in range(NUM_COLLECTORS):
+        S.release()
+
 
 def main():
     rospy.init_node('profiler', anonymous=True)
@@ -117,7 +171,7 @@ def main():
 
     # Accumulate depth messages while recording
     rospy.Subscriber('/ctd/depth', DepthPressure,
-        lambda m: is_recording and depth_msgs.append(m))
+        functools.partial(record_data, depth_msgs))
 
     # Subscribe to the action start/stop messages
     rospy.Subscriber('/winch/move_to_depth/goal', MoveToDepthActionGoal,
