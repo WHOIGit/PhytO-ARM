@@ -2,6 +2,7 @@
 import functools
 import json
 import os
+import threading
 
 import rospy
 
@@ -13,6 +14,8 @@ from ds_core_msgs.msg import RawData
 
 from .instrumentation import instrument
 
+
+ifcb_ready = threading.Event()
 
 
 # Apologies for the horrible naming. This is the ROS service handler that
@@ -52,7 +55,10 @@ def do_runroutine(client, pub, req):
 
 # Send a command to the IFCB host and publish it to ROS
 def send_command(client, pub, command):
-    # Construct the message we are going to send
+    # Wait for the IFCB to be ready; this prevents sending a command too early
+    ifcb_ready.wait()
+
+    # Construct the message we are going to publish
     msg = RawData()
     msg.header.stamp = msg.ds_header.io_time = rospy.Time.now()
     msg.data_direction = RawData.DATA_OUT
@@ -70,12 +76,30 @@ def send_command(client, pub, command):
 def on_any_message(pub, data):
     sender_id, smsgsrc, seqno, data = data
 
+    # Publish a copy of the incoming message
     msg = RawData()
     msg.header.seq = seqno
     msg.header.stamp = msg.ds_header.io_time = rospy.Time.now()
     msg.data_direction = RawData.DATA_IN
     msg.data = data.encode()
     pub.publish(msg)
+
+    # Handle errors from the server
+    if data == 'client:reset':
+        rospy.logfatal('IFCB sent client reset')
+        raise ConnectionResetError
+
+
+# Callback for the "startedAsClient" message from the IFCB
+def on_started(client, pub, *args, **kwargs):
+    rospy.loginfo('Established connection to the IFCB')
+
+    # Allow any queued commands to proceed now that the IFCB is available
+    ifcb_ready.set()
+
+    # Run "saveroutines" to save copies of the routines as JSON in a known
+    # location, so we can instrument them later.
+    send_command(client, pub, 'saveroutines')
 
 
 def main():
@@ -111,9 +135,12 @@ def main():
         functools.partial(do_runroutine, client, tx_pub),
     )
 
-    # Connect the client and have it dump its routines to disk as JSON
+    # Set up a callback for when the connection starts
+    client.hub_connection.on('startedAsClient',
+        functools.partial(on_started, client, tx_pub))
+
+    # Connect the client
     client.connect()
-    send_command(client, tx_pub, 'saveroutines')
 
     # Keep the program alive while other threads work
     rospy.spin()
