@@ -136,12 +136,12 @@ async def move_to_depth_chk(server, goal):
 
 async def move_to_depth(server, goal):
     # Get an initial depth fix and motor status message
-    try:
-        await asyncio.wait([
-            asyncio.create_task(depth.wait()),
-            asyncio.create_task(motor.wait()),
-        ], timeout=2.0, return_when=asyncio.ALL_COMPLETED)
-    except asyncio.TimeoutError:
+    _, pending = await asyncio.wait([
+        asyncio.create_task(depth.wait()),
+        asyncio.create_task(motor.wait()),
+    ], timeout=2.0, return_when=asyncio.ALL_COMPLETED)
+
+    if pending:
         server.set_aborted(text='Timed out waiting for initial status')
         return
 
