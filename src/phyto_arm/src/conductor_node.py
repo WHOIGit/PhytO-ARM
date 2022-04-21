@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import functools
+import math
 import threading
 
 import actionlib
@@ -42,7 +43,7 @@ class state:
 
     ifcb_is_instrumented = False
 
-    position_hold = True
+    position_hold = False
     position_hold_condition = threading.Condition()
 
     scheduled_depths = []
@@ -55,7 +56,7 @@ def on_ifcb_msg(msg):
     marker = None
     parsed = parse_ifcb_msg(msg.data.decode())
     if len(parsed) == 2 and parsed[0] == 'reportevent':
-        marker = parse_marker(parsed[1])
+        marker = parse_ifcb_marker(parsed[1])
     if marker is None:
         return
 
@@ -73,12 +74,16 @@ def on_ifcb_msg(msg):
        marker['value'].get('StepType') == 'SwitchTriggering' and \
        marker['value'].get('Arguments', []) == [False]:
 
+        rospy.logerr('Should release position hold now')
+
         with state.position_hold_condition:
             state.position_hold = False
             state.position_hold_condition.notify()
 
     # Detect when a routine finishes
     if marker['kind'] == 'exit' and marker['path'] == []:
+        rospy.logerr('IFCB routine finished')
+
         with state.ifcb_busy_condition:
             state.ifcb_is_busy = False
             state.ifcb_busy_condition.notify()
@@ -93,6 +98,13 @@ def on_profile_msg(msg):
 
 def loop():
     global ifcb_run_routine, move_to_depth
+
+    rospy.logerr('Top of the loop')
+
+    # Safety check: We shouldn't be holding position at this point, assuming
+    # the previous iteration succeeded. But if we allow interruptions in the
+    # future, we need to handle this case.
+    assert not state.position_hold
 
     # Go to minimum depth
     set_state(ConductorStates.UPCAST)
@@ -125,7 +137,7 @@ def loop():
     # Decide if we want to use the scheduled depth
     scheduled_interval = rospy.Duration(60*rospy.get_param('~schedule/every'))
 
-    if scheduled_interval == 0:  # disabled
+    if math.isclose(scheduled_interval.to_sec(), 0.0):  # disabled
         run_schedule = False
     elif state.last_scheduled_time is None:
         run_schedule = True
@@ -170,39 +182,44 @@ def loop():
 
     # Activate position hold, which will be released at a certain point during
     # sampling.
+    rospy.logerr('Activating position hold')
     with state.position_hold_condition:
         state.position_hold = True
 
-    rospy.loginfo('Stopping before IFCB stuff')
-    import time
-    time.sleep(30)
-    rospy.loginfo('Continuing after delay')
-    return
-
     # Wait for current IFCB activity to finish
+    rospy.logerr('Waiting for IFCB to be ready')
     set_state(ConductorStates.WAIT_FOR_IFCB)
     with state.ifcb_busy_condition:
         state.ifcb_busy_condition.wait_for(lambda: not state.ifcb_is_busy)
+    rospy.logerr('IFCB is ready!')
 
     # Debubble
+    rospy.logerr('Starting debubble routine')
     with state.ifcb_busy_condition:
         state.ifcb_is_busy = True
     result = ifcb_run_routine(routine='debubble', instrument=True)
     assert result.success
 
     # Wait for debubble to finish
+    rospy.logerr('Waiting for debubble to finish')
     with state.ifcb_busy_condition:
         state.ifcb_busy_condition.wait_for(lambda: not state.ifcb_is_busy)
+    rospy.logerr('Debubble is finished!')
 
     # Sample
+    rospy.logerr('Starting runsample routine')
     with state.ifcb_busy_condition:
         state.ifcb_is_busy = True
     result = ifcb_run_routine(routine='runsample', instrument=True)
     assert result.success
 
     # Wait for position hold release
+    rospy.logerr('Waiting for position hold release')
     with state.position_hold_condition:
         state.position_hold_condition.wait_for(lambda: not state.position_hold)
+    rospy.logerr('Done waiting for position hold release')
+
+    rospy.logerr('Bottom of the loop')
 
 
 
