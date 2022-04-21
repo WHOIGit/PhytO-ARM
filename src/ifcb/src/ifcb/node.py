@@ -121,6 +121,7 @@ def on_triggerimage(pub, _, image):
 
 
 def on_triggerrois(roi_pub, mkr_pub, _, rois):
+    timestamp = rospy.Time.now()
     markers = ImageMarkerArray()
     for i, (top, left, image) in enumerate(rois):
         # IFCB does not give us the width and height so we must extract from
@@ -131,14 +132,14 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois):
 
         # Publish the ROI image itself
         roi = CompressedImage()
-        roi.header.stamp = rospy.Time.now()
+        roi.header.stamp = timestamp
         roi.format = 'png'
         roi.data = image
         roi_pub.publish(roi)
 
         # Add a marker to the array
         mkr = ImageMarker()
-        mkr.header.stamp = roi.header.stamp
+        mkr.header.stamp = timestamp
         mkr.type = ImageMarker.POLYGON
         mkr.scale = 1.0
         mkr.outline_color = ColorRGBA(0, 1, 1, 1)
