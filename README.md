@@ -13,7 +13,7 @@ The `phyto-arm` tool starts all of the ROS nodes and loads the provided configur
 
 The ROS nodes will be shut down when the process is terminated. To run nodes in the background (so that you can disconnect from the system, for example), use the `screen` utility:
 
-    $ screen -dmS phyto-arm ./phyto-arm config/hades.yaml
+    $ screen -dmS phyto-arm ./phyto-arm configs/hades.yaml
 
 In the future you can shut down the nodes using:
 
