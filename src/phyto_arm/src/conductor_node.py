@@ -74,7 +74,7 @@ def on_ifcb_msg(msg):
        marker['value'].get('StepType') == 'SwitchTriggering' and \
        marker['value'].get('Arguments', []) == [False]:
 
-        rospy.logerr('Should release position hold now')
+        rospy.loginfo('Should release position hold now')
 
         with state.position_hold_condition:
             state.position_hold = False
@@ -82,7 +82,7 @@ def on_ifcb_msg(msg):
 
     # Detect when a routine finishes
     if marker['kind'] == 'exit' and marker['path'] == []:
-        rospy.logerr('IFCB routine finished')
+        rospy.loginfo('IFCB routine finished')
 
         with state.ifcb_busy_condition:
             state.ifcb_is_busy = False
@@ -99,7 +99,7 @@ def on_profile_msg(msg):
 def loop():
     global ifcb_run_routine, move_to_depth
 
-    rospy.logerr('Top of the loop')
+    rospy.loginfo('Top of the loop')
 
     # Safety check: We shouldn't be holding position at this point, assuming
     # the previous iteration succeeded. But if we allow interruptions in the
@@ -182,44 +182,44 @@ def loop():
 
     # Activate position hold, which will be released at a certain point during
     # sampling.
-    rospy.logerr('Activating position hold')
+    rospy.loginfo('Activating position hold')
     with state.position_hold_condition:
         state.position_hold = True
 
     # Wait for current IFCB activity to finish
-    rospy.logerr('Waiting for IFCB to be ready')
+    rospy.loginfo('Waiting for IFCB to be ready')
     set_state(ConductorStates.WAIT_FOR_IFCB)
     with state.ifcb_busy_condition:
         state.ifcb_busy_condition.wait_for(lambda: not state.ifcb_is_busy)
-    rospy.logerr('IFCB is ready!')
+    rospy.loginfo('IFCB is ready!')
 
     # Debubble
-    rospy.logerr('Starting debubble routine')
+    rospy.loginfo('Starting debubble routine')
     with state.ifcb_busy_condition:
         state.ifcb_is_busy = True
     result = ifcb_run_routine(routine='debubble', instrument=True)
     assert result.success
 
     # Wait for debubble to finish
-    rospy.logerr('Waiting for debubble to finish')
+    rospy.loginfo('Waiting for debubble to finish')
     with state.ifcb_busy_condition:
         state.ifcb_busy_condition.wait_for(lambda: not state.ifcb_is_busy)
-    rospy.logerr('Debubble is finished!')
+    rospy.loginfo('Debubble is finished!')
 
     # Sample
-    rospy.logerr('Starting runsample routine')
+    rospy.loginfo('Starting runsample routine')
     with state.ifcb_busy_condition:
         state.ifcb_is_busy = True
     result = ifcb_run_routine(routine='runsample', instrument=True)
     assert result.success
 
     # Wait for position hold release
-    rospy.logerr('Waiting for position hold release')
+    rospy.loginfo('Waiting for position hold release')
     with state.position_hold_condition:
         state.position_hold_condition.wait_for(lambda: not state.position_hold)
-    rospy.logerr('Done waiting for position hold release')
+    rospy.loginfo('Done waiting for position hold release')
 
-    rospy.logerr('Bottom of the loop')
+    rospy.loginfo('Bottom of the loop')
 
 
 
