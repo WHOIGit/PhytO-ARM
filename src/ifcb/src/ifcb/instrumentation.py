@@ -45,28 +45,27 @@ def instrument(node, routine='', path=None):
 
     new_children = []
 
-    if path == []:
-        # At the top level we need to create a new Sequence
-        new_children.append({
-            'Type': 'Sequence',
-            'Steps': [ marker('enter', routine, path, node) ],
-        })
-    else:
-        new_children.append(marker('enter', routine, path, node))
+    # Helper function to append a marker, creating a new Sequence to contain
+    # it if necessary.
+    def append_marker(*args, **kwargs):
+        if path == []:
+            # At the top level we need to create a new Sequence
+            new_children.append({
+                'Type': 'Sequence',
+                'Steps': [ marker(*args, **kwargs) ],
+            })
+        else:
+            new_children.append(marker(*args, **kwargs))
 
+    # Instrument this node and its children
+    append_marker('enter', routine, path, node)
     for i, child in enumerate(children):
-        new_children.append(marker('before', routine, path + [i], child))
+        append_marker('before', routine, path + [i], child)
         new_children.append(instrument(child, routine, path + [i]))
-        new_children.append(marker('after', routine, path + [i], child))
+        append_marker('after', routine, path + [i], child)
+    append_marker('exit', routine, path, node)
 
-    if path == []:
-        new_children.append({
-            'Type': 'Sequence',
-            'Steps': [ marker('exit', routine, path, node) ],
-        })
-    else:
-        new_children.append(marker('exit', routine, path, node))
-
+    # Return the instrumented object
     if isinstance(node, list):
         return new_children
     else:
