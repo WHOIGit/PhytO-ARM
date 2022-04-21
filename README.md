@@ -136,6 +136,9 @@ These nodes perform lower-level interactions with hardware components. These nod
     - Publishes:
       - `/ifcb/in` for messages received from the IFCB
       - `/ifcb/out` for messages sent to the IFCB
+      - `/ifcb/image` for full-frame images
+      - `/ifcb/roi/image` for detected ROI images only
+      - `/ifcb/roi/markers` with rectangular bounds of ROIs
     - Services:
       - `/ifcb/command` to send a message to the IFCB
       - `/ifcb/routine` to send a routine to the IFCB

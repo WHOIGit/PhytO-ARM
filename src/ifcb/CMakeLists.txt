@@ -7,8 +7,12 @@ project(ifcb)
 find_package(
   catkin REQUIRED COMPONENTS
     message_generation
+    geometry_msgs
+    sensor_msgs
     std_msgs
+    visualization_msgs
     ds_core_msgs
+    foxglove_msgs
 )
 
 catkin_python_setup()
