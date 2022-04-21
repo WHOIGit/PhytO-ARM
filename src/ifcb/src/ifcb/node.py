@@ -2,6 +2,8 @@
 import functools
 import json
 import os
+import struct
+import sys
 import threading
 
 import rospy
@@ -11,6 +13,11 @@ import ifcb.srv as srv
 from ifcbclient import IFCBClient
 
 from ds_core_msgs.msg import RawData
+from foxglove_msgs.msg import ImageMarkerArray
+from geometry_msgs.msg import Point
+from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import ColorRGBA
+from visualization_msgs.msg import ImageMarker
 
 from .instrumentation import instrument
 
@@ -102,12 +109,62 @@ def on_started(client, pub, *args, **kwargs):
     send_command(client, pub, 'saveroutines')
 
 
+def on_triggerimage(pub, _, image):
+    # The image data should be in PNG format, which is an allowed ROS image type
+    assert image.startswith(b'\x89PNG\x0D\x0A\x1A\x0A')  # magic bytes
+
+    msg = CompressedImage()
+    msg.header.stamp = rospy.Time.now()
+    msg.format = 'png'
+    msg.data = image
+    pub.publish(msg)
+
+
+def on_triggerrois(roi_pub, mkr_pub, _, rois):
+    markers = ImageMarkerArray()
+    for i, (top, left, image) in enumerate(rois):
+        # IFCB does not give us the width and height so we must extract from
+        # the IHDR chunks.
+        magic, chlen, chtype, w, h = struct.unpack_from('>8sL4sLL', image)
+        assert magic == b'\x89PNG\x0D\x0A\x1A\x0A'
+        assert chtype == b'IHDR'
+
+        # Publish the ROI image itself
+        roi = CompressedImage()
+        roi.header.stamp = rospy.Time.now()
+        roi.format = 'png'
+        roi.data = image
+        roi_pub.publish(roi)
+
+        # Add a marker to the array
+        mkr = ImageMarker()
+        mkr.header.stamp = roi.header.stamp
+        mkr.type = ImageMarker.POLYGON
+        mkr.scale = 1.0
+        mkr.outline_color = ColorRGBA(0, 1, 1, 1)
+        mkr.points = [
+            Point(left,     top,     0),
+            Point(left + w, top,     0),
+            Point(left + w, top + h, 0),
+            Point(left,     top + h, 0),
+        ]
+        markers.markers.append(mkr)
+
+    # Publish all the markers together
+    mkr_pub.publish(markers)
+
+
 def main():
     rospy.init_node('ifcb', anonymous=True)
 
     # Publishers for raw messages coming in and out of the IFCB
     rx_pub = rospy.Publisher('~in',  RawData, queue_size=5)
     tx_pub = rospy.Publisher('~out', RawData, queue_size=5)
+
+    # Publishers for images, ROI images, and ROI markers
+    img_pub = rospy.Publisher('~image', CompressedImage, queue_size=5)
+    roi_pub = rospy.Publisher('~roi/image', CompressedImage, queue_size=5)
+    mkr_pub = rospy.Publisher('~roi/markers', ImageMarkerArray, queue_size=5)
 
     # Create an IFCB websocket API client
     client = IFCBClient(
@@ -120,7 +177,18 @@ def main():
     # Note: This relies on internal implementation details of pyifcbclient.
     client.hub_connection.on('messageRelayed',
         functools.partial(on_any_message, rx_pub))
+
+    # Set up a callback for when the connection starts.
+    # Note: This too relies on internal implementation details of pyifcbclient.
+    client.hub_connection.on('startedAsClient',
+        functools.partial(on_started, client, tx_pub))
     
+    # Set up callbacks for trigger images and ROIs
+    client.on(('triggerimage',),
+              functools.partial(on_triggerimage, img_pub))
+    client.on(('triggerrois',),
+              functools.partial(on_triggerrois, roi_pub, mkr_pub))
+
     # Create a ROS service for sending commands
     rospy.Service(
         '~command',
@@ -134,10 +202,6 @@ def main():
         srv.RunRoutine,
         functools.partial(do_runroutine, client, tx_pub),
     )
-
-    # Set up a callback for when the connection starts
-    client.hub_connection.on('startedAsClient',
-        functools.partial(on_started, client, tx_pub))
 
     # Connect the client
     client.connect()

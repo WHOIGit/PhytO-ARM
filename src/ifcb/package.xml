@@ -15,6 +15,13 @@
 
     <buildtool_depend>catkin</buildtool_depend>
 
-    <!-- We use the DsHeader message type -->
+    <!-- Most of these are for publishing images and markers -->
+    <exec_depend>foxglove_msgs</exec_depend>  <!-- for ImageMarkerArray -->
+    <exec_depend>geometry_msgs</exec_depend>
+    <exec_depend>sensor_msgs</exec_depend>
+    <exec_depend>std_msgs</exec_depend>
+    <exec_depend>visualization_msgs</exec_depend>
+
+    <!-- We use the DsHeader and RawData message type -->
     <depend>ds_core_msgs</depend>
 </package>
