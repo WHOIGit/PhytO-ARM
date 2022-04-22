@@ -32,16 +32,10 @@ def set_state(pub, s):
 
 # N.B.: This is an abuse of Python syntax, don't do as I do!
 class state:
-    ifcb_activity = threading.Event()
-    latest_ifcb_msg = None
-
     profile_activity = threading.Event()
     latest_profile = None
 
-    ifcb_is_busy = False
-    ifcb_busy_condition = threading.Condition()
-
-    ifcb_is_instrumented = False
+    ifcb_is_idle = threading.Event()
 
     position_hold = False
     position_hold_condition = threading.Condition()
@@ -57,18 +51,25 @@ def on_ifcb_msg(msg):
     parsed = parse_ifcb_msg(msg.data.decode())
     if len(parsed) == 2 and parsed[0] == 'reportevent':
         marker = parse_ifcb_marker(parsed[1])
+
+    # For routines sent with 'interactive:start', the IFCB will tell us when the
+    # routine has started and finished. This is the most reliable way to detect
+    # this, rather than using the markers.
+    #
+    # XXX
+    # The ifcb_is_idle Event should be clear()'d _before_ sending a routine, to
+    # avoid a race condition where a thread sends a routine and then immediately
+    # awaits the Event before we have been told the routine started.
+    if parsed == ['valuechanged', 'interactive', 'stopped']:
+        rospy.loginfo('IFCB routine not running')
+        state.ifcb_is_idle.set()
+        return
+
+    # Remaining behaviors depend on having a parsed marker
     if marker is None:
         return
 
-    # Alert waiting threads that there was some activity
-    state.ifcb_activity.set()
-    state.ifcb_activity.clear()
-    
-    # If we got a marker, we know the IFCB is running an instrumented routine,
-    # and we can wait for it to finish
-    state.is_ifcb_instrumented = True
-
-    # Detect when we can release our position hold 
+    # Detect when we can release our position hold
     if marker['routine'] == 'runsample' and \
        marker['kind'] == 'before' and \
        marker['value'].get('StepType') == 'SwitchTriggering' and \
@@ -79,14 +80,6 @@ def on_ifcb_msg(msg):
         with state.position_hold_condition:
             state.position_hold = False
             state.position_hold_condition.notify()
-
-    # Detect when a routine finishes
-    if marker['kind'] == 'exit' and marker['path'] == []:
-        rospy.loginfo('IFCB routine finished')
-
-        with state.ifcb_busy_condition:
-            state.ifcb_is_busy = False
-            state.ifcb_busy_condition.notify()
 
 
 def on_profile_msg(msg):
@@ -162,7 +155,7 @@ def loop():
 
         state.next_scheduled_index += 1
         state.last_scheduled_time = rospy.Time.now()
-    
+
     # Safety check: Do not exceed depth bounds
     if not (rospy.get_param('~range/min') <= target_depth <= \
             rospy.get_param('~range/max')):
@@ -189,27 +182,23 @@ def loop():
     # Wait for current IFCB activity to finish
     rospy.loginfo('Waiting for IFCB to be ready')
     set_state(ConductorStates.WAIT_FOR_IFCB)
-    with state.ifcb_busy_condition:
-        state.ifcb_busy_condition.wait_for(lambda: not state.ifcb_is_busy)
+    state.ifcb_is_idle.wait()
     rospy.loginfo('IFCB is ready!')
 
     # Debubble
     rospy.loginfo('Starting debubble routine')
-    with state.ifcb_busy_condition:
-        state.ifcb_is_busy = True
+    state.ifcb_is_idle.clear()
     result = ifcb_run_routine(routine='debubble', instrument=True)
     assert result.success
 
     # Wait for debubble to finish
     rospy.loginfo('Waiting for debubble to finish')
-    with state.ifcb_busy_condition:
-        state.ifcb_busy_condition.wait_for(lambda: not state.ifcb_is_busy)
+    state.ifcb_is_idle.wait()
     rospy.loginfo('Debubble is finished!')
 
     # Sample
     rospy.loginfo('Starting runsample routine')
-    with state.ifcb_busy_condition:
-        state.ifcb_is_busy = True
+    state.ifcb_is_idle.clear()
     result = ifcb_run_routine(routine='runsample', instrument=True)
     assert result.success
 
