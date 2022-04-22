@@ -101,11 +101,6 @@ def on_any_message(pub, data):
     msg.data = data.encode()
     pub.publish(msg)
 
-    # Handle errors from the server
-    if data == 'client:reset':
-        rospy.logfatal('IFCB sent client reset')
-        raise ConnectionResetError
-
 
 # Callback for the "startedAsClient" message from the IFCB
 def on_started(client, pub, *args, **kwargs):
