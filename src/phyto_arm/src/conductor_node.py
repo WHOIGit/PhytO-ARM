@@ -228,8 +228,8 @@ def main():
     rospy.Subscriber('/profiler', DepthProfile, on_profile_msg)
 
     # Initialize service proxy for sending routines to the IFCB
-    rospy.wait_for_service('/ifcb/routine')
     ifcb_run_routine = rospy.ServiceProxy('/ifcb/routine', RunRoutine)
+    ifcb_run_routine.wait_for_service()
 
     # Initialize action client for controlling the winch
     move_to_depth = actionlib.SimpleActionClient(
