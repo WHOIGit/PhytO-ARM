@@ -34,26 +34,36 @@ def do_command(client, pub, req):
 
 # The ROS service handler that runs a routine, optionally with instrumentation
 def do_runroutine(client, pub, req):
+    # XXX
+    # We always use the 'interactive:start' command instead of 'routine' because
+    # the latter does not (as of Apr 21, 2022) provide any feedback when the
+    # routine completes.
+    #
+    # This way, the IFCB will send 'valuechanged:interactive:stopped' when the
+    # routine completes.
+    #
+    # This means that the routines *must* be written to disk at the expected
+    # location. We send 'saveroutines' at startup for this reason.
+
     # Deny path traversal
     if '/' in req.routine:
         return srv.RunRoutineResponse(success=False)
 
-    # Simple case for when we don't want instrumentation
-    if not req.instrument:
-        send_command(client, pub, f'routine:{req.routine}')
-        return srv.RunRoutineResponse(success=True)
-    
     # Attempt to load the file
     path = f'~/IFCBacquire/Host/Routines/{req.routine}.json'
     try:
         with open(os.path.expanduser(path), 'rb') as f:
             routine = json.load(f)
     except:
+        rospy.logerr(f'Could not load {req.routine}.json')
         return srv.RunRoutineResponse(success=False)
 
-    # Instrument the routine and send it
-    instrumented = instrument(routine, routine=req.routine)
-    encoded = json.dumps(instrumented, separators=(',', ':'))  # less whitespace
+    # Optionally instrument the routine
+    if req.instrument:
+        routine = instrument(routine, routine=req.routine)
+
+    # Encode and send the routine
+    encoded = json.dumps(routine, separators=(',', ':'))  # less whitespace
     send_command(client, pub, f'interactive:load:{encoded}')
     send_command(client, pub, 'interactive:start')
 
@@ -183,7 +193,7 @@ def main():
     # Note: This too relies on internal implementation details of pyifcbclient.
     client.hub_connection.on('startedAsClient',
         functools.partial(on_started, client, tx_pub))
-    
+
     # Set up callbacks for trigger images and ROIs
     client.on(('triggerimage',),
               functools.partial(on_triggerimage, img_pub))
