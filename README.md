@@ -201,6 +201,11 @@ These steps assume that ROS Noetic has been installed already.
     sed 's/#.*//' apt-requirements.txt | envsubst \
         | xargs sudo apt install -y
 
+    # Create Python virtual environment
+    python3 -m virtualenv .venv --system-site-packages
+    . venv/bin/activate
+    python3 -m pip install -r python3-requirements.txt
+
     # Create Catkin workspace
     catkin init
 
