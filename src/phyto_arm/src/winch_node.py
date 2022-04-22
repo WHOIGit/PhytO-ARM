@@ -313,6 +313,10 @@ async def main():
     rospy.init_node('winch', anonymous=True, disable_signals=True)
     rospy.core.add_preshutdown_hook(loop.stop)
 
+    # Wait for services to become available
+    for svc in [ move, set_position_envelope, stop ]:
+        svc.wait_for_service()
+
     # Subscribe to incoming messages
     rospy.Subscriber('/ctd/depth', DepthPressure, depth.update_soon)
     rospy.Subscriber('/motor/motion', Motion, motor.update_soon)
