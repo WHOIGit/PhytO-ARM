@@ -92,8 +92,6 @@ def on_profile_msg(msg):
 def loop():
     global ifcb_run_routine, move_to_depth
 
-    rospy.loginfo('Top of the loop')
-
     # Safety check: We shouldn't be holding position at this point, assuming
     # the previous iteration succeeded. But if we allow interruptions in the
     # future, we need to handle this case.
@@ -180,36 +178,29 @@ def loop():
         state.position_hold = True
 
     # Wait for current IFCB activity to finish
-    rospy.loginfo('Waiting for IFCB to be ready')
     set_state(ConductorStates.WAIT_FOR_IFCB)
     state.ifcb_is_idle.wait()
-    rospy.loginfo('IFCB is ready!')
 
     # Debubble
-    rospy.loginfo('Starting debubble routine')
+    set_state(ConductorStates.IFCB_DEBUBBLE)
     state.ifcb_is_idle.clear()
     result = ifcb_run_routine(routine='debubble', instrument=True)
     assert result.success
 
     # Wait for debubble to finish
-    rospy.loginfo('Waiting for debubble to finish')
     state.ifcb_is_idle.wait()
-    rospy.loginfo('Debubble is finished!')
 
     # Sample
     rospy.loginfo('Starting runsample routine')
+    set_state(ConductorStates.IFCB_RUNSAMPLE)
     state.ifcb_is_idle.clear()
     result = ifcb_run_routine(routine='runsample', instrument=True)
     assert result.success
 
     # Wait for position hold release
-    rospy.loginfo('Waiting for position hold release')
     with state.position_hold_condition:
         state.position_hold_condition.wait_for(lambda: not state.position_hold)
-    rospy.loginfo('Done waiting for position hold release')
-
-    rospy.loginfo('Bottom of the loop')
-
+    rospy.loginfo('Position hold released')
 
 
 def main():
