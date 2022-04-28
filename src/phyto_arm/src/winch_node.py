@@ -227,7 +227,7 @@ async def move_to_depth(server, goal):
 
         # If we exceed the programmed position envelope, the motor will stop
         # automatically. Take this as a sign something bad happened.
-        if started and motor.value.mode == Motion.MODE_PASSIVE:
+        if started and motor.value.mode != Motion.MODE_VELOCITY:
             server.set_aborted(text='Motor unexpectedly stopped')
             break
         elif not started and motor.value.mode == Motion.MODE_VELOCITY:

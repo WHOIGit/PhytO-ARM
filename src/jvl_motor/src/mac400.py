@@ -54,6 +54,10 @@ class MODE(enum.Enum):
     VELOCITY = 1
     POSITION = 2
 
+    # Might briefly read this if a position limit is hit, before switching to
+    # PASSIVE mode.
+    STOP = 11
+
 
 # Register numbers are taken from the user manual, listing 5.12.3. All registers
 # are 32-bits, stored as two 16-bit half-words in big endian order.

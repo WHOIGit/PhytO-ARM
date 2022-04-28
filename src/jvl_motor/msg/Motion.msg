@@ -14,6 +14,7 @@ ds_core_msgs/DsHeader ds_header
 int8 MODE_PASSIVE = 0
 int8 MODE_VELOCITY = 1
 int8 MODE_POSITION = 2
+int8 MODE_STOP = 11
 
 int8 mode
 
