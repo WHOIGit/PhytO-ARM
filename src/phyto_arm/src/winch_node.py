@@ -115,12 +115,6 @@ def estimate_time(v, start, target, epsilon):
     return rospy.Duration.from_sec(t)
 
 
-def dist_to_encoder_counts(dist):
-    # return 8192 * gear_ratio * dist / spool_circumference
-    return int(round(8192 * 60 * dist / 0.6))
-
-
-
 # This is our entrypoint to the MoveToDepth action, which has some additional
 # guardrails to prevent a runaway motor.
 async def move_to_depth_chk(server, goal):
@@ -165,7 +159,7 @@ async def move_to_depth(server, goal):
     depth_max = max(start_depth, goal.depth) + 0.10  # m
 
     rospy.logdebug(f'Starting depth is {start_depth} m')
-    rospy.logdebug(f'Setting depth envelope to ({depth_min}, {depth_max}) m')
+    rospy.loginfo(f'Setting depth envelope to ({depth_min}, {depth_max}) m')
 
     # Velocity function
     v = velocity_f(goal.depth, 0.02, 0.05)
@@ -173,7 +167,7 @@ async def move_to_depth(server, goal):
 
     # Estimate the time it should take to reach the destination
     expected_time = estimate_time(v, start_depth, goal.depth, epsilon)
-    rospy.logdebug(f'Estimated movement time is {expected_time.to_sec():.0f} s')
+    rospy.loginfo(f'Estimated movement time is {expected_time.to_sec():.0f} s')
 
     # Set a time limit based on the estimate
     time_limit = max(
@@ -181,31 +175,34 @@ async def move_to_depth(server, goal):
         expected_time + rospy.Duration.from_sec(10.0)
     )
 
-    rospy.logdebug(f'Setting time limit to {time_limit.to_sec():.0f} s')
+    rospy.loginfo(f'Setting time limit to {time_limit.to_sec():.0f} s')
+
+    # Compute the RPM to m/s ratio
+    gear_ratio = rospy.get_param('~gear_ratio')
+    spool_circumference = rospy.get_param('~spool_circumference')
+    rpm_ratio = 60 * gear_ratio / spool_circumference
+
+    # Create a function to convert distances to encoder counts
+    dist2encoder = \
+        lambda d: int(round(8192 * gear_ratio * d / spool_circumference))
 
     # Set some position bounds on the motor itself
     rospy.logdebug(f'Current motor position is {motor.value.position}')
 
     if goal.depth < start_depth:
         lower_bound = motor.value.position - \
-            dist_to_encoder_counts((start_depth - goal.depth) + 0.10)
-        upper_bound = motor.value.position + dist_to_encoder_counts(0.10)
+            dist2encoder((start_depth - goal.depth) + 0.10)
+        upper_bound = motor.value.position + dist2encoder(0.10)
     else:
-        lower_bound = motor.value.position - dist_to_encoder_counts(0.10)
+        lower_bound = motor.value.position - dist2encoder(0.10)
         upper_bound = motor.value.position + \
-            dist_to_encoder_counts((goal.depth - start_depth) + 0.10)
+            dist2encoder((goal.depth - start_depth) + 0.10)
 
     if lower_bound < -(2**24) + 1 or upper_bound > 2**24 - 1:
         server.set_aborted(text='Encoder position could wrap -- reset offset')
         return
 
-    rospy.logdebug('Motor position envelope is '
-                   f'({lower_bound}, {upper_bound})')
-
-    # TODO: Calculate the RPM to m/s ratio
-    gear_ratio = 60.0
-    spool_circumference = 0.6707
-    rpm_ratio = 60 * gear_ratio / spool_circumference
+    rospy.loginfo(f'Motor position envelope is ({lower_bound}, {upper_bound})')
 
     # Record the time that we start moving
     start_time = rospy.Time.now()
@@ -229,6 +226,8 @@ async def move_to_depth(server, goal):
         # automatically. Take this as a sign something bad happened.
         if started and motor.value.mode != Motion.MODE_VELOCITY:
             server.set_aborted(text='Motor unexpectedly stopped')
+            if not (pos_min < motor.value.position < pos_max):
+                rospy.logerr('Position envelope exceeded')
             break
         elif not started and motor.value.mode == Motion.MODE_VELOCITY:
             # We started moving, so turn on the check above
@@ -245,12 +244,9 @@ async def move_to_depth(server, goal):
             break
 
         # Update bounds so we do not travel far from this position
-        set_position_envelope(
-            min=max(lower_bound,
-                    motor.value.position - dist_to_encoder_counts(0.10)),
-            max=min(upper_bound,
-                    motor.value.position + dist_to_encoder_counts(0.10)),
-        )
+        pos_min = max(lower_bound, motor.value.position - dist2encoder(0.10))
+        pos_max = min(upper_bound, motor.value.position + dist2encoder(0.10))
+        set_position_envelope(min=pos_min, max=pos_max)
 
         # Compute and command a new velocity according to our current depth
         velocity = v(depth.value.depth)
@@ -259,8 +255,8 @@ async def move_to_depth(server, goal):
         if True:
             move(
                 velocity=rpm,       # RPM
-                acceleration=1000,  # RPM/s
-                torque=1.0          # rated torque
+                acceleration=1200,  # RPM/s
+                torque=3.0          # rated torque
             )
 
         # Publish feedback about our current progress
@@ -295,9 +291,12 @@ async def move_to_depth(server, goal):
     server.set_succeeded(result)
 
     # Suggest a new conversion factor
-    time_ratio = expected_time / elapsed_time
-    rospy.logdebug(f'Calculated RPM ratio is {rpm_ratio}')
-    rospy.logdebug(f'Suggested RPM ratio is {rpm_ratio / time_ratio}')
+    if abs(start_depth - goal.depth) >= 1.0:
+        time_ratio = expected_time / elapsed_time
+        rospy.set_param('~spool_circumference',
+                        spool_circumference * time_ratio)
+        rospy.loginfo(f'Adjusting RPM ratio from {rpm_ratio} to '
+                      f'{rpm_ratio / time_ratio}')
 
 
 async def main():
