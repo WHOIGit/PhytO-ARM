@@ -97,17 +97,12 @@ def on_action_stop(pub, action_msg):
         S.acquire()
     is_recording = False
 
-    if not data_msgs or not depth_msgs:
-        rospy.logerr('Did not receive any data')
-        for _ in range(NUM_COLLECTORS):
-            S.release()
-        return
-
     # Since the data topic is dynamic, we need to re-interpret the data as the
     # correct type. This is a bit hacky, but described here:
     # http://schulz-m.github.io/2016/07/18/rospy-subscribe-to-any-msg-type/
-    pkg, _, typename = data_msgs[0]._connection_header['type'].partition('/')
-    msg_class = getattr(importlib.import_module(f'{pkg}.msg'), typename)
+    if data_msgs:
+        pkg, _, clsname = data_msgs[0]._connection_header['type'].partition('/')
+        msg_class = getattr(importlib.import_module(f'{pkg}.msg'), clsname)
 
     parsed_data_msgs = []
     for raw_msg in data_msgs:
@@ -133,6 +128,12 @@ def on_action_stop(pub, action_msg):
 
     if len(groups) != data.shape[0]:
         rospy.logwarn(f'Discarded {len(groups) - data.shape[0]} data points')
+
+    if data.shape[0] < 2:
+        rospy.logerr('Did not receive enough data')
+        for _ in range(NUM_COLLECTORS):
+            S.release()
+        return
 
     # Create a function that linearly interpolates between points
     f = scipy.interpolate.interp1d(data[:,0], data[:,1])
