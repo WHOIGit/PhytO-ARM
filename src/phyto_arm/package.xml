@@ -24,6 +24,8 @@
 
     <depend>ds_core_msgs</depend>
 
+    <exec_depend>rospy</exec_depend>
+
     <exec_depend>ds_util_nodes</exec_depend>
 
     <exec_depend>aml_ctd</exec_depend>
