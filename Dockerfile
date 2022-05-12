@@ -36,3 +36,8 @@ COPY ./src ./src
 # Build
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash \
  && stdbuf -o L catkin build phyto_arm
+
+# Copy the launch tool
+ENV DONT_SCREEN=1
+ENV NO_VIRTUALENV=1
+COPY ./phyto-arm ./phyto-arm

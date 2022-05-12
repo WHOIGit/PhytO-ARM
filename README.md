@@ -177,12 +177,9 @@ These steps assume that ROS Noetic has been installed already.
 
     source /opt/ros/noetic/setup.bash
 
-    sudo apt install -y \
-        build-essential \
-        python3-catkin-tools \
-        python3-rosdep \
-        python3-vcstool \
-        python3-virtualenv
+    # Install apt package dependencies
+    sed 's/#.*//' apt-requirements.txt | envsubst \
+        | xargs sudo apt install -y
 
     # Clone source dependencies
     vcs import src < deps.rosinstall
@@ -196,10 +193,6 @@ These steps assume that ROS Noetic has been installed already.
     # https://github.com/ros-perception/vision_opencv/issues/345
     sudo sed -i 's,/usr/include/opencv,/usr/include/opencv4,g' \
         /opt/ros/noetic/share/cv_bridge/cmake/cv_bridgeConfig.cmake
-
-    # Install additional dependencies
-    sed 's/#.*//' apt-requirements.txt | envsubst \
-        | xargs sudo apt install -y
 
     # Create Python virtual environment
     python3 -m virtualenv .venv --system-site-packages
@@ -222,6 +215,34 @@ These steps assume that ROS Noetic has been installed already.
     sudo systemctl daemon-reload
     sudo systemctl enable phyto-arm
     sudo systemctl start phyto-arm
+
+
+### Install with Docker
+
+This is in progress.
+
+    sudo docker build --tag whoi/phyto-arm .
+    sudo docker run --rm -it \
+        --publish 9090:9090/tcp \
+        --volume "$(pwd)"/configs:/configs:ro \
+        --volume /mnt/data:/mnt/data \
+        --device /dev/ttyS3 \
+        whoi-phyto-arm \
+        ./phyto-arm start /configs/hades_docker.yaml
+
+Each serial device defined in the config file (e.g., for the CTD) must be passed to the container with `--device`.
+
+Any network service to which a node connects on `localhost` must likewise be changed to refer to the Docker host's IP address of `172.17.0.1`, such as the params `/gps/host` and `/ifcb/address`.
+
+The gpsd service on the host needs to be modified to accept inbound connections from the container. Use `systemctl edit gpsd.socket` to create an override file:
+
+    # Allow clients to connect to gpsd from Docker.
+    # Based on https://stackoverflow.com/q/42240757
+    [Socket]
+    ListenStream=
+    ListenStream=/var/run/gpsd.sock
+    ListenStream=0.0.0.0:2947
+
 
 
 ## Configuring instruments
