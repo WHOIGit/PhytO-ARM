@@ -11,5 +11,5 @@
     uri: https://bitbucket.org/whoidsl/ds_sensors.git
 
 - git:
-    local-name: rocon_devices
-    uri: https://github.com/robotics-in-concert/rocon_devices.git
+    local-name: ros-rtsp-camera
+    uri: https://github.com/WHOIGit/ros-rtsp-camera.git

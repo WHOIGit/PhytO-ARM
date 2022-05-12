@@ -1,4 +1,4 @@
 ds_base
 ds_msgs
 ds_sensors
-rocon_devices
+ros-rtsp-camera

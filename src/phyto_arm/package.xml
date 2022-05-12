@@ -38,7 +38,7 @@
         Dependencies related to republishing the RTSP feed.
     -->
     <exec_depend>compressed_image_transport</exec_depend>
-    <exec_depend>rocon_rtsp_camera_relay</exec_depend>
+    <exec_depend>rtsp_camera</exec_depend>
 
     <!--
         Provides the rosbridge_server node, which communicates with Foxglove.
