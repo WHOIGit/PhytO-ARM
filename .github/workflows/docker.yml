@@ -66,24 +66,49 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build
+      # Enable Docker layer caching in the GitHub Actions cache.
+      #
+      # https://evilmartians.com/chronicles/build-images-on-github-actions-with-docker-layer-caching
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-multi-buildx-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-multi-buildx
+
+      # Pull the previous images from the registry, which helps to avoid
+      # invalidating lower layers with updated apt dependencies that then have
+      # to be re-downloaded on our bandwidth-constrained devices.
+      #
+      # This means our images can get stale, but we can always manually rebuild.
+      - name: Pull existing images
+        shell: bash
+        run: |
+          TAGS=("${{ steps.init.outputs.docker_tag }}" latest)
+          IFS=, read -a PLATFORMS \
+            <<< "${{ steps.init.outputs.docker_platforms }}"
+
+          for TAG in "${TAGS[@]}"; do
+            for PLATFORM in "${PLATFORMS[@]}"; do
+              docker pull --platform "$PLATFORM" \
+                "${{ steps.init.outputs.docker_repo }}:$TAG" || true
+            done
+          done
+
+      - name: Build (and optionally push)
         uses: docker/build-push-action@v2
         with:
           context: ./ros/
           platforms: ${{ steps.init.outputs.docker_platforms }}
-          load: true
+          push: ${{ steps.init.outputs.docker_push }}
+          tags: ${{ steps.init.outputs.docker_repo }}:${{ steps.init.outputs.docker_tag }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
           build-args: |
             GIT_SOURCE=${{ steps.init.outputs.git_source }}
             GIT_REVISION=${{ steps.init.outputs.git_revision }}
 
-      - name: Push to registry
-        if: steps.init.outputs.docker_push == 'true'
-        uses: docker/build-push-action@v2
-        with:
-          context: ./ros/
-          platforms: ${{ steps.init.outputs.docker_platforms }}
-          push: true
-          tags: ${{ steps.init.outputs.docker_repo }}:${{ steps.init.outputs.docker_tag }}
-          build-args: |
-            GIT_SOURCE=${{ steps.init.outputs.git_source }}
-            GIT_REVISION=${{ steps.init.outputs.git_revision }}
+      - name: Update cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
