@@ -18,6 +18,20 @@ COPY ./deps.rosinstall ./
 RUN mkdir ./src \
  && vcs import src < deps.rosinstall
 
+# Install dependencies declared in package.xml files
+RUN apt update \
+ && rosdep install --default-yes --from-paths ./src --ignore-src \
+ && rm -rf /var/lib/apt/lists/*
+
+# Warm the build directory with pre-built packages that don't change often.
+# This list can be updated according to `catkin build --dry-run phyto_arm`.
+RUN source /opt/ros/${ROS_DISTRO}/setup.bash \
+ && stdbuf -o L catkin build \
+        ds_core_msgs \
+        ds_sensor_msgs \
+        ds_util_nodes \
+        rtsp_camera
+
 # Copy package.xml files for local packages
 COPY ./src/aml_ctd/package.xml ./src/aml_ctd/package.xml
 COPY ./src/ifcb/package.xml ./src/ifcb/package.xml
@@ -25,7 +39,7 @@ COPY ./src/jvl_motor/package.xml ./src/jvl_motor/package.xml
 COPY ./src/phyto_arm/package.xml ./src/phyto_arm/package.xml
 COPY ./src/rbr_maestro3_ctd/package.xml ./src/rbr_maestro3_ctd/package.xml
 
-# Install dependencies declared in package.xml files
+# Install new rosdep dependencies declared in the above package.xml files
 RUN apt update \
  && rosdep install --default-yes --from-paths ./src --ignore-src \
  && rm -rf /var/lib/apt/lists/*
@@ -34,7 +48,7 @@ RUN apt update \
 COPY ./src ./src
 
 # Build
-RUN source /opt/ros/${ROS_DISTRO}/setup.bash \
+RUN source ./devel/setup.bash \
  && stdbuf -o L catkin build phyto_arm
 
 # Copy the launch tool
