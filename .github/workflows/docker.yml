@@ -4,9 +4,12 @@ on:
   pull_request:
     paths:
       - "ros/**"
+      - ".github/workflows/**"
   push:
     paths:
       - "ros/**"
+      - ".github/workflows/**"
+
 
 jobs:
   build:
@@ -70,30 +73,11 @@ jobs:
       #
       # https://evilmartians.com/chronicles/build-images-on-github-actions-with-docker-layer-caching
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-multi-buildx-${{ github.sha }}
           restore-keys: ${{ runner.os }}-multi-buildx
-
-      # Pull the previous images from the registry, which helps to avoid
-      # invalidating lower layers with updated apt dependencies that then have
-      # to be re-downloaded on our bandwidth-constrained devices.
-      #
-      # This means our images can get stale, but we can always manually rebuild.
-      - name: Pull existing images
-        shell: bash
-        run: |
-          TAGS=("${{ steps.init.outputs.docker_tag }}" latest)
-          IFS=, read -a PLATFORMS \
-            <<< "${{ steps.init.outputs.docker_platforms }}"
-
-          for TAG in "${TAGS[@]}"; do
-            for PLATFORM in "${PLATFORMS[@]}"; do
-              docker pull --platform "$PLATFORM" \
-                "${{ steps.init.outputs.docker_repo }}:$TAG" || true
-            done
-          done
 
       - name: Build (and optionally push)
         uses: docker/build-push-action@v2
@@ -102,8 +86,12 @@ jobs:
           platforms: ${{ steps.init.outputs.docker_platforms }}
           push: ${{ steps.init.outputs.docker_push }}
           tags: ${{ steps.init.outputs.docker_repo }}:${{ steps.init.outputs.docker_tag }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache
+            type=registry,ref=${{ steps.init.outputs.docker_repo }}:buildcache
+          cache-to: |
+            type=local,dest=/tmp/.buildx-cache-new,mode=max
+            type=registry,ref=${{ steps.init.outputs.docker_repo }}:buildcache,mode=max
           build-args: |
             GIT_SOURCE=${{ steps.init.outputs.git_source }}
             GIT_REVISION=${{ steps.init.outputs.git_revision }}
