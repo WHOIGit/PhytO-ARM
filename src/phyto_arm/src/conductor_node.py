@@ -73,7 +73,7 @@ def on_ifcb_msg(msg):
     if marker['routine'] == 'runsample' and \
        marker['kind'] == 'before' and \
        marker['value'].get('StepType') == 'SwitchTriggering' and \
-       marker['value'].get('Arguments', []) == [False]:
+       marker['value'].get('Arguments', []) == [True]:
 
         rospy.loginfo('Should release position hold now')
 
