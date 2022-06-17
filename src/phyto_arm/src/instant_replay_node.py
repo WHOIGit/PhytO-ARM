@@ -60,7 +60,7 @@ def main():
 
     # Publisher for instant replays
     publisher = rospy.Publisher(
-        f'{rospy.get_name()}/image',
+        '~image',
         Image,
         queue_size=2*history.maxlen
     )

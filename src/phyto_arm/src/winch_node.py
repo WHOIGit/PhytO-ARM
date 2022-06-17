@@ -2,6 +2,7 @@
 import asyncio
 import functools
 import math
+import signal
 import uuid
 
 import actionlib
@@ -15,6 +16,16 @@ from jvl_motor.srv import MoveCmd, SetPositionEnvelopeCmd, StopCmd
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthFeedback, \
     MoveToDepthResult
+
+
+
+import faulthandler
+import signal
+
+def dump(*args, **kwargs):
+    faulthandler.dump_traceback()
+
+signal.signal(signal.SIGUSR1, dump)
 
 
 # COMMAND LINE NOTE
@@ -159,8 +170,9 @@ async def move_to_depth(server, goal):
     depth_min = min(start_depth, goal.depth) - depth_margin  # m
     depth_max = max(start_depth, goal.depth) + depth_margin  # m
 
-    rospy.logdebug(f'Starting depth is {start_depth} m')
-    rospy.loginfo(f'Setting depth envelope to ({depth_min}, {depth_max}) m')
+    rospy.logdebug(f'Starting depth is {start_depth:.2f} m')
+    rospy.loginfo('Setting depth envelope to ' +
+                  f'({depth_min:.2f}, {depth_max:.2f}) m')
 
     # Velocity function
     v = velocity_f(goal.depth, 0.02, 0.05)
@@ -188,7 +200,7 @@ async def move_to_depth(server, goal):
         lambda d: int(round(8192 * gear_ratio * d / spool_circumference))
 
     # Set some position bounds on the motor itself
-    rospy.logdebug(f'Current motor position is {motor.value.position}')
+    rospy.logdebug(f'Current motor position is {motor.value.position:.2f}')
 
     if goal.depth < start_depth:
         lower_bound = motor.value.position - \
@@ -203,7 +215,8 @@ async def move_to_depth(server, goal):
         server.set_aborted(text='Encoder position could wrap -- reset offset')
         return
 
-    rospy.loginfo(f'Motor position envelope is ({lower_bound}, {upper_bound})')
+    rospy.loginfo('Motor position envelope is ' + 
+                  f'({lower_bound:.2f}, {upper_bound:.2f})')
 
     # Record the time that we start moving
     start_time = rospy.Time.now()
@@ -300,8 +313,8 @@ async def move_to_depth(server, goal):
         time_ratio = expected_time / elapsed_time
         rospy.set_param('~spool_circumference',
                         spool_circumference * time_ratio)
-        rospy.loginfo(f'Adjusting RPM ratio from {rpm_ratio} to '
-                      f'{rpm_ratio / time_ratio}')
+        rospy.loginfo(f'Adjusting RPM ratio from {rpm_ratio:.4f} to '
+                      f'{rpm_ratio / time_ratio:.4f}')
 
 
 async def main():
@@ -315,7 +328,12 @@ async def main():
 
     # Initialize the ROS node
     rospy.init_node('winch', anonymous=True, disable_signals=True)
-    rospy.core.add_preshutdown_hook(loop.stop)
+
+    # Register signal handlers the same way rospy would
+    for sig in [signal.SIGTERM, signal.SIGINT]:
+        loop.add_signal_handler(sig, rospy.signal_shutdown,
+                                f'signal-{sig.value}')
+    rospy.core.add_preshutdown_hook(lambda reason: loop.stop())
 
     # Wait for services to become available
     for svc in [ move, set_position_envelope, stop ]:
@@ -340,4 +358,4 @@ async def main():
 
 
 if __name__ == '__main__':
-    asyncio.get_event_loop().run_until_complete(main())  # Python <3.7
+    asyncio.run(main())

@@ -91,7 +91,11 @@ async def main():
 
         # Parse the message data
         # FIXME: Unsure if we ought to decode to a string or leave as bytes
-        parsed = amlxparser.parseAMLx(msg.data.decode())
+        try:
+            parsed = amlxparser.parseAMLx(msg.data.decode())
+        except:
+            rospy.logerr(f'Failed to parse: {msg.data.decode()}')
+            continue
 
         # Create a lookup table of measurements
         data = {}

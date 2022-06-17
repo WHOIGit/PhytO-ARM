@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+import sys
+sys.path.insert(0, "/home/ifcb/PhytO-ARM/ros")
+import debug
+
+
 import functools
 import math
 import threading
@@ -72,8 +77,8 @@ def on_ifcb_msg(msg):
     # Detect when we can release our position hold
     if marker['routine'] == 'runsample' and \
        marker['kind'] == 'before' and \
-       marker['value'].get('StepType') == 'SwitchTriggering' and \
-       marker['value'].get('Arguments', []) == [True]:
+       marker['value'].get('StepType') == 'ChangeSpeed' and \
+       marker['value'].get('Arguments', []) == ['{#SamplingSpeed}']:
 
         rospy.loginfo('Should release position hold now')
 
@@ -206,7 +211,9 @@ def loop():
 def main():
     global ifcb_run_routine, move_to_depth, set_state
 
-    rospy.init_node('conductor', anonymous=True)
+    rospy.init_node('conductor', anonymous=True, log_level=rospy.DEBUG)
+
+    #debug.hook_signals()
 
     # Publish state messages useful for debugging
     set_state = functools.partial(set_state,
@@ -235,7 +242,4 @@ def main():
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass
+    debug.wrap_main(main)

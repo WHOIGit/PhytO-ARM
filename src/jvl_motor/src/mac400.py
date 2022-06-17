@@ -44,7 +44,7 @@ class Register:
         return (2*self.num, 2*self.num+1)
 
 
-class MODE(enum.Enum):
+class MODE(enum.IntEnum):
     '''Modes for the MODE_REG register.'''
     # More modes are described in table 5.12.3 of the user manual.
     #
