@@ -34,7 +34,7 @@ routes = web.RouteTableDef()
 async def index(request):
     return web.json_response({
         'depth': last_depth,
-        'location': last_location,
+        **last_location,
     })
 
 
