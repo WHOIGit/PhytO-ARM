@@ -2,10 +2,6 @@
     <!-- Most settings are in config.yaml, which is easier to edit -->
     <rosparam command="load" file="$(arg config_file)" />
 
-    <!-- Launch file for recording rosbags -->
-    <include file="$(find phyto_arm)/launch/rosbag.launch"
-        pass_all_args="true" />
-
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
         <arg name="use_compression" value="true" />
     </include>
@@ -13,34 +9,41 @@
     <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
 
     <group if="$(eval arg('ctd') == 'rbr_maestro3')">
-        <node name="ctd" pkg="rbr_maestro3_ctd"
-            type="rbr_maestro3_node.py">
+        <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py"
+              launch-prefix="$(optenv LAUNCH_PREFIX)">
             <remap from="~in" to="/ctd_comms/in" />
         </node>
     </group>
 
     <group if="$(eval arg('ctd') == 'aml')">
-        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py"
+              launch-prefix="$(optenv LAUNCH_PREFIX)">
             <remap from="~in" to="/ctd_comms/in" />
         </node>
     </group>
 
-    <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+    <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py"
+          launch-prefix="$(optenv LAUNCH_PREFIX)" />
 
-    <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+    <node name="winch" pkg="phyto_arm" type="winch_node.py"
+          launch-prefix="$(optenv LAUNCH_PREFIX)" />
 
-    <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+    <node name="profiler" pkg="phyto_arm" type="profiler_node.py"
+          launch-prefix="$(optenv LAUNCH_PREFIX)" />
 
     <node name="gps" pkg="gpsd_client" type="gpsd_client">
         <remap from="/fix" to="~fix" />
         <remap from="/extended_fix" to="~extended_fix" />
     </node>
 
-    <node name="web" pkg="phyto_arm" type="web_node.py" />
+    <node name="web" pkg="phyto_arm" type="web_node.py"
+          launch-prefix="$(optenv LAUNCH_PREFIX)" />
 
-    <node name="ifcb" pkg="ifcb" type="ifcb" />
+    <node name="ifcb" pkg="ifcb" type="ifcb"
+          launch-prefix="$(optenv LAUNCH_PREFIX)" />
 
-    <node name="conductor" pkg="phyto_arm" type="conductor_node.py" />
+    <node name="conductor" pkg="phyto_arm" type="conductor_node.py"
+          launch-prefix="$(optenv LAUNCH_PREFIX)" />
 
     <node name="camera" pkg="rtsp_camera" type="rtsp_camera_node">
         <remap from="~image" to="~image/do_not_use" />
@@ -49,6 +52,7 @@
 
     <!--
     disabled
-    <node name="instant_replay" pkg="phyto_arm" type="instant_replay_node.py" />
+    <node name="instant_replay" pkg="phyto_arm" type="instant_replay_node.py"
+          launch-prefix="$(optenv LAUNCH_PREFIX)" />
     -->
 </launch>

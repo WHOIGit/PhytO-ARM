@@ -37,7 +37,7 @@ def parseAMLx(s):
             parsed.setdefault('derive', {})[name] = \
                 Measurement(sensor, name, float(value), unit, None, None, None)
         else:
-            raise ValueError("Unexpected sensor type")
+            raise ValueError(f"Unexpected sensor type: {sensor}")
 
     parsed['msgnum'] = msgnum
     return parsed
@@ -65,6 +65,8 @@ def iterAMLx(s):
 if __name__ == '__main__':
     import pprint
 
-    sample = '''msg138{mux[meta=time,1590605500.55,s][data=uv,1],port1[data=Cond,0.000000,mS/cm][rawi=ADC,563,none][data=TempCT,23.881313,C][rawi=ADC,428710,none],port2[data=Pressure,0.071390,dbar][rawi=ADC,844470,2sComp],port3[data=SV,0.000000,m/s][rawf=NSV,0.000000,samples],derive[data=Depth,0.070998,m]}'''
+    import sys
+    sample = sys.argv[1]
+    #sample = '''msg138{mux[meta=time,1590605500.55,s][data=uv,1],port1[data=Cond,0.000000,mS/cm][rawi=ADC,563,none][data=TempCT,23.881313,C][rawi=ADC,428710,none],port2[data=Pressure,0.071390,dbar][rawi=ADC,844470,2sComp],port3[data=SV,0.000000,m/s][rawf=NSV,0.000000,samples],derive[data=Depth,0.070998,m]}'''
 
     pprint.pprint(parseAMLx(sample))

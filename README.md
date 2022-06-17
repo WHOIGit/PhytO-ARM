@@ -219,12 +219,21 @@ These steps assume that ROS Noetic has been installed already.
 
 ### Install with Docker
 
-This is in progress.
+This is a work in progress.
 
-    sudo docker build --tag whoi/phyto-arm .
-    sudo docker run --rm -it \
+Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system. The container image can also be built with
+
+    docker build --tag whoi/phyto-arm .
+
+  [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
+
+Running the container looks like:
+
+    docker run --rm -it \
+        --name phyto-arm \
         --publish 9090:9090/tcp \
         --volume "$(pwd)"/configs:/configs:ro \
+        --volume ~/IFCBacquire:/root/IFCBacquire:ro \
         --volume /mnt/data:/mnt/data \
         --device /dev/ttyS3 \
         whoi-phyto-arm \
@@ -232,7 +241,7 @@ This is in progress.
 
 Each serial device defined in the config file (e.g., for the CTD) must be passed to the container with `--device`.
 
-Any network service to which a node connects on `localhost` must likewise be changed to refer to the Docker host's IP address of `172.17.0.1`, such as the params `/gps/host` and `/ifcb/address`.
+Any network service running on the host to which a node connects must be changed to refer to the Docker host's IP address of `172.17.0.1`, such as in the params `/gps/host` and `/ifcb/address`.
 
 The gpsd service on the host needs to be modified to accept inbound connections from the container. Use `systemctl edit gpsd.socket` to create an override file:
 

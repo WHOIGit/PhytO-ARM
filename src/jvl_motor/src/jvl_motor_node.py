@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+import sys
+sys.path.insert(0, "/home/ifcb/PhytO-ARM/ros")
+import debug
+
+
 import functools
 import threading
 import time
@@ -107,7 +112,9 @@ def cmd_stop(client, request):
 
 def main():
     # Initialize this node
-    rospy.init_node('jvl_motor', anonymous=True)
+    rospy.init_node('jvl_motor', anonymous=True, log_level=rospy.DEBUG)
+
+    #debug.hook_signals()
 
     # Connect to the Modbus server
     client = ModbusClient(
@@ -213,7 +220,4 @@ def main():
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass
+    debug.wrap_main(main)
