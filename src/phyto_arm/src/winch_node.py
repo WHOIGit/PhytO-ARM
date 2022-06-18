@@ -155,8 +155,9 @@ async def move_to_depth(server, goal):
 
     # Save our initial depth and compute depth limits
     start_depth = depth.value.depth
-    depth_min = min(start_depth, goal.depth) - 0.10  # m
-    depth_max = max(start_depth, goal.depth) + 0.10  # m
+    depth_margin = rospy.get_param('~safety_envelopes').get('position', 0.1)
+    depth_min = min(start_depth, goal.depth) - depth_margin  # m
+    depth_max = max(start_depth, goal.depth) + depth_margin  # m
 
     rospy.logdebug(f'Starting depth is {start_depth} m')
     rospy.loginfo(f'Setting depth envelope to ({depth_min}, {depth_max}) m')
@@ -227,7 +228,10 @@ async def move_to_depth(server, goal):
         if started and motor.value.mode != Motion.MODE_VELOCITY:
             server.set_aborted(text='Motor unexpectedly stopped')
             if not (pos_min < motor.value.position < pos_max):
-                rospy.logerr('Position envelope exceeded')
+                rospy.logerr(
+                    'Position envelope exceeded -- '
+                    f'{motor.value.position} not in ({pos_min, pos_max})'
+                )
             break
         elif not started and motor.value.mode == Motion.MODE_VELOCITY:
             # We started moving, so turn on the check above
@@ -244,8 +248,9 @@ async def move_to_depth(server, goal):
             break
 
         # Update bounds so we do not travel far from this position
-        pos_min = max(lower_bound, motor.value.position - dist2encoder(0.10))
-        pos_max = min(upper_bound, motor.value.position + dist2encoder(0.10))
+        pos_margin = dist2encoder(depth_margin)
+        pos_min = max(lower_bound, motor.value.position - pos_margin)
+        pos_max = min(upper_bound, motor.value.position + pos_margin)
         set_position_envelope(min=pos_min, max=pos_max)
 
         # Compute and command a new velocity according to our current depth
