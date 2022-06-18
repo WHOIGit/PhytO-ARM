@@ -175,6 +175,17 @@ def start(args):
         return _start(args)
     os.environ['DONT_SCREEN'] = '1'
 
+    # Check if there is a screen session running already
+    try:
+        subprocess.check_call(
+            ['screen', '-list', 'phyto-arm'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        print('PhytO-ARM appears to be running already, aborting')
+        return
+    except subprocess.CalledProcessError:
+        pass
+
     # Re-run this command in a screen session
     command = 'screen -L -dmS phyto-arm ' + \
               ' '.join(shlex.quote(a) for a in sys.argv)
