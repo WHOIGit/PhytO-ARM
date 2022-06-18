@@ -10,10 +10,12 @@ The nodes are mostly started by roslaunch, with the notable exception of
 '''
 import argparse
 import atexit
+import json
 import os
 import shlex
 import subprocess
 import sys
+import urllib.request
 
 import yaml
 
@@ -79,6 +81,18 @@ def prep_roslaunch(config, env, package, launchfile):
     return command, env
 
 
+# Send alerts when the program stops
+def send_alerts(alert_config):
+    for alert in alert_config:
+        assert alert['type'] == 'slack' and alert['url']
+        urllib.request.urlopen(
+            alert['url'],
+            json.dumps({
+                'text': 'PhytO-ARM stopped'
+            }).encode()
+        )
+
+
 def attach(args):
     os.execl('/bin/sh', '/bin/sh', '-c', 'screen -r phyto-arm')
 
@@ -90,6 +104,9 @@ def _start(args):
 
     # Prepare the environment
     env = prep_environment()
+
+    # Set up alerts for when we terminate
+    atexit.register(send_alerts, config.get('alerts', []))
 
     # Allow the config to override where logs are stored
     log_dir = config.get('launch_args', {}).get('log_dir')
