@@ -192,12 +192,12 @@ async def move_to_depth(server, goal):
 
     if goal.depth < start_depth:
         lower_bound = motor.value.position - \
-            dist2encoder((start_depth - goal.depth) + 0.10)
-        upper_bound = motor.value.position + dist2encoder(0.10)
+            dist2encoder((start_depth - goal.depth) + depth_margin)
+        upper_bound = motor.value.position + dist2encoder(depth_margin)
     else:
-        lower_bound = motor.value.position - dist2encoder(0.10)
+        lower_bound = motor.value.position - dist2encoder(depth_margin)
         upper_bound = motor.value.position + \
-            dist2encoder((goal.depth - start_depth) + 0.10)
+            dist2encoder((goal.depth - start_depth) + depth_margin)
 
     if lower_bound < -(2**24) + 1 or upper_bound > 2**24 - 1:
         server.set_aborted(text='Encoder position could wrap -- reset offset')
