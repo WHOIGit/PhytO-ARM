@@ -9,15 +9,15 @@ This directory contains ROS nodes for the PhytO-ARM project. The supported ROS r
 
 The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
 
-    $ ./phyto-arm config/hades.yaml
+    $ ./phyto-arm start config/hades.yaml
+    $ ./phyto-arm stop
 
-The ROS nodes will be shut down when the process is terminated. To run nodes in the background (so that you can disconnect from the system, for example), use the `screen` utility:
 
-    $ screen -dmS phyto-arm ./phyto-arm configs/hades.yaml
+The ROS nodes will be run in the background (so that you can disconnect from the system, for example) within a `screen` session. This session can be attached with the convenience command
 
-In the future you can shut down the nodes using:
+    $ ./phyto-arm attach
 
-    $ screen -S phyto-arm -X quit
+Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</kbd> to detach again.
 
 **Note:** All instruments must already be logging data. Some notes on configuring instruments are included below.
 
