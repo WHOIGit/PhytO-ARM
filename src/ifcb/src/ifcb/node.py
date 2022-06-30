@@ -82,7 +82,6 @@ def send_command(client, pub, command):
     msg.data = command.encode()
 
     # Send the command
-    rospy.loginfo(f'> {command[:512]}')
     client.relay_message_to_host(command)
 
     # Publish the message after sending it, so that the timestamp is more
@@ -93,8 +92,6 @@ def send_command(client, pub, command):
 # Publish incoming "raw" messages from the IFCB as ROS messages
 def on_any_message(pub, data):
     sender_id, smsgsrc, seqno, data = data
-
-    rospy.loginfo(f'< {data[:512]}')
 
     # Publish a copy of the incoming message
     msg = RawData()
