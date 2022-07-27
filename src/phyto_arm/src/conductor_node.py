@@ -201,9 +201,9 @@ def loop():
     playlist.append((ConductorStates.IFCB_RUNSAMPLE, 'runsample'))
 
     # Run IFCB steps in sequence
-    for state, routine in playlist:
+    for state_const, routine in playlist:
         rospy.loginfo(f'Starting {routine} routine')
-        set_state(state)
+        set_state(state_const)
         state.ifcb_is_idle.clear()
         result = ifcb_run_routine(routine=routine, instrument=True)
         assert result.success
