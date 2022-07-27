@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import sys
-sys.path.insert(0, "/home/ifcb/PhytO-ARM/ros")
-import debug
-
-
 import functools
 import math
 import threading
@@ -213,8 +208,6 @@ def main():
 
     rospy.init_node('conductor', anonymous=True, log_level=rospy.DEBUG)
 
-    #debug.hook_signals()
-
     # Publish state messages useful for debugging
     set_state = functools.partial(set_state,
         rospy.Publisher('~state', ConductorState, queue_size=1, latch=True))
@@ -242,4 +235,4 @@ def main():
 
 
 if __name__ == '__main__':
-    debug.wrap_main(main)
+    main()

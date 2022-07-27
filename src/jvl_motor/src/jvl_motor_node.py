@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import sys
-sys.path.insert(0, "/home/ifcb/PhytO-ARM/ros")
-import debug
-
-
 import functools
 import threading
 import time
@@ -114,8 +109,6 @@ def main():
     # Initialize this node
     rospy.init_node('jvl_motor', anonymous=True, log_level=rospy.DEBUG)
 
-    #debug.hook_signals()
-
     # Connect to the Modbus server
     client = ModbusClient(
         host=rospy.get_param('~address'),
@@ -220,4 +213,4 @@ def main():
 
 
 if __name__ == '__main__':
-    debug.wrap_main(main)
+    main()
