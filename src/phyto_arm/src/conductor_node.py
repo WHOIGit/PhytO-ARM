@@ -44,6 +44,8 @@ class state:
     last_scheduled_time = None
     next_scheduled_index = 0
 
+    last_bead_time = None
+
 
 def on_ifcb_msg(msg):
     # Parse the message and see if it is a marker
@@ -181,21 +183,31 @@ def loop():
     set_state(ConductorStates.WAIT_FOR_IFCB)
     state.ifcb_is_idle.wait()
 
-    # Debubble
-    set_state(ConductorStates.IFCB_DEBUBBLE)
-    state.ifcb_is_idle.clear()
-    result = ifcb_run_routine(routine='debubble', instrument=True)
-    assert result.success
+    # Build up a playlist of IFCB steps that we need to run
+    playlist = []
 
-    # Wait for debubble to finish
-    state.ifcb_is_idle.wait()
+    # Determine if it's time to run beads
+    bead_interval = rospy.Duration(60*rospy.get_param('~bead_interval'))
+    if rospy.Time.now() - state.last_bead_time > bead_interval:
+        rospy.loginfo('Will run beads this round')
+        playlist.append((ConductorStates.IFCB_DEBUBBLE, 'debubble'))
+        playlist.append((ConductorStates.IFCB_BEADS,    'beads'))
+        playlist.append((ConductorStates.IFCB_BIOCIDE,  'biocide'))
+        playlist.append((ConductorStates.IFCB_BLEACH,   'bleach'))
+        state.last_bead_time = rospy.Time.now()
 
-    # Sample
-    rospy.loginfo('Starting runsample routine')
-    set_state(ConductorStates.IFCB_RUNSAMPLE)
-    state.ifcb_is_idle.clear()
-    result = ifcb_run_routine(routine='runsample', instrument=True)
-    assert result.success
+    # Always run a debubble and sample
+    playlist.append((ConductorStates.IFCB_DEBUBBLE,  'debubble'))
+    playlist.append((ConductorStates.IFCB_RUNSAMPLE, 'runsample'))
+
+    # Run IFCB steps in sequence
+    for state, routine in playlist:
+        rospy.loginfo(f'Starting {routine} routine')
+        set_state(state)
+        state.ifcb_is_idle.clear()
+        result = ifcb_run_routine(routine=routine, instrument=True)
+        assert result.success
+        state.ifcb_is_idle.wait()
 
     # Wait for position hold release
     with state.position_hold_condition:
@@ -228,6 +240,10 @@ def main():
         MoveToDepthAction
     )
     move_to_depth.wait_for_server()
+
+    # Set a fake timestamp for having run beads, so that we don't run it at
+    # every startup and potentially waste our limited supply.
+    state.last_bead_time = rospy.Time.now()
 
     # Run the main loop forever
     while not rospy.is_shutdown():
