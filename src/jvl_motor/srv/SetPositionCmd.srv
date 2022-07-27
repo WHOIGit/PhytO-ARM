@@ -1,0 +1,10 @@
+# SetPositionCmd
+# Sets the motor into motion toward the position selected, without violating
+# the maximum velocity, torque or acceleration.
+
+int32 position  # encoder count
+float32 velocity  # RPM
+float32 acceleration  # RPM/s
+float32 torque  # 1.0 = rated torque
+
+---

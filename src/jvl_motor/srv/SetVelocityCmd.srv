@@ -1,5 +1,5 @@
-# MoveCmd
-# Sets the motor into motion at the given velocity, without exceeding the
+# SetVelocityCmd
+# Sets the motor into motion at the a constant velocity, without exceeding the
 # maximum acceleration or torque.
 
 float32 velocity  # RPM

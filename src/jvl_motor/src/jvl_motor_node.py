@@ -62,7 +62,22 @@ def write_registers(client, reg_values):
         raise RuntimeError('Failed to write registers')
 
 
-def cmd_move(client, request):
+def cmd_set_position(client, request):
+    try:
+        write_registers(client, {
+            mac400.MODE_REG:  mac400.MODE.POSITION,
+            mac400.P_SOLL:    request.position,
+            mac400.P_NEW:     0,
+            mac400.V_SOLL:    request.velocity,
+            mac400.A_SOLL:    request.acceleration,
+            mac400.T_SOLL:    request.torque,
+        })
+    except RuntimeError:
+        rospy.logerr('Failed to command motor movement')
+    return srv.SetPositionCmdResponse()
+
+
+def cmd_set_velocity(client, request):
     try:
         write_registers(client, {
             mac400.MODE_REG:  mac400.MODE.VELOCITY,
@@ -74,7 +89,7 @@ def cmd_move(client, request):
         })
     except RuntimeError:
         rospy.logerr('Failed to command motor movement')
-    return srv.MoveCmdResponse()
+    return srv.SetVelocityCmdResponse()
 
 
 def cmd_set_position_envelope(client, request):
@@ -134,17 +149,22 @@ def main():
         queue_size=1
     )
     
-    # Create services for start and stop
+    # Create services
     services = [
         rospy.Service(
-            '~move',
-            srv.MoveCmd,
-            functools.partial(cmd_move, client)
+            '~set_position',
+            srv.SetPositionCmd,
+            functools.partial(cmd_set_position, client)
         ),
         rospy.Service(
             '~set_position_envelope',
             srv.SetPositionEnvelopeCmd,
             functools.partial(cmd_set_position_envelope, client)
+        ),
+        rospy.Service(
+            '~set_velocity',
+            srv.SetVelocityCmd,
+            functools.partial(cmd_set_velocity, client)
         ),
         rospy.Service(
             '~stop',
