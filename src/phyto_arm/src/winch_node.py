@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import asyncio
-import functools
 import math
 import signal
 import uuid
@@ -16,16 +15,6 @@ from jvl_motor.srv import MoveCmd, SetPositionEnvelopeCmd, StopCmd
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthFeedback, \
     MoveToDepthResult
-
-
-
-import faulthandler
-import signal
-
-def dump(*args, **kwargs):
-    faulthandler.dump_traceback()
-
-signal.signal(signal.SIGUSR1, dump)
 
 
 # COMMAND LINE NOTE
