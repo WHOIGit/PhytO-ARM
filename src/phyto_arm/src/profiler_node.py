@@ -171,8 +171,8 @@ def main():
     # Publish DepthProfile messages
     pub = {
         'all':  rospy.Publisher('~', DepthProfile, queue_size=1),
-        'down': rospy.Publisher('~/downcast', DepthProfile, queue_size=1),
-        'up':   rospy.Publisher('~/upcast', DepthProfile, queue_size=1),
+        'down': rospy.Publisher('~downcast', DepthProfile, queue_size=1),
+        'up':   rospy.Publisher('~upcast', DepthProfile, queue_size=1),
     }
 
     # Accumulate depth messages while recording
