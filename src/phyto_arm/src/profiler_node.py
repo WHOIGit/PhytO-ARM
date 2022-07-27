@@ -3,7 +3,6 @@ import functools
 import importlib
 import io
 import itertools
-import math
 import threading
 
 import numpy as np
@@ -153,7 +152,9 @@ def on_action_stop(pub, action_msg):
     profile.data_field = data_field
     profile.depths = x
     profile.values = y
-    pub.publish(profile)
+
+    pub['all'].publish(profile)
+    pub['down' if data[0,0] < data[-1,0] else 'up'].publish(profile)
 
     # Set the Event's internal flag so that the waiting 'goal' message handler
     # can process the next goal.
@@ -168,7 +169,11 @@ def main():
     rospy.init_node('profiler', anonymous=True)
 
     # Publish DepthProfile messages
-    pub = rospy.Publisher('~', DepthProfile, queue_size=1)
+    pub = {
+        'all':  rospy.Publisher('~', DepthProfile, queue_size=1),
+        'down': rospy.Publisher('~/downcast', DepthProfile, queue_size=1),
+        'up':   rospy.Publisher('~/upcast', DepthProfile, queue_size=1),
+    }
 
     # Accumulate depth messages while recording
     rospy.Subscriber('/ctd/depth', DepthPressure,
