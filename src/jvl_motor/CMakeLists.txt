@@ -17,8 +17,9 @@ add_message_files(
 
 add_service_files(
   FILES
-  MoveCmd.srv
+  SetPosition.srv
   SetPositionEnvelopeCmd.srv
+  SetVelocity.srv
   StopCmd.srv
 )
 
