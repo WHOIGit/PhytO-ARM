@@ -19,10 +19,12 @@ def on_depth_message(msg):
         last_depth = math.nan
 
 def on_gps_message(msg):
+    # These field names are chosen to match IFCBacquire so that our values end
+    # up in the same place in the HDR file.
     global last_location
     last_location = {
-        'latitude':  msg.latitude,
-        'longitude': msg.longitude,
+        'gpsLatitude':  msg.latitude,
+        'gpsLongitude': msg.longitude,
     }
 
 
