@@ -89,6 +89,8 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
       - user-chosen topic provided in config
     - Publishes:
       - `/profiler` with *resampled* profile data
+      - `/profiler/downcast` as above, but only downcasts
+      - `/profiler/downcast` as above, but only upcasts
 
   - `web`: Web API for attaching metadata to IFCB bins
     - Subscribes:
@@ -149,8 +151,9 @@ These nodes perform lower-level interactions with hardware components. These nod
       - `/motor/error` with error registers
       - `/motor/motion` with motion registers
     - Services:
-      - `/motor/move` to set the motor's velocity
+      - `/motor/set_position` to set the motor's position
       - `/motor/set_position_envelope` to set position limits
+      - `/motor/set_velocity` to set the motor's velocity
       - `/motor/stop` to stop the motor
 
 
