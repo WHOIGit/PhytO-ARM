@@ -32,6 +32,6 @@ generate_messages(
 catkin_package()
 
 catkin_install_python(
-  PROGRAMS nodes/ifcb
+  PROGRAMS nodes/logfilter_node nodes/ifcb
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

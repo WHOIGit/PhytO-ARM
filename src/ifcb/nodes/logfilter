@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+import rospy
+
+import ifcb.logfilter_node
+
+
+if __name__ == '__main__':
+    try:
+        ifcb.logfilter_node.main()
+    except rospy.ROSInterruptException:
+        pass
