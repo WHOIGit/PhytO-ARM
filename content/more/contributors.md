@@ -18,6 +18,8 @@ Assistant Scientist in the Biology Department at Woods Hole Oceanographic Instit
 
 ## Natalie Kukshtel
 
+## Michael Staiger
+
 # Partners
 ## Donald Anderson
 ## Greg Doucette
