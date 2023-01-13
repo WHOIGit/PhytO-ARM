@@ -1,10 +1,9 @@
 ---
-title: "Motor to Gearbox Connection"
+title: "Motor to Gear box Connection"
 output: md_document
 weigh: 2
 ---
 
-# Motor to Gear Box Connection
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/JVL1.jpeg)
 

@@ -4,7 +4,6 @@ output: md_document
 weight: 3
 ---
 
-# Spindle and Spool Assembly
 
 Next, fit the spindle over the output shaft on the gearbox. The spindle shaft is a shaft step up moving the Conedrive output shaft from 5/8" to 1" and is provided with Waterman Direct Drive Deep Water Reels. Remove the setscrew from the spindle and set aside. Give the input on the spindle a coat of Blue Grease HT or Molykote to prevent grinding and galling and apply some to the gearbox output shaft as well.
 

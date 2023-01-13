@@ -1,5 +1,5 @@
 ---
-title: "MacTalk_Usage"
+title: "MacTalk Usage"
 weight: 3
 ---
 

@@ -1,10 +1,10 @@
 ---
-title: "Stand and GearBox Assembly"
+title: "Stand and Gear Box Assembly"
 output: md_document
 weight: 4
 ---
 
-## Stand and GearBox Assembly
+
 
 To begin, secure the lower section of the winch stand to the mounting block or deck with lag screws or use bolts with lock nuts if the underside of the decking is easily accessible. Since the load will be centered past the front of the stand, be sure the back leg is secure and will not tip.
 

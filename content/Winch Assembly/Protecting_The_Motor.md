@@ -4,7 +4,6 @@ output: md_document
 weight: 1
 ---
 
-# Protecting the Motor
 
 ### Current System
 
