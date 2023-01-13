@@ -5,44 +5,34 @@ output: md_document
 
 This document reviews the equipment needed for basic deployments, parts numbers for relevant items, and details on the system setup.
 
-#### Hardware
+## Hardware
 
-1.  
+#### Motor Components
 
-    ##### Motor Components
+1.  MAC400 Motor with absolute encoder, no brake: [MAC400-D3-FAGM from JVL](https://www.jvl.dk/703/mac400-integrated-servo-motor)
+2.  Motor control module: [MAC00-E14 from JVL](https://www.jvl.dk/806/industrial-ethernet-mac)
+3.  Motor control software license: [MACTALK_USB_OEM from JVL](https://www.jvl.dk/523/software-mac-motor)
+4.  Motor power cable, 5m length: WP0005 from JVL
+5.  Module power cable, 5m length: WI1000-M12F5T05N from JVL
+6.  Serial programming cable: RS232-M12-1-5-8 from JVL
 
-    1.  MAC400 Motor with absolute encoder, no brake: [MAC400-D3-FAGM from JVL](https://www.jvl.dk/703/mac400-integrated-servo-motor)
-    2.  Motor control module: [MAC00-E14 from JVL](https://www.jvl.dk/806/industrial-ethernet-mac)
-    3.  Motor control software license: [MACTALK_USB_OEM from JVL](https://www.jvl.dk/523/software-mac-motor)
-    4.  Motor power cable, 5m length: WP0005 from JVL
-    5.  Module power cable, 5m length: WI1000-M12F5T05N from JVL
-    6.  Serial programming cable: RS232-M12-1-5-8 from JVL
+#### Gearbox Components
 
-2.  
+1.  Cone Drive Custom WHOI spec worm gear box PARTNUMBER
 
-    ##### Gearbox Components
+2.  Mounting hardware, spindle, spool, and boom: [Waterman Industries Gear Box Bottom Reel with Aluminum Spool (No motor, gear box, stand pipe, or base plate)](https://hiliner.com/product-catalog/deep-water-reels/waterman-industries-deep-water-reels-manual-electric-or-hydraulic/) from Hiliner Fishing Gear & Tackle, Inc.
 
-    1.  Cone Drive Custom WHOI spec worm gear box PARTNUMBER
+3.  Additional fiberglass boom slats: Waterman Industries 5/16" x 2" x 36" Fiberglass Spring Arm (for Gear Box Bottom Reel)
 
-    2.  Mounting hardware, spindle, spool, and boom: [Waterman Industries Gear Box Bottom Reel with Aluminum Spool (No motor, gear box, stand pipe, or base plate)](https://hiliner.com/product-catalog/deep-water-reels/waterman-industries-deep-water-reels-manual-electric-or-hydraulic/) from Hiliner Fishing Gear & Tackle, Inc.
+#### Stand motor protection Link to WHOI stand design Link to WHOI
 
-    3.  Additional fiberglass boom slats: Waterman Industries 5/16" x 2" x 36" Fiberglass Spring Arm (for Gear Box Bottom Reel)
+1.  Link to WHOI stand Drawing PDF "Stand Assembly.pdf"
+2.  Bag Protection Option [McMaster-Carr](https://www.mcmaster.com/4656T1/)
+3.  Link to WHOI box drawing PDF "Motor Cover B.pdf"
 
-3.  
+#### Misc Hardware
 
-    ##### Stand motor protection Link to WHOI stand design Link to WHOI
-
-    1.  Link to WHOI stand Drawing PDF "Stand Assembly.pdf"
-    2.  Bag Protection Option [McMaster-Carr](https://www.mcmaster.com/4656T1/)
-    3.  Link to WHOI box drawing PDF "Motor Cover B.pdf"
-
-4.  
-
-    ##### Misc Hardware
-
-    1.  Machine Keys -- 3/16"x3/16"x1" [McMaster-Carr](https://www.mcmaster.com/98870A140/)
-    2.  
-    3.  
+1.  Machine Keys -- 3/16"x3/16"x1" [McMaster-Carr](https://www.mcmaster.com/98870A140/)
 
 #### Networking
 
