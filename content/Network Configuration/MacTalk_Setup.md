@@ -1,6 +1,5 @@
 ---
 title: "MacTalk Setup"
-output: md_document
 ---
 
 #### MacTalk Setup & Addressing

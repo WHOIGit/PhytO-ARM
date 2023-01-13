@@ -1,6 +1,5 @@
 ---
 title: "Sierra Wireless Ace Manager"
-output: md_document
 ---
 
 #### Setting up the module in Sierra Wireless ACE Manager

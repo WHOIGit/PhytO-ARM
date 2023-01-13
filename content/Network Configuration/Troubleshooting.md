@@ -1,6 +1,5 @@
 ---
 title: "Troubleshooting"
-output: md_document
 ---
 
 ##### Errors

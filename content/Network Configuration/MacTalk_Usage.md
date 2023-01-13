@@ -1,6 +1,5 @@
 ---
 title: "MacTalk_Usage"
-output: md_document
 ---
 
 #### Updating Firmware
