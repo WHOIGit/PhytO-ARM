@@ -1,5 +1,6 @@
 ---
 title: "MacTalk Setup"
+weight: 2
 ---
 
 #### MacTalk Setup & Addressing

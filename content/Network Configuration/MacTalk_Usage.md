@@ -1,5 +1,6 @@
 ---
 title: "MacTalk_Usage"
+weight: 3
 ---
 
 #### Updating Firmware
