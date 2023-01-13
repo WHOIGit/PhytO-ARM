@@ -1,6 +1,7 @@
 ---
 title: "Final Assembly"
 output: md_document
+weight: 5
 ---
 
 Secure the top plate and boom mount to the top of the gearbox. Coat the bolts in Aquashield to prevent corrosion before tightening in place.

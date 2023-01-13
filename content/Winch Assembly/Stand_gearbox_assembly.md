@@ -1,6 +1,7 @@
 ---
 title: "Stand and GearBox Assembly"
 output: md_document
+weight: 4
 ---
 
 ## Stand and GearBox Assembly

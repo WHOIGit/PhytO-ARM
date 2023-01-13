@@ -1,6 +1,7 @@
 ---
 title: "Motor to Gearbox Connection"
 output: md_document
+weigh: 2
 ---
 
 # Motor to Gear Box Connection

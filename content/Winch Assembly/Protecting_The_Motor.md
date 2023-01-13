@@ -1,6 +1,7 @@
 ---
 title: "Protecting the Motor"
 output: md_document
+weight: 1
 ---
 
 # Protecting the Motor

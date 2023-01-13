@@ -1,6 +1,7 @@
 ---
 title: "Spindle and Spool Assembly"
 output: md_document
+weight: 3
 ---
 
 # Spindle and Spool Assembly
