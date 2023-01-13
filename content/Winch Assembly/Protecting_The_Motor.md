@@ -4,7 +4,6 @@ output: md_document
 weight: 1
 ---
 
-
 ### Current System
 
 The MAC400 motor is rated IP66 and could theoretically withstand splashing and spraying in the marine environment. We chose to give it some added protection due to its relative investment cost. After some trial and error we chose to go with [hook and loop sealed anti corrosion bags](https://www.mcmaster.com/anti-corrosion-bag/). This cheap and eaily installable solution worked well for us, but other options or no protection may be needed depending on your situation and deployment parameters.

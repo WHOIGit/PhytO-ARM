@@ -1,7 +1,7 @@
 ---
-title: "Motor to Gear box Connection"
+title: "Motor to Gear Box Connection"
 output: md_document
-weigh: 2
+weight: 2
 ---
 
 
