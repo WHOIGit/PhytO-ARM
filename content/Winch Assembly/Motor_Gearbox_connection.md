@@ -5,7 +5,7 @@ weight: 2
 ---
 
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/JVL1.jpeg)
+![Alt](/images/JVL1.jpeg)
 
 To begin connecting the motor to the gearbox apply a small amount of Molykote to the gearbox input shaft with a cotton swab (be careful, it is very messy if it gets on clothing or skin).
 
