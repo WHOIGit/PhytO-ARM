@@ -6,7 +6,7 @@ weight: 4
 
 
 
-To begin, secure the lower section of the winch stand to the mounting block or deck with lag screws or use bolts with lock nuts if the underside of the decking is easily accessible. Since the load will be centered past the front of the stand, be sure the back leg is secure and will not tip.
+Drawings of stand and mounting parts can be found on the [Parts List](https://hablab.whoi.edu/phyto-arm/overview/parts_list/). Secure the lower section of the winch stand to the mounting block or deck with lag screws or use bolts with lock nuts if the underside of the decking is easily accessible. Since the load will be centered past the front of the stand, be sure the back leg is secure and will not tip.
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/Winch1.jpg)
 
