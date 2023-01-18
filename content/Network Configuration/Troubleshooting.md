@@ -39,7 +39,7 @@ Common Errors
 | Position controls are on                                                       | If the motor is position-limited, it will stop if directed to exceed the limit. Return the motor to the limits and/or disable the limits |
 | The tuning has not been adjusted for the current load                          | Adjust the load factor in MacTalk or by changing the register value                                                                      |
 | Some other setting has been inappropriately changed (this has happened before) | Do a complete reset of the motor in MacTalk                                                                                              |
-
+erm
 ##### I can't identify a problem but the motor does not run
 
 | Possible Cause                                                           | Solution                                                                                                                                                                                                                  |
