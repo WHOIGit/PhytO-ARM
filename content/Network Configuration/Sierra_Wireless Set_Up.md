@@ -9,7 +9,7 @@ weight: 1
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/JVL1.jpg)
 
-2.  Log in to Sierra Wireless ACE manager (this is done by typing "<https://> your IP address : your port number " into your browser) and select the "LAN" tab, and expand the 3rd list titled DHCP Reservation List
+2.  Log in to Sierra Wireless ACE manager (this is done by typing "<https://> your IP address : your port number " into your browser) and entering the unsername and password assigned to your sierra modem. Then select the "LAN" tab, and expand the 3rd list titled DHCP Reservation List
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC1.png)
 
@@ -25,8 +25,4 @@ weight: 1
 -   The public start port for SSH will be 3922, the private port will be 20 (the default SSH port)
 -   The motor does not have any port forwarding set up as it should never need to be remotely accessed, all access will be through the Win 10 machine at 192.168.13.2
 
-5.  The module does not need to be connected via Ethernet for reserving the address in ACE Manager, however you do need the physical network set up for the next steps. Be sure to connect all the components via Ethernet to a switch
-
--   Ensure the Win10 machine, motor, and modem are all plugged into the same switch OR
--   All components are plugged in any switch that has been daisy chained to another
--   There are many components that all require power: the modem, switch, Win10 NUC, adjustable DC power supply for the motor control circuit, and AC power for the motor drive circuit, plus any additional computers or monitors.
+5.  The module does not need to be connected via Ethernet for reserving the address in ACE Manager, however you do need the physical network set up for the next steps of MacTalk setup and usage. Be sure to connect all the components via Ethernet to a switch.

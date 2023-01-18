@@ -40,7 +40,7 @@ Note: The JVL module does not need to be connected via Ethernet for reserving th
 1.  Restart MacTalk. It's possible the motor will be detected automatically over Ethernet during the initial scan.
 2.  If the motor is not detected right away, open the dropdown menu on the far left. There should be a "Serial port" option and a local Ethernet connection. The Ethernet connection should be:
 
--   Displayed with a green icon next to it, and
+-   Displayed with a green icon next to it
 -   Listed with the address 192.168.13.2, which is the address of the computer
 -   You may need to manual enter the IP address you assigned the motor you are trying to connect into the box to the right of the wrench and driver icon
 

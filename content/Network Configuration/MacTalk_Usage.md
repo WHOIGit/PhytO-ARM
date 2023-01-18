@@ -13,7 +13,7 @@ A pop-up window should show firmware update options. If the firmware you need is
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC7.png)
 
-Choose the firmware you would like installed on the module by selecting it, and click the "Start" button at the bottom of the window. Once you start the installation, the window should display the current firmware on the module, the new version being loaded, and the download progress. The installer will run, alerting you when the installation is complete.
+Choose the firmware you would like installed on the module by selecting it, and click the "Start" button at the bottom of the window. Once you start the installation, the window should display the current firmware on the module, the new version being loaded, and the download progress. The installer will run, alerting you when the installation is complete. NOTE: Do not stop this process midway through, it is possible to brick a unit by interupting this installation process. 
 
 ![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC8.png)
 
@@ -21,7 +21,7 @@ Once the firmware is updated, click the "Exit" button to close the window. MacTa
 
 #### Tuning the Motor
 
-The motor is configured to behave differently depending on the other hardware it has been paired with. In our setups, we use a planetary gearbox, which is highly precise and most commonly used with servo motors. Given the high level of precision in the hardware, we need to account for that in the MacTalk setup.
+The motor is configured to behave differently depending on the other hardware it has been paired with. In our setups, we use a conedrive gearbox, which is highly precise and most commonly used with servo motors. Given the high level of precision in the hardware, we need to account for that in the MacTalk setup.
 
 If left on the default settings, the motor will quickly begin skipping or making lots of shaky, jerky movements. This is because the default tolerance for follow error, or the number of counts between the target and actual count, is nearly 0. Servo motors will generally make several small, rapid adjustments to maintain a position or speed, which can be useful in many other applications; here we want a smooth ascent and descent with precise stopping points.
 
