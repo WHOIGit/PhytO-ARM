@@ -25,6 +25,7 @@ This document reviews the equipment needed for basic deployments, parts numbers 
 #### Motor Stand and Protection Hardware
 
 1.  Link to WHOI stand Drawing PDF "Stand Assembly.pdf"
+   [Download file](/static/images/Stand_Assembly.pdf)
 2.  Bag Protection Option [McMaster-Carr](https://www.mcmaster.com/4656T1/)
 3.  Link to WHOI box drawing PDF "Motor Cover B.pdf"
 
