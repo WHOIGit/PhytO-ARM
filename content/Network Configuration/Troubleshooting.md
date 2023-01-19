@@ -5,7 +5,7 @@ Weight: 4
 
 ##### Errors
 
-All errors will be displayed in the Errors bar above Status. You may need to expand the list by clicking the red arrow to display any errors.
+All MacTalk errors will be displayed in the Errors bar above Status in the MacTalk program. You may need to expand the list by clicking the red arrow to display any errors.
 
 ##### Status
 
