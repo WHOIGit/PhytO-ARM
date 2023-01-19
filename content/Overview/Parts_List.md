@@ -14,7 +14,7 @@ This document reviews the equipment needed for basic deployments, parts numbers 
 3.  Motor control software license: [MACTALK_USB_OEM from JVL](https://www.jvl.dk/523/software-mac-motor)
 4.  Motor power cable, 5m length: WP0005 from JVL
 5.  Module power cable, 5m length: WI1000-M12F5T05N from JVL
-6.  Serial programming cable: RS232-M12-1-5-8 from JVL
+6.  Serial programming cable: RS232-M12-1-5-8 from JVL (Note: May need [Serial to USB](https://www.amazon.com/Sabrent-Converter-Prolific-Chipset-CB-DB9P/dp/B00IDSM6BW/ref=sr_1_3?keywords=Serial%2BTo%2BUsb%2BAdapter&qid=1674146167&sr=8-3&th=1) adapter cable depending on computer ports)
 
 #### Gearbox Components
 
@@ -24,11 +24,9 @@ This document reviews the equipment needed for basic deployments, parts numbers 
 
 #### Motor Stand and Protection Hardware
 
-1.  Link to WHOI stand Drawing PDF "Stand Assembly.pdf"
-   [Download file](https://drive.google.com/file/d/1l7seAab8UveowJ0qSMiqy4KtkhFb25bC/view?usp=sharing)
+1.  Link to WHOI stand Drawing PDF "Stand Assembly.pdf" [Download file](https://whoi-my.sharepoint.com/:b:/g/personal/michael_staiger_whoi_edu/EVbM2-zOY0hBjWZCHXKfUOAB2K06o-FsmcDCMey1_-G9TQ?e=0UA0Nf)
 2.  Bag Protection Option [McMaster-Carr](https://www.mcmaster.com/4656T1/)
-3.  Link to WHOI box drawing PDF "Motor Cover B.pdf"
-[Download file](https://drive.google.com/file/d/1k4QyMbjhJlD_Sxw6f8YTRJV2tpmxH5Du/view?usp=sharing)
+3.  Link to WHOI box drawing PDF "Motor Cover B.pdf" [Download file](https://whoi-my.sharepoint.com/:b:/g/personal/michael_staiger_whoi_edu/ERwgTlnwaAZDnIMBmpFRazABG99atlDSl248m-EFrU-SXw?e=x1PYt4)
 
 #### Misc Hardware
 
@@ -39,6 +37,7 @@ This document reviews the equipment needed for basic deployments, parts numbers 
 1.  Sierra Wireless MP70 Cellular Modem: [from Novotech](https://novotech.com/mp70-105.html)
 2.  6-in-1 sharkfin antenna: [from Novotech](https://novotech.com/6-in-1-airlink-antenna-294.html)
 3.  Pro Switch: [from Digital Loggers](https://dlidirect.com/products/new-pro-switch)
+4.  Several Ethernet cables
 
 #### Field Visits
 
