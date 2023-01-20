@@ -17,7 +17,7 @@ Note: The JVL module does not need to be connected via Ethernet for reserving th
 
 -   If the motor does not appear in MacTalk, make sure you've selected "Serial port" from the dropdown menu in the upper left corner. Select the appropriate COM port in the next menu, and make sure the baudrate is set to the MacTalk default of 19200
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC4.png)
+![Alt](/images/MAC4.png)
 
 -   If there is no green circle next to the selected COM port, open Device Manager on Windows (click the Windows icon on the bottom left and type "Device Manager"). Click "Ports (COM & LPT)" to expand the list of available ports. The USB Serial Port will have a COM port number listed next to it, select that COM port in MacTalk
 -   If the green circle still doesn't show up, restart MacTalk
@@ -28,7 +28,7 @@ Note: The JVL module does not need to be connected via Ethernet for reserving th
 -   Subnet is 255.255.255.0
 -   Default gateway is the IP address for the modem (192.168.13.31)
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC5.png)
+![Alt](/images/MAC5.png)
 
 4.  Click Apply and Save, this will save all the changes you made, the module will reboot and the new IP address should show up in the lower right corner along with the motor icon
 5.  Check the box that says Use DHCP and then Apply & Save
@@ -44,7 +44,7 @@ Note: The JVL module does not need to be connected via Ethernet for reserving th
 -   Listed with the address 192.168.13.2, which is the address of the computer
 -   You may need to manual enter the IP address you assigned the motor you are trying to connect into the box to the right of the wrench and driver icon
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC6.png)
+![Alt](/images/MAC6.png)
 
 3.  If you don't see the green icon or the IP address is something else (like 10.0.0.80 or 169.254.15.44), check your Ethernet connection
 

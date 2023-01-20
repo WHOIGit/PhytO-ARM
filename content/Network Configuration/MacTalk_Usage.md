@@ -11,11 +11,11 @@ To change or update the firmware on a module, click on the Updates menu from the
 
 A pop-up window should show firmware update options. If the firmware you need is not immediately listed, check the box that says "Show all files", and select the appropriate file. Alternatively, you can browse the firmware folder using the button on the right.
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC7.png)
+![Alt](/images/MAC7.png)
 
 Choose the firmware you would like installed on the module by selecting it, and click the "Start" button at the bottom of the window. Once you start the installation, the window should display the current firmware on the module, the new version being loaded, and the download progress. The installer will run, alerting you when the installation is complete. NOTE: Do not stop this process midway through, it is possible to brick a unit by interupting this installation process. 
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC8.png)
+![Alt](/images/MAC8.png)
 
 Once the firmware is updated, click the "Exit" button to close the window. MacTalk will restart automatically, and the module tab will now display the new firmware.
 
@@ -27,7 +27,7 @@ If left on the default settings, the motor will quickly begin skipping or making
 
 To fix this, we need to make 2 adjustments. First, adjust the motor tuning by selecting the "Filter Setup" icon in MacTalk. This will bring up a small floating menu.
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC9.png)
+![Alt](/images/MAC9.png)
 
 Here, we need to adjust the Position/Velocity filter. The default setting will be at the 5,3 position on the x,y grid. This needs to move to the 3,3 position, where there is more stability but still relatively quick corrections to the movement. After this has been changed, click "Load Filter" to save the changes. Check to make sure the new filter is in place by closing the window and reopening it to ensure the same setting are selected.
 
@@ -35,7 +35,7 @@ Secondly, we need to open up the In Position Window for the motor. With more sta
 
 To change the In Position Window, we need to put the motor into Position Mode. This can be done by either changing the actual mode, or you can uncheck the box next to "Change Actual Mode".
 
-![Alt](https://github.com/WHOIGit/PhytO-ARM/blob/master/website/static/images/MAC10.png)
+![Alt](/images/MAC10.png)
 
 Once in Position Mode, a box will appear under Motion Parameters that says "In position window". The default value is 100, enter 200 in the box and hit enter. This will update the register for this value. If you want to be sure your changes have been saved, click "Save in Motor" along the top menu bar. This will save the register values to the motor and restart the module. Confirm when you switch into Position Mode that this value remains set at 200.
 
