@@ -5,6 +5,8 @@ weight: 2
 
 #### MacTalk Setup & Addressing
 
+THIS IS A TEST
+
 Note: The JVL module does not need to be connected via Ethernet for reserving the address in ACE Manager, however you do need the physical network set up for the next steps. Be sure to connect all the components via Ethernet to a switch
 
 -   Ensure the Win10 machine, motor, and modem are all plugged into the same switch OR
