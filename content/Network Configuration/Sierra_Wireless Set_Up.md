@@ -7,7 +7,7 @@ weight: 1
 
 1.  Look up MAC address for motor module, this will be listed on a sticker at the bottom edge
 
-![Alt](/images/JVL1.jpg)
+![Alt](/images/JVLMAC.png)
 
 2.  Log in to Sierra Wireless ACE manager (this is done by typing "<https://> your IP address : your port number " into your browser) and entering the unsername and password assigned to your sierra modem. Then select the "LAN" tab, and expand the 3rd list titled DHCP Reservation List
 
