@@ -16,6 +16,6 @@ Slide inner drag plate onto spindle shaft and screw into place. Next slide one t
 
 |                                                                                            |                                                                                            |                                                                                            |
 |------------------------|------------------------|------------------------|
-| ![Alt](/images/Spool1.jpeg) | ![Alt](/images/Spool2.jpeg) | ![Alt](h/images/Spool3.jpeg) |
+| ![Alt](/images/Spool1.jpeg) | ![Alt](/images/Spool2.jpeg) | ![Alt](/images/Spool3.jpeg) |
 
 Note: Apply the non-slip decking tape to the inside of the spool to increase the grip the line will have. If played out too far without enough friction on the spool, the line may simply rotate around the spool as it turns. Secure your line on the spool by running the line through a loop at the end around the center of the spool.
