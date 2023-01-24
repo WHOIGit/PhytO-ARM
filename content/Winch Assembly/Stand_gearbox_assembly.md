@@ -12,8 +12,8 @@ Drawings of stand and mounting parts can be found on the [Parts List](https://ha
 
 Once the stand is installed, attach the stand insert to the base of the gearbox using the threaded bores. Fit the bolts with washers and coat the threads in Aquashield to prevent corrosion.
 
-![Alt](/images/Winch1_1.jpeg)
+![Alt](/images/Winch1_1.png)
 
 Seat the ConeDrive gearbox and post in the stand base, and adjust the height as needed. To secure the stand at the appropriate height, run a bolt or pin through the paired holes in the stand base and post. Tighten with a lock nut.
 
-![Alt](/images/Winch1_2.jpeg)
+![Alt](/images/Winch1_2.png)

@@ -8,11 +8,11 @@ weight: 1
 
 The MAC400 motor is rated [IP66](https://rainfordsolutions.com/products/ingress-protection-ip-rated-enclosures/ip-enclosure-ratings-standards-explained/#:~:text=The%20IP%20rating%20or%20IP,voltage%20not%20exceeding%2072.5%20kV.&text=This%20standard%20defines%20levels%20of,tools%2C%20dirt%20and%20liquid%20water.) and could theoretically withstand splashing and spraying in the marine environment. We chose to give it some added protection due to its relative investment cost. After some trial and error we chose to go with [hook and loop sealed anti corrosion bags](https://www.mcmaster.com/anti-corrosion-bag/). This cheap and easily installed solution worked well for us, but other options or no protection may be needed depending on your situation and deployment parameters.
 
-![Alt](/images/Bag1.jpeg)
+![Alt](/images/Bag1.png)
 
 To use this solution simply slide the bag over the MAC400 on the final assembled Phyto-Arm system and close the hook and loops where possible. Hit the bag with a heat gun to shrink the bag and reduce size of openings for environmental damage.
 
-![Alt](/images/Bag2.jpeg%C3%9F)
+![Alt](/images/Bag2.png)
 
 ### Previously used system:
 
