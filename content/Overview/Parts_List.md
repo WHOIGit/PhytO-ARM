@@ -18,15 +18,15 @@ This document reviews the equipment needed for basic deployments, parts numbers 
 
 #### Gearbox Components
 
-1.  Cone Drive Custom WHOI spec worm gear box PARTNUMBER
+1.  [Cone Drive](https://conedrive.com/) Custom WHOI spec worm gear box PARTNUMBER
 2.  Mounting hardware, spindle, spool, and boom: [Waterman Industries Gear Box Bottom Reel with Aluminum Spool (No motor, gear box, stand pipe, or base plate)](https://hiliner.com/product-catalog/deep-water-reels/waterman-industries-deep-water-reels-manual-electric-or-hydraulic/) from Hiliner Fishing Gear & Tackle, Inc.
 3.  Additional fiberglass boom slats: Waterman Industries 5/16" x 2" x 36" Fiberglass Spring Arm (for Gear Box Bottom Reel)
 
 #### Motor Stand and Protection Hardware
 
-1.  Link to WHOI stand Drawing PDF "Stand Assembly.pdf" [Download file](https://whoi-my.sharepoint.com/:b:/g/personal/michael_staiger_whoi_edu/EVbM2-zOY0hBjWZCHXKfUOAB2K06o-FsmcDCMey1_-G9TQ?e=0UA0Nf)
+1.  WHOI stand Drawing PDF "Stand Assembly.pdf" [Download file](https://whoi-my.sharepoint.com/:b:/g/personal/michael_staiger_whoi_edu/EVbM2-zOY0hBjWZCHXKfUOAB2K06o-FsmcDCMey1_-G9TQ?e=0UA0Nf)
 2.  Bag Protection Option [McMaster-Carr](https://www.mcmaster.com/4656T1/)
-3.  Link to WHOI box drawing PDF "Motor Cover B.pdf" [Download file](https://whoi-my.sharepoint.com/:b:/g/personal/michael_staiger_whoi_edu/ERwgTlnwaAZDnIMBmpFRazABG99atlDSl248m-EFrU-SXw?e=x1PYt4)
+3.  WHOI box drawing PDF "Motor Cover B.pdf" [Download file](https://whoi-my.sharepoint.com/:b:/g/personal/michael_staiger_whoi_edu/ERwgTlnwaAZDnIMBmpFRazABG99atlDSl248m-EFrU-SXw?e=x1PYt4)
 
 #### Misc Hardware
 
