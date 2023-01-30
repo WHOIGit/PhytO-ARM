@@ -7,6 +7,7 @@ DRAFT
 
 Once the networking has been set up and all requites softwares have been installed you are ready to begin controlling your PhytO-Arm system. First log into your IFCB via ssh tunnels. Launch the PhytO-arm software (HOW do you do this?).
 
+
 #### First, prepare your session for interacting with ROS:
 
 ```{bash include = TRUE}
@@ -17,6 +18,7 @@ cd ~/PhytO-ARM source devel/setup.bash
 
 ```{bash}
 rosservice call /motor_aft/stop
+#replace motor_aft with the ros node name of your PhytO-Arm system
 ```
 
 #### To command the motor to move to a given position, use:
