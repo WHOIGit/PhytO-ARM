@@ -7,7 +7,6 @@ DRAFT
 
 Once the networking has been set up and all requites softwares have been installed you are ready to begin controlling your PhytO-Arm system. First log into your IFCB via ssh tunnels. Launch the PhytO-arm software (HOW do you do this?).
 
-
 #### First, prepare your session for interacting with ROS:
 
 ```{bash include = TRUE}
@@ -29,7 +28,7 @@ rosservice call /motor_aft/set_position "{ position: <X>, velocity: <V>, acceler
 
 ```
 
-**Velocity should be encoded as negative for upward motion and positive for downward motion**. Velocities on the order ot 10000 will result in an estimated rate of 2 cm/s
+**Velocity should be encoded as negative for upward motion and positive for downward motion**. Velocities on the order of 10000 will result in an estimated rate of 2 cm/s
 
 If unsure about direction, before moving the motor, you can get the current encoder position. This can be found in Foxglove Studio (e.g., using a Raw Messages panel looking at the /motor_aft/motion topic for the "position" field) or by running a command:
 
@@ -37,14 +36,16 @@ If unsure about direction, before moving the motor, you can get the current enco
 rostopic echo -n 1 /motor_aft/motion
 ```
 
-I recommend establishing a table of encoder position to depth mappings. Once you have this table, we can set a safety envelope on the motor position so that the motor will refuse to exceed the bounds:
+We recommend establishing a table of encoder position to depth mappings. (DO WE HAVE THIS TABLE? COULD WE SHARE?). You can set a safety envelope on the motor position so that the motor will refuse to exceed the bounds and thus not put your instruments into the bottom or pull them out of the water:
 
 ```{bash}
 rosservice call /motor_aft/set_position_envelope "{ min: <X>, max: <Y> }"
 ```
 
-The calculation for converting a distance (in meters) to encoder counts is:
+## The calculation for converting a distance (in meters) to encoder counts is:
 
 8192 \* gear_ratio \* distance / spool_circumference
 
 where gear_ratio = 60 and we don't yet know the spool_circumference but we can derive it from your table.
+
+8192 is the number of encoder counts to turn the motor 360°

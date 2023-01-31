@@ -13,7 +13,7 @@ weight: 1
 
 ![Alt](/images/MAC1.png)
 
-3.  Create a new entry and enter the MAC address for the module. If the motor is the only one on the network, assign it to 192.168.13.3. We label all of our JVL motors as .3 for simplicity.
+3.  Create a new entry and enter the MAC address for the module. If the motor is the only one on the network, assign it to 192.168.13.3. (IP address 192.168.13.xxx is the standard assigned to all Sierra Wireless MP70s. Ending digits larger than .100 are unreserved and automatically assigned. We advice assigning all components of the system IP addresses that end with values less than .100 and maintaining a standard naming convention between Phyto-Arm Systems.) We label all of our JVL motors as .3 for simplicity. You may also have to do this same process for the WIN10 machine. Alternatively, we have been using a IFCB as the on-board computer, in this case follow all steps the same simply replace any WIN10 NUC reserving  and access with IFCB machine.
 
 ![Alt](/images/MAC2.png)
 
