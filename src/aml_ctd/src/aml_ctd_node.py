@@ -110,7 +110,7 @@ async def main():
         assert data['Depth'].unit == 'm' if 'Depth' in data else True
         assert data['Cond'].unit == 'mS/cm'
         assert data['TempCT'].unit == 'C'
-        assert data['Pressure'].unit == 'dbar'
+        assert data['Pressure'].unit in ('dbar', 'dBar')
         assert data['SV'].unit == 'm/s'
 
         # The parser assumes the timestamp is in UTC
