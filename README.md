@@ -181,11 +181,11 @@ These steps assume that ROS Noetic has been installed already.
     source /opt/ros/noetic/setup.bash
 
     # Install apt package dependencies
-    sed 's/#.*//' apt-requirements.txt | envsubst \
+    sed 's/#.*//' deps/apt-requirements.txt | envsubst \
         | xargs sudo apt install -y
 
     # Clone source dependencies
-    vcs import src < deps.rosinstall
+    vcs import src < deps/deps.rosinstall
 
     # Install ROS dependencies
     sudo rosdep init
@@ -200,7 +200,7 @@ These steps assume that ROS Noetic has been installed already.
     # Create Python virtual environment
     python3 -m virtualenv .venv --system-site-packages
     . venv/bin/activate
-    python3 -m pip install -r python3-requirements.txt
+    python3 -m pip install -r deps/python3-requirements.txt
 
     # Create Catkin workspace
     catkin init

@@ -4,17 +4,17 @@ SHELL ["/usr/bin/bash", "-c"]
 WORKDIR /app
 
 # Install apt package dependencies
-COPY ./apt-requirements.txt ./
+COPY deps/apt-requirements.txt ./
 RUN apt update \
  && sed '/^#/d' apt-requirements.txt | xargs apt install -y \
  && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY ./python3-requirements.txt ./
+COPY deps/python3-requirements.txt ./
 RUN python3 -m pip install -r python3-requirements.txt
 
 # Clone third-party dependencies from VCS
-COPY ./deps.rosinstall ./
+COPY deps/deps.rosinstall ./
 RUN mkdir ./src \
  && vcs import src < deps.rosinstall
 
