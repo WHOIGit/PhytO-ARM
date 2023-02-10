@@ -19,11 +19,13 @@
         <remap from="~in" to="/ctd_comms/in" />
     </node>
 
-    <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+    <group if="$(arg winch)">
+        <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
-    <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+        <node name="winch" pkg="phyto_arm" type="winch_node.py" />
 
-    <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+        <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+    </group>
 
     <node name="gps" pkg="gpsd_client" type="gpsd_client">
         <remap from="/fix" to="~fix" />
@@ -36,7 +38,11 @@
 
     <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
 
-    <node name="conductor" pkg="phyto_arm" type="conductor_node.py" />
+    <node name="conductor" pkg="phyto_arm" type="conductor_node.py"
+          if="$(arg winch)" />
+
+    <node name="conductor" pkg="phyto_arm" type="conductor_nowinch_node.py"
+          unless="$(arg winch)" />
 
     <node name="camera" pkg="rtsp_camera" type="rtsp_camera_node" />
 

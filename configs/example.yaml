@@ -5,6 +5,7 @@ launch_args:
     ctd: aml
     log_dir: /mnt/data/roslogs/
     rosbag_prefix: /mnt/data/rosbags/phyto-arm
+    winch: false
 
 
 alerts:
