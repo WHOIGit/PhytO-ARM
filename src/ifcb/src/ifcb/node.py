@@ -125,8 +125,18 @@ def on_triggerimage(pub, _, image):
     pub.publish(msg)
 
 
-def on_triggerrois(roi_pub, mkr_pub, _, rois):
+def on_triggercontent(roi_pub, mkr_pub, _, daq, rois):
     timestamp = rospy.Time.now()
+
+    # TODO: Publish DAQ messages too
+    pass
+
+    # Delegate publishing of ROI images and markers to on_triggerrois
+    on_triggerrois(roi_pub, mkr_pub, _, rois, timestamp=timestamp)
+
+
+def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
+    timestamp = timestamp or rospy.Time.now()
     markers = ImageMarkerArray()
     for i, (top, left, image) in enumerate(rois):
         # IFCB does not give us the width and height so we must extract from
@@ -192,6 +202,8 @@ def main():
     # Set up callbacks for trigger images and ROIs
     client.on(('triggerimage',),
               functools.partial(on_triggerimage, img_pub))
+    client.on(('triggercontent',),
+              functools.partial(on_triggercontent, roi_pub, mkr_pub))
     client.on(('triggerrois',),
               functools.partial(on_triggerrois, roi_pub, mkr_pub))
 
