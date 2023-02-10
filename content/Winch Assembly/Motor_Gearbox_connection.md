@@ -4,16 +4,15 @@ output: md_document
 weight: 2
 ---
 
-
 ![Alt](/images/JVL1.png)
 
-To begin connecting the motor to the gearbox apply a small amount of Molykote to the gearbox input shaft with a cotton swab (be careful, it is very messy if it gets on clothing or skin).
+To begin connecting the motor to the gearbox apply, a thin layer of Molykote to the gearbox input shaft with a cotton swab (be careful, it is very messy if it gets on clothing or skin).
 
-The gearbox has a small setscrew that will tighten a clamp around the motor output shaft, located underneath a small rubber insert. Remove the cover and loosen the setscrew to open the input shaft, do not fully remove the set screw.
+The gearbox has a small setscrew that will tighten a clamp around the motor output shaft, located underneath a small rubber insert. Remove the rubber insert and loosen the setscrew to open the input shaft, do not fully remove the set screw.
 
 ![Alt](/images/JVL2.png)
 
-If using the box protection sustem remove the nuts from the ends of the bolts around the motor face and coat bolts with molykote. Carefully line up the motor output shaft with the gearbox input. Align and insert M5 20mm length machine key coated in molykote to the motor output shaft. Slowly insert the motor shaft into the gear input taking care to also align the bolts from the motor housing into their bores on the gear box. Tighten hex bolts to affix motor to gearbox. Tighten set screw and return rubber insert to cover.
+If using the box protection system remove the nuts from the ends of the bolts around the motor face and coat bolts with molykote. Carefully line up the motor output shaft with the gearbox input. Align and insert 3/16" x 3/4" machine key coated in molykote to the motor output shaft (NOTE: the motor is speced to accept a M5 machine key, but we have found that there is some inaccuracy in the machining of the JVL motor shafts making the slightly smaller 3/16" key fit more consistently). Slowly insert the motor shaft into the gear box input taking care to also align the bolts from the motor housing into their bores on the gear box. Tighten hex bolts in a hex pattern to affix motor to gearbox. Tighten set screw and return rubber insert to cover.
 
 ![Alt](/images/JVL3.png)
 
