@@ -1,0 +1,97 @@
+name: Example
+
+
+launch_args:
+    ctd: aml
+    log_dir: /mnt/data/roslogs/
+    rosbag_prefix: /mnt/data/rosbags/phyto-arm
+
+
+alerts:
+    # You can post alert messages to Slack by creating an Incoming Webhook for your channel:
+    # - type: slack
+    #   url: https://hooks.slack.com/services/...
+
+
+# Node-specific configuration
+
+gps:
+    host: "172.17.0.1"
+
+conductor:
+    range:
+        min:  0.5  # m
+        max:  2.0  # m
+
+    # TODO: Currently unimplemented
+    speed:
+        transit: 0.02  # m/s
+        profile: 0.02  # m/s
+
+    # Minimum level of the profiled sensor data to trigger a sample at depth
+    threshold: 0.0
+
+    # Scheduled depths are sampled once per time interval, or when the profile
+    # data does not exceed the configured threshold above.
+    #
+    # Note: Adjusting the scheduled depths after the node has started may resume
+    # from an arbitrary point in the new schedule.
+    schedule:
+        every: 60  # minutes, 0 = never
+        range:
+            first: 0.5  # m
+            last:  2.0  # m
+            count: 4
+
+profiler:
+    resolution: 0.02  # m
+    data_topic: "/ctd/aml/port5/phycoerythrin"
+    data_field: "value"
+
+ctd_comms:
+    connection:
+        type: "SERIAL"
+        port: "/dev/ttyTHS0"
+        baud: 115200
+        data_bits: 8
+
+ifcb:
+    address: "172.17.0.1"
+    port: 8092
+    serial: "111-111-111"
+
+motor:
+    address: "192.168.13.3"
+    port: 502
+    refresh_rate: 1  # hz
+    counts_per_turn: 8192  # defined in manual p.9
+
+camera:
+    # Raymarine CAM220IP defaults
+    video_stream_url: "rtsp://admin:1234@192.168.13.30/h264"
+
+winch:
+    # TODO: Almost none of these values are used yet!
+
+    # The spool circumference is needed for an initial estimate of speed
+    spool_circumference: 0.6604  # m
+
+    gear_ratio: 60
+
+    max_speed:  0.02  # m/s
+    acceleration:  1  # m/s^2
+
+    # Distance from target at which we will reduce speed by half. This controls
+    # the sharpness of our velocity function. A smaller number produces a more
+    # abrupt stop.
+    half_speed_dist: 0.05  # m
+
+    # Distance from the target at which we are close enough to stop.
+    epsilon: 0.01  # m
+
+    safety_envelopes:
+        time:
+            extra_pct: 10.0
+            extra_sec: 10.0
+        position: 0.1  # meters
+
