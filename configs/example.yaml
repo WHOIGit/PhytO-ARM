@@ -31,6 +31,9 @@ conductor:
     # Minimum level of the profiled sensor data to trigger a sample at depth
     threshold: 0.0
 
+    # Interval at which we run a bead sample for maintenance
+    bead_interval: 1440  # minutes
+
     # Scheduled depths are sampled once per time interval, or when the profile
     # data does not exceed the configured threshold above.
     #
@@ -94,4 +97,3 @@ winch:
             extra_pct: 10.0
             extra_sec: 10.0
         position: 0.1  # meters
-
