@@ -40,13 +40,13 @@ Be sure to make the corresponding edits to the config file to persist changes be
 
 ## Observing with Foxglove Studio
 
-[Foxglove Studio][] is the recommended software for monitoring the PhytO-ARM system. To connect to a live system, use the "Rosbridge (ROS 1 & 2)" connection type.
+[Foxglove Studio][] is the recommended software for monitoring the PhytO-ARM system. To connect to a live system, use the "Foxglove WebSocket" connection type.
 
-The Rosbridge node uses TCP port 9090. Ensure this port is forwarded in your router settings *for trusted clients only*, or use SSH port forwarding:
+The Foxglove Bridge node uses TCP port 8765. Ensure this port is forwarded in your router settings *for trusted clients only*, or use SSH port forwarding:
 
-    $ ssh -NL 9090:localhost:9090 hades.hablab.whoi.edu
+    $ ssh -NL 8765:localhost:8765 hades.hablab.whoi.edu
 
-In Studio, the connection address is `ws://hades.hablab.whoi.edu:9090` if connecting directly or `ws://localhost:9090` if using the SSH tunnel.
+In Studio, the connection address is `ws://hades.hablab.whoi.edu:8765` if connecting directly or `ws://localhost:8765` if using the SSH tunnel.
 
   [Foxglove Studio]: https://foxglove.dev
 
