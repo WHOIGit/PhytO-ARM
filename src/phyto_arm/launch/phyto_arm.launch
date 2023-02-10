@@ -9,17 +9,15 @@
 
     <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
 
-    <group if="$(eval arg('ctd') == 'rbr_maestro3')">
-        <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
-            <remap from="~in" to="/ctd_comms/in" />
-        </node>
-    </group>
+    <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py"
+          if="$(eval arg('ctd') == 'rbr_maestro3')">
+        <remap from="~in" to="/ctd_comms/in" />
+    </node>
 
-    <group if="$(eval arg('ctd') == 'aml')">
-        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
-            <remap from="~in" to="/ctd_comms/in" />
-        </node>
-    </group>
+    <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py"
+          if="$(eval arg('ctd') == 'aml')">
+        <remap from="~in" to="/ctd_comms/in" />
+    </node>
 
     <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
