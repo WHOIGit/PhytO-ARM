@@ -30,7 +30,10 @@ This document reviews the equipment needed for basic deployments, parts numbers 
 
 #### Misc Hardware
 
-1.  Machine Keys -- 3/16"x3/16"x1" [McMaster-Carr](https://www.mcmaster.com/98870A140/)
+1.  Machine Keys -- 3/16"x3/16"x3/4" [Part Number 98870A130](https://www.mcmaster.com/98870A130/) and 3/16"x3/16"x1-1/4" [Part Number 98870A150](https://www.mcmaster.com/98870A150/)
+2.  JVL to Cone Bolts M5x0.8x20mm [Part Number 92290A242](https://www.mcmaster.com/92290A242/) (note the head diameter for these may be too large I can not find a direct match to the parts we have in the lab) and washers [Part Number 98689A114](https://www.mcmaster.com/98689A114/)
+3.  Stand and Boom mount to Gearbox bolts M10x1.5 x 20mm [Part Number 93635A416](https://www.mcmaster.com/93635A416/) and lock washers [Part Number 92153A434](https://www.mcmaster.com/92153A434/)
+4.  Lag Bolts or other mounting hardware for bolting down stand
 
 #### Networking
 
