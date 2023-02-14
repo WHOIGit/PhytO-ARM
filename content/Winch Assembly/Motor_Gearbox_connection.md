@@ -4,7 +4,7 @@ output: md_document
 weight: 2
 ---
 
-![Alt](/images/JVL1.png)
+![Alt](/images/MotorDiagram.png)
 
 To begin connecting the motor to the gearbox apply, a thin layer of Molykote to the gearbox input shaft with a cotton swab (be careful, it is very messy if it gets on clothing or skin).
 
