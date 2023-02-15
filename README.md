@@ -23,7 +23,7 @@ During and after deployments, system operators can review system data using stan
 
 ## Contents
 
-Three types of ROS nodes are available. Device nodes enable integration of IFCB, CTD, GPS, servo, and IP camera systems. Behavior nodes interpret device node data streams and direct changes in system behavior. System nodes log ROS traffic and make it available for real-time interactive display (Rosbridge). 
+Three types of ROS nodes are provided. Device nodes enable integration of IFCB, CTD, GPS, servo, and IP camera systems. Behavior nodes interpret device node data streams and direct changes in system behavior. System nodes log ROS traffic and make it available for real-time interactive display (Rosbridge). 
 
 
 ## Installation
