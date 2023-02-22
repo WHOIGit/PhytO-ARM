@@ -1,6 +1,31 @@
 ---
-title: Home
+title: PhytO-ARM
 ---
+PhytO-ARM is robot operating system (ROS)-based toolkit that has been developed by the [Brosnahan Lab at the Woods Hole Oceanographic Institution][blab] for enhanced collection and real-time sharing of phytoplankton observing data.  
+
+for integration of Imaging FlowCytobot ([IFCB][mclane]) and other ocean sensors that are commonly deployed by the [Brosnahan Lab][blab]. The supported ROS release is [Noetic Ninjemys][noetic]. All code supporting PhytO-ARM sensor systems is available through GitHub [here][repo].
+
+At this site, you'll find part inventories and assembly instructions for set up of different sensor configurations that may be used in a variety of contexts. 
+
+There are instructions for assembling a profiling configuration at our accompanying [PhytO-ARM][parm] website. The profiling system consists of an IFCB, an [AML ctd][aml], and a winch built from a [JVL servo motor][jvl] and parts from [Conedrive][cdrive] and [Waterman Industries][wiparts]. Once assembled, code provided here enables a variety of continuous sampling behaviors including continuous CTD profiling and targeted collection of IFCB samples at chlorophyll maxima. 
+
+PhytO-ARM observations of location, depth, water properties, etc. are written to IFCB metadata files at time of collection for distribution through an existing webservices system called [IFCB dashboard][ifcbdb]. Additional scripts are provided for export to [CF-compliant NetCDF][cfnet] data formats and upload to repositories like the [NOAA ERDDAP][nerddap] system.
+
+During and after deployments, system operators can review system data using standard ROS tools like [FoxGlove Studio][fglove].  
+
+  [mclane]: https://mclanelabs.com/imaging-flowcytobot/
+  [blab]: https://www2.whoi.edu/site/brosnahanlab/
+  [noetic]: http://wiki.ros.org/noetic
+  [repo]: https://github.com/WHOIGit/PhytO-ARM
+  [parm]: https://phyto-arm.whoi.edu
+  [aml]: https://amloceanographic.com/instrumentation
+  [jvl]: https://www.jvl.dk/703/mac400-integrated-servo-motor
+  [cdrive]: https://conedrive.com/products/products-2-2/gear-sets-materials-specials-etc-2/
+  [wiparts]: https://hiliner.com/product-catalog/deep-water-reels/waterman-industries-deep-drop-reels-replacement-spools-and-spring-arms/
+  [cfnet]: http://cfconventions.org
+  [nerddap]: https://www.ncei.noaa.gov/erddap/index.html
+  [fglove]: https://foxglove.dev/studio
+  
 
 # PhytO-ARM
 PhytO-ARM is an extensible, open-source platform for multi-sensor, real-time phytoplankton observing, data sharing, and adaptive sampling. It is intended for scientists and aquaculturists that need to monitor and react to dynamic algal bloom conditions.
