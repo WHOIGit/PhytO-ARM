@@ -19,9 +19,9 @@ PhytO-ARM directs collection of a vertical hydrographic profile, interprets its 
 identifies a feature of interest for IFCB sampling. It then repositions the IFCB at a 
 target sampling depth and initiates IFCB sample collection. CTD observations of salinity, 
 temperature, fluorescence, and other water properties measured at time of IFCB sample 
-collection are written to IFCB sample metadata for distribution through [IFCB dashboards]
-[ifcbdb]. Once IFCB has collected its sample, a new CTD profile is triggered, initiating 
+collection are written to IFCB sample metadata for distribution through [IFCB dashboards][ifcbdb]. 
+Once IFCB has collected its sample, a new CTD profile is triggered, initiating 
 the system's next sampling cycle. This behavior will repeat continuously, pausing only for 
 standard cleaning and bead sample collection at an operator defined interval until stopped.
 
-    [ifcbdb]: https://github.com/WHOIGit/ifcbdb.github
+  [ifcbdb]: https://github.com/WHOIGit/ifcbdb.github
