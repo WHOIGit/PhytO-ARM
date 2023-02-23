@@ -2,11 +2,11 @@
 title: PhytO-ARM
 ---
 PhytO-ARM is a toolkit for integration of an Imaging FlowCybobot ([IFCB][mclane]) with 
-other oceanographic sensors and platforms. It has been developed by the [Brosnahan Lab at 
-the Woods Hole Oceanographic Institution][blab]. At this site, you'll find part 
-inventories and assembly instructions for a variety of different sensor configurations 
-that enable different sampling behaviors and automated response on detection of harmful 
-species. 
+other oceanographic sensors and platforms. It has been developed by the [Brosnahan Lab]
+[blab] at [the Woods Hole Oceanographic Institution][whoi]. At this site, you'll find 
+bills of materials and assembly instructions for a variety of different sensor 
+configurations that enable different sampling behaviors and automated responses upon 
+detection of HABs or other species of interest. 
  
 PhytO-ARM systems are supported by robot operating system (ROS) software that is available 
 through GitHub [here][repo]. The supported ROS release is [Noetic Ninjemys][noetic]. 
@@ -20,6 +20,7 @@ Additional code for export of ROS data to CF-compliant NetCDF data formats is av
 
   [mclane]: https://mclanelabs.com/imaging-flowcytobot/
   [blab]: https://www2.whoi.edu/site/brosnahanlab/
+  [whoi]: https://www.whoi.edu
   [repo]: https://github.com/WHOIGit/PhytO-ARM
   [noetic]: http://wiki.ros.org/noetic
   [contifcbacq]: https://github.com/WHOIGit/Dockerized-IFCBacquire
