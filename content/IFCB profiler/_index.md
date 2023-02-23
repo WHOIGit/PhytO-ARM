@@ -24,4 +24,4 @@ Once IFCB has collected its sample, a new CTD profile is triggered, initiating
 the system's next sampling cycle. This behavior will repeat continuously, pausing only for 
 standard cleaning and bead sample collection at an operator defined interval until stopped.
 
-  [ifcbdb]: https://github.com/WHOIGit/ifcbdb.github
+  [ifcbdb]: https://github.com/WHOIGit/ifcbdb.git
