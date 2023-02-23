@@ -2,8 +2,8 @@
 title: PhytO-ARM
 ---
 PhytO-ARM is a toolkit for integration of an Imaging FlowCybobot ([IFCB][mclane]) with 
-other oceanographic sensors and platforms. It has been developed by the [Brosnahan Lab]
-[blab] at [the Woods Hole Oceanographic Institution][whoi]. At this site, you'll find 
+other oceanographic sensors and platforms. It has been developed by the [Brosnahan Lab][blab] 
+at [the Woods Hole Oceanographic Institution][whoi]. At this site, you'll find 
 bills of materials and assembly instructions for a variety of different sensor 
 configurations that enable different sampling behaviors and automated responses upon 
 detection of HABs or other species of interest. 
