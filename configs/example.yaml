@@ -63,6 +63,7 @@ ifcb:
     address: "172.17.0.1"
     port: 8092
     serial: "111-111-111"
+    routines_dir: "/routines"
 
 motor:
     address: "192.168.13.3"

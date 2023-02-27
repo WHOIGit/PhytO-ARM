@@ -43,14 +43,14 @@ def do_runroutine(client, pub, req):
     # routine completes.
     #
     # This means that the routines *must* be written to disk at the expected
-    # location. We send 'saveroutines' at startup for this reason.
+    # location.
 
     # Deny path traversal
     if '/' in req.routine:
         return srv.RunRoutineResponse(success=False)
 
     # Attempt to load the file
-    path = f'~/IFCBacquire/Host/Routines/{req.routine}.json'
+    path = os.path.join(rospy.get_param('~routines_dir'), f'{req.routine}.json')
     try:
         with open(os.path.expanduser(path), 'rb') as f:
             routine = json.load(f)
@@ -108,10 +108,6 @@ def on_started(client, pub, *args, **kwargs):
 
     # Allow any queued commands to proceed now that the IFCB is available
     ifcb_ready.set()
-
-    # Run "saveroutines" to save copies of the routines as JSON in a known
-    # location, so we can instrument them later.
-    send_command(client, pub, 'saveroutines')
 
 
 def on_triggerimage(pub, _, image):
