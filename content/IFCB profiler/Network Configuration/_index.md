@@ -1,6 +1,6 @@
 ---
 title: "Network Configuration"
-weight: 2
+weight: 5
 ---
 
 This setup guide uses IP and MAC addresses specific to the modem and SIM card used in this 

@@ -1,7 +1,7 @@
 ---
 title: "Parts List"
 output: md_document
-weight: 1
+weight: 5
 ---
 
 This document reviews the equipment needed for basic deployments, parts numbers for relevant items, and details on the system setup.

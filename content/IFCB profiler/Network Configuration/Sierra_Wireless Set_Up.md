@@ -1,6 +1,6 @@
 ---
 title: "Sierra Wireless Ace Manager"
-weight: 1
+weight: 8
 ---
 
 #### Setting up the module in Sierra Wireless ACE Manager
