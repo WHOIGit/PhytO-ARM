@@ -13,7 +13,7 @@ Components required for basic configuration:
         - 6 pin bulkhead connector with RS-232 pin out (if attaching a CTD) 
 | ![vent cap connector](/images/bulkhead_connector.jpg) ![connector pins](/images/bulkhead_pins.png)|
 |:--:|
-| <b>Detail of MCBH-6 connector installed through IFCB vent cap.<\b>
+| <b>Detail of MCBH-6 connector installed through IFCB vent cap.<\b>|
 |<b>Pin 1: CPU serial Tx<\b>|
 |<b>Pin 2: Ground<\b>|
 |<b>Pin 3: 24V power<\b>|
