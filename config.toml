@@ -4,3 +4,6 @@ title = "PhytO-ARM"
 pluralizelisttitles = false
 ignorefiles = ["Archive/*", "Overview/*"]
 theme = "hugo-geekdoc"
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
