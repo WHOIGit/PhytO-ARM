@@ -14,13 +14,8 @@ Components required for basic configuration:
         
 | ![vent cap connector](/images/bulkhead_connector.jpg) ![connector pins](/images/bulkhead_pins.png)|
 |:--|
-| <b>Detail of MCBH-6 connector installed through IFCB vent cap.</b>|
-|<b>Pin 1: CPU serial Tx <br />
-Pin 2: Ground<br />
-Pin 3: 24V power<br />
-Pin 4: CPU serial Rx<br />
-Pin 5: N/C<br />
-Pin 6: N/C</b>|
+|**Detail of MCBH-6 connector installed through IFCB vent cap.**|
+|**Pin 1: CPU serial Tx<br />Pin 2: Ground<br />Pin 3: 24V power<br />Pin 4: CPU serial Rx<br />Pin 5: N/C<br />Pin 6: N/C</b>**|
 
 2.  Communication
     * Sierra Wireless MP70 Cellular Modem: [from Novotech](https://novotech.com/mp70-105.html)
