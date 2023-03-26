@@ -11,6 +11,7 @@ Components required for basic configuration:
         - v2.1.0 IFCBacquire
         - Debian or Ubuntu OS
         - 6 pin bulkhead connector with RS-232 pin out (if attaching a CTD) 
+        
 | ![vent cap connector](/images/bulkhead_connector.jpg) ![connector pins](/images/bulkhead_pins.png)|
 |:--:|
 | <b>Detail of MCBH-6 connector installed through IFCB vent cap.<\b>|
