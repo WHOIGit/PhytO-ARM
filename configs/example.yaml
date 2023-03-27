@@ -102,3 +102,9 @@ winch:
             extra_pct: 10.0
             extra_sec: 10.0
         position: 0.1  # meters
+
+web_node:
+    ctdDepth:
+        topic: /ctd/depth
+        value: depth
+        default: nan
