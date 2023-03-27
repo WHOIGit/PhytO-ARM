@@ -23,7 +23,7 @@ from .instrumentation import instrument
 
 
 ifcb_ready = threading.Event()
-
+initial_datafolder = None
 
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
@@ -48,6 +48,13 @@ def do_runroutine(client, pub, req):
     # Deny path traversal
     if '/' in req.routine:
         return srv.RunRoutineResponse(success=False)
+
+    # Check for beads routines
+    assert initial_datafolder is not None
+    if req.routine == 'beads':
+        send_command(client, pub, f'daq:setdatafolder:{initial_datafolder}/beads')
+    else:
+        send_command(client, pub, f'daq:setdatafolder:{initial_datafolder}')
 
     # Attempt to load the file
     path = os.path.join(rospy.get_param('~routines_dir'), f'{req.routine}.json')
@@ -109,6 +116,10 @@ def on_started(client, pub, *args, **kwargs):
     # Allow any queued commands to proceed now that the IFCB is available
     ifcb_ready.set()
 
+# Reset the data folder to the initial value in case bead run
+# was the last command set
+def on_interactive_stopped(_, __, ___, client, pub):
+    send_command(client, pub, f'daq:setdatafolder:{initial_datafolder}')
 
 def on_triggerimage(pub, _, image):
     # The image data should be in PNG format, which is an allowed ROS image type
@@ -166,6 +177,13 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     mkr_pub.publish(markers)
 
 
+def on_datafolder(_, __, datafolder):
+    global initial_datafolder
+    # Reject updates once set
+    if initial_datafolder is None:
+        initial_datafolder = datafolder
+
+
 def main():
     rospy.init_node('ifcb', anonymous=True)
 
@@ -202,6 +220,12 @@ def main():
               functools.partial(on_triggercontent, roi_pub, mkr_pub))
     client.on(('triggerrois',),
               functools.partial(on_triggerrois, roi_pub, mkr_pub))
+
+    # Set up callbacks for datafolder switching
+    client.on(('valuechanged','setdatafolder'),
+              functools.partial(on_datafolder, client, tx_pub))
+    client.on(('valuechanged','interactive','stopped'),
+              functools.partial(on_interactive_stopped, client, tx_pub))
 
     # Create a ROS service for sending commands
     rospy.Service(
