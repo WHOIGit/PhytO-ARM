@@ -118,7 +118,7 @@ def on_started(client, pub, *args, **kwargs):
 
 # Reset the data folder to the initial value in case bead run
 # was the last command set
-def on_interactive_stopped(_, __, ___, client, pub):
+def on_interactive_stopped(client, pub, *_):
     send_command(client, pub, f'daq:setdatafolder:{initial_datafolder}')
 
 def on_triggerimage(pub, _, image):
@@ -176,12 +176,12 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     # Publish all the markers together
     mkr_pub.publish(markers)
 
-
-def on_datafolder(_, __, datafolder):
+# Backup the initial value of the data folder so we can restore it after bead runs
+def on_datafolder(_event, _type, value):
     global initial_datafolder
     # Reject updates once set
     if initial_datafolder is None:
-        initial_datafolder = datafolder
+        initial_datafolder = value
 
 
 def main():
@@ -222,9 +222,8 @@ def main():
               functools.partial(on_triggerrois, roi_pub, mkr_pub))
 
     # Set up callbacks for datafolder switching
-    client.on(('valuechanged','setdatafolder'),
-              functools.partial(on_datafolder, client, tx_pub))
-    client.on(('valuechanged','interactive','stopped'),
+    client.on(('valuechanged','setdatafolder',), on_datafolder)
+    client.on(('valuechanged','interactive','stopped',),
               functools.partial(on_interactive_stopped, client, tx_pub))
 
     # Create a ROS service for sending commands
