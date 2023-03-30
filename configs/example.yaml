@@ -64,6 +64,8 @@ ifcb:
     port: 8092
     serial: "111-111-111"
     routines_dir: "/routines"
+    # This path is interpreted by IFCBacquire, which may be in another
+    # container or namespace.
     data_dir: "/mnt/data/ifcbdata"
 
 motor:

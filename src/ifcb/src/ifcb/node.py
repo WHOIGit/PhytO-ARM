@@ -49,7 +49,6 @@ def do_runroutine(client, pub, req):
         return srv.RunRoutineResponse(success=False)
 
     # Check for beads routines
-    assert rospy.get_param("~data_dir") is not None
     if req.routine == 'beads':
         send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
     else:
