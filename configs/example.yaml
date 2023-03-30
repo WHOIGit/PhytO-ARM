@@ -104,7 +104,9 @@ winch:
         position: 0.1  # meters
 
 web_node:
-    ctdDepth:
-        topic: /ctd/depth
-        value: depth
-        default: nan
+    field_map:
+        ctdDepth:
+            topic: /ctd/depth
+            topic_field: depth
+            default: .nan
+

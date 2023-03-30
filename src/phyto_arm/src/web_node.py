@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import math
-
+import importlib
+import io
+import functools
 import rospy
 
 from aiohttp import web
@@ -29,13 +31,16 @@ def on_gps_message(msg):
     }
 
 
-def capture_field_value(name, path, default, msg):
-    global field_map
-    if msg[path]:
-        field_map[name] = msg[path]
-    elif default:
-        field_map[name] = default
-    
+def capture_field_value(name, field, default, msg):
+    # Since the data topic is dynamic, we need to re-interpret the data as the
+    # correct type. This is a bit hacky, but described here:
+    # http://schulz-m.github.io/2016/07/18/rospy-subscribe-to-any-msg-type/
+    pkg, _, clsname = msg._connection_header['type'].partition('/')
+    msg_class = getattr(importlib.import_module(f'{pkg}.msg'), clsname)
+    buf = io.BytesIO()
+    msg.serialize(buf)
+    parsed = msg_class().deserialize(buf.getvalue())
+    field_map[name] = parsed[field] if parsed[field] else default
 
 
 app = web.Application()
@@ -59,12 +64,12 @@ def main():
     rospy.init_node('web_node')
 
     # Read config and create subscribers accordingly
-    global field_map
-    field_config = rospy.get_param('/web_node')
-    for name, config in field_config.items():
+    field_map = rospy.get_param('~field_map')
+    for name, config in field_map.items():
         if config.default:
             field_map[name] = config.default
-        rospy.Subscriber(config.topic, object, lambda msg: capture_field_value(name, config.field, config.default, msg))
+        rospy.Subscriber(config.topic, rospy.AnyMsg,
+                         functools.partial(capture_field_value, name, config.topic_field, config.default))
 
 
     rospy.Subscriber('/ctd/depth', DepthPressure, on_depth_message)
