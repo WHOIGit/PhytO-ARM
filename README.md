@@ -85,16 +85,30 @@ Container images are built for `x86_64` and `aarch64` and published automaticall
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
 
 Running the container looks like:
+```bash
+docker run --rm -it \
+    # Name of the container in docker
+    --name phyto-arm \
+    # Bind TCP port host:container
+    --publish 9090:9090/tcp \
+    # Bind config directory host:container. ':ro' = read-only
+    --volume "$(pwd)"/configs:/configs:ro \
+    # Bind IFCBAcquire routines directory host:container
+    --volume /home/ifcb/IFCBacquire/Host/Routines:/routines:ro \
+    # host:container bind for saving files to host, in this case
+    # for the log_dir and rosbag_prefix settings in example.yaml
+    --volume /mnt/data:/mnt/data \
+    # Give access to CTD device
+    --device /dev/ttyS3 \
+    # Name of Docker image:tag to use
+    whoi/phyto-arm:latest \
+    # Start command. Change to use desired config file, should be
+    # in the container config directory mapped above.
+    ./phyto-arm start /configs/hades_docker.yaml
+```
 
-    docker run --rm -it \
-        --name phyto-arm \
-        --publish 9090:9090/tcp \
-        --volume "$(pwd)"/configs:/configs:ro \
-        --volume ~/IFCBacquire:/root/IFCBacquire:ro \
-        --volume /mnt/data:/mnt/data \
-        --device /dev/ttyS3 \
-        whoi-phyto-arm \
-        ./phyto-arm start /configs/hades_docker.yaml
+The above can be saved to a bash script for repeatability, commonly `run.sh`.
+
 
 Each serial device defined in the config file (e.g., for the CTD) must be passed to the container with `--device`.
 
