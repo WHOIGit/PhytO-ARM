@@ -64,6 +64,7 @@ ifcb:
     port: 8092
     serial: "111-111-111"
     routines_dir: "/routines"
+    data_dir: "/mnt/data/ifcbdata"
 
 motor:
     address: "192.168.13.3"

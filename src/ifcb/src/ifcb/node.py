@@ -23,7 +23,6 @@ from .instrumentation import instrument
 
 
 ifcb_ready = threading.Event()
-initial_datafolder = None
 
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
@@ -50,11 +49,11 @@ def do_runroutine(client, pub, req):
         return srv.RunRoutineResponse(success=False)
 
     # Check for beads routines
-    assert initial_datafolder is not None
+    assert rospy.get_param("~data_dir") is not None
     if req.routine == 'beads':
-        send_command(client, pub, f'daq:setdatafolder:{initial_datafolder}/beads')
+        send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
     else:
-        send_command(client, pub, f'daq:setdatafolder:{initial_datafolder}')
+        send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
 
     # Attempt to load the file
     path = os.path.join(rospy.get_param('~routines_dir'), f'{req.routine}.json')
@@ -116,10 +115,9 @@ def on_started(client, pub, *args, **kwargs):
     # Allow any queued commands to proceed now that the IFCB is available
     ifcb_ready.set()
 
-# Reset the data folder to the initial value in case bead run
-# was the last command set
+# Reset the data folder to the configured data directory
 def on_interactive_stopped(client, pub, *_):
-    send_command(client, pub, f'daq:setdatafolder:{initial_datafolder}')
+    send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
 
 def on_triggerimage(pub, _, image):
     # The image data should be in PNG format, which is an allowed ROS image type
@@ -176,13 +174,6 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     # Publish all the markers together
     mkr_pub.publish(markers)
 
-# Backup the initial value of the data folder so we can restore it after bead runs
-def on_datafolder(_event, _type, value):
-    global initial_datafolder
-    # Reject updates once set
-    if initial_datafolder is None:
-        initial_datafolder = value
-
 
 def main():
     rospy.init_node('ifcb', anonymous=True)
@@ -222,7 +213,6 @@ def main():
               functools.partial(on_triggerrois, roi_pub, mkr_pub))
 
     # Set up callbacks for datafolder switching
-    client.on(('valuechanged','setdatafolder',), on_datafolder)
     client.on(('valuechanged','interactive','stopped',),
               functools.partial(on_interactive_stopped, client, tx_pub))
 
