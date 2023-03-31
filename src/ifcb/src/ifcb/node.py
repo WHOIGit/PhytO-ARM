@@ -24,7 +24,6 @@ from .instrumentation import instrument
 
 ifcb_ready = threading.Event()
 
-
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
 def do_command(client, pub, req):
@@ -48,6 +47,12 @@ def do_runroutine(client, pub, req):
     # Deny path traversal
     if '/' in req.routine:
         return srv.RunRoutineResponse(success=False)
+
+    # Check for beads routines
+    if req.routine == 'beads':
+        send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
+    else:
+        send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
 
     # Attempt to load the file
     path = os.path.join(rospy.get_param('~routines_dir'), f'{req.routine}.json')
@@ -109,6 +114,9 @@ def on_started(client, pub, *args, **kwargs):
     # Allow any queued commands to proceed now that the IFCB is available
     ifcb_ready.set()
 
+# Reset the data folder to the configured data directory
+def on_interactive_stopped(client, pub, *_):
+    send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
 
 def on_triggerimage(pub, _, image):
     # The image data should be in PNG format, which is an allowed ROS image type
@@ -202,6 +210,10 @@ def main():
               functools.partial(on_triggercontent, roi_pub, mkr_pub))
     client.on(('triggerrois',),
               functools.partial(on_triggerrois, roi_pub, mkr_pub))
+
+    # Set up callbacks for datafolder switching
+    client.on(('valuechanged','interactive','stopped',),
+              functools.partial(on_interactive_stopped, client, tx_pub))
 
     # Create a ROS service for sending commands
     rospy.Service(

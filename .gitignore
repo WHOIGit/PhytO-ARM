@@ -7,3 +7,5 @@ devel
 devel_isolated
 rosbags
 __pycache__
+.venv
+logs
