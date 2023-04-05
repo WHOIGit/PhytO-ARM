@@ -25,6 +25,16 @@ During and after deployments, system operators can review system data using stan
 
 Three types of ROS nodes are provided. Device nodes enable integration of IFCB, CTD, GPS, servo, and IP camera systems. Behavior nodes interpret device node data streams and direct changes in system behavior. System nodes log ROS traffic and make it available for real-time interactive display (Rosbridge). 
 
+## Hardware Dependencies
+The following are **required** for PhytO-ARM to run:
+- IFCB with IFCBacquire running
+- CTD
+- GPS (gpsd service must be present, but device itself can be absent)
+
+The following devices are optional:
+- JVL motor (see `example.yaml` for how to enable/disable)
+- IP Camera
+
 
 ## Installation
 
@@ -78,9 +88,13 @@ These steps assume that ROS Noetic has been installed already.
 
 This is a work in progress.
 
-Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system. The container image can also be built with
+Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system. 
 
-    docker build --tag whoi/phyto-arm .
+```docker pull whoi/phyto-arm:latest```
+
+The container image can also be built with
+
+    docker build --tag whoi-phyto-arm .
 
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
 
@@ -89,8 +103,8 @@ Running the container looks like:
 docker run --rm -it \
     # Name of the container in docker
     --name phyto-arm \
-    # Bind TCP port host:container
-    --publish 9090:9090/tcp \
+    # Expose whatever port is being used by Foxglove
+    --publish 8765:8765/tcp \
     # Bind config directory host:container. ':ro' = read-only
     --volume "$(pwd)"/configs:/configs:ro \
     # Bind IFCBAcquire routines directory host:container
@@ -107,7 +121,7 @@ docker run --rm -it \
     ./phyto-arm start /configs/hades_docker.yaml
 ```
 
-The above can be saved to a bash script for repeatability, commonly `run.sh`.
+The above can be saved to a bash script for repeatability, commonly `run.sh`. Remove comment lines if copying directly.
 
 
 Each serial device defined in the config file (e.g., for the CTD) must be passed to the container with `--device`.
@@ -122,6 +136,99 @@ The gpsd service on the host needs to be modified to accept inbound connections 
     ListenStream=
     ListenStream=/var/run/gpsd.sock
     ListenStream=0.0.0.0:2947
+
+
+## Configuration
+
+Configuration files live in `configs/` and use the YAML format. It is recommended that each deployment get its own configuration.
+
+The entries in the config file are loaded into the ROS [Parameter Server][]. Some parameters can be dynamically changed while the nodes are running:
+
+    $ source devel/setup.bash
+    $ rosparam get /conductor/schedule/every
+    60
+    $ rosparam set /profiler/data_topic /ctd/aml/port3/chloroblue
+
+Be sure to make the corresponding edits to the config file to persist changes beyond the current session.
+
+  [Parameter Server]: https://wiki.ros.org/Parameter%20Server
+
+
+## Instrument-specific configurations
+
+### AML CTD
+
+Use `picocom` to to talk to the appropriate serial device. Press <kbd>Enter</kbd> first to interrupt any current logging and get a prompt.
+
+    $ picocom -b 115200 /dev/ttyS3
+    > set derive depth y
+    > set scan dep
+    > set derive sv y
+    > set scan sound
+    > mmonitor
+    ...
+
+Press <kbd>Ctrl-A</kbd>, <kbd>Ctrl-X</kbd> to exit `picocom` while the device is logging.
+
+The time must be set to UTC. To sync the clock, you can use:
+
+    (echo; echo "set fulltime $(date -u "+%Y-%m-%d %H:%M:%S")") \
+    | picocom -b 115200 /dev/ttyS3
+
+
+### GPS
+
+GPS tracking is provided via [gpsd][].
+
+  [gpsd]: https://gpsd.gitlab.io/gpsd/index.html
+
+    sudo apt install -y gpsd gpsd-clients
+
+On Ubuntu, edit `/etc/default/gpsd` to configure the GPS device or network source. For example, to listen for UDP packets broadcast on the local network:
+
+    DEVICES="udp://192.168.13.255:22335"
+
+Monitor that GPS updates are being received using `gpsmon`.
+
+
+## Starting and Stopping
+
+The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
+
+    $ ./phyto-arm start config/hades.yaml
+    $ ./phyto-arm stop
+
+
+The ROS nodes will be run in the background (so that you can disconnect from the system, for example) within a `screen` session. This session can be attached with the convenience command
+
+    $ ./phyto-arm attach
+
+Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</kbd> to detach again.
+
+**Note:** All instruments must already be logging data. Some notes on configuring instruments are included below.
+
+## Deployment Checklist
+
+- [ ] Config: YAML file created, compare against `example.yaml`
+- [ ] CTD: hardware is installed and powered on
+- [ ] CTD: confirmed broadcasting in `picocom`
+- [ ] CTD: device set correctly in config YAML
+- [ ] CTD: device mapped to container if using Docker
+- [ ] GPS: `gpsd` installed and running
+- [ ] GPS: If used, GPS device plugged in and IP configured
+- [ ] IP camera: IP reserved and set correctly in config YAML
+- [ ] Motor: If used, plugged in
+- [ ] Motor: `launch_args.winch` set to true if used, false otherwise
+- [ ] Motor: IP reserved and set in config YAML
+- [ ] Foxglove: If using container, Foxglove bridge port is exposed
+- [ ] Data: Rosbag, data and logs directory exist as set in config YAML
+- [ ] Data: If using container, data directory volumes are mounted
+- [ ] IFCBacquire: Routines directory populated
+- [ ] IFCBacquire: Started and values set
+- [ ] IFCB: Address, port, serial set in config YAML
+- [ ] IFCB: Liquids loaded
+- [ ] When ready, run PhytO-ARM for a cycle to confirm no errors
+
 
 
 ## Node Inventory
@@ -228,75 +335,6 @@ These nodes provide functionality for recording data and connecting to other too
     - Publishes:
       - `/rosout_agg` with copies of all log messages
 
-
-## Configuration
-
-Configuration files live in `configs/` and use the YAML format. It is recommended that each deployment get its own configuration.
-
-The entries in the config file are loaded into the ROS [Parameter Server][]. Some parameters can be dynamically changed while the nodes are running:
-
-    $ source devel/setup.bash
-    $ rosparam get /conductor/schedule/every
-    60
-    $ rosparam set /profiler/data_topic /ctd/aml/port3/chloroblue
-
-Be sure to make the corresponding edits to the config file to persist changes beyond the current session.
-
-  [Parameter Server]: https://wiki.ros.org/Parameter%20Server
-
-
-## Instrument-specific configurations
-
-### AML CTD
-
-Use `picocom` to to talk to the appropriate serial device. Press <kbd>Enter</kbd> first to interrupt any current logging and get a prompt.
-
-    $ picocom -b 115200 /dev/ttyS3
-    > set derive depth y
-    > set scan dep
-    > set derive sv y
-    > set scan sound
-    > mmonitor
-    ...
-
-Press <kbd>Ctrl-A</kbd>, <kbd>Ctrl-X</kbd> to exit `picocom` while the device is logging.
-
-The time must be set to UTC. To sync the clock, you can use:
-
-    (echo; echo "set fulltime $(date -u "+%Y-%m-%d %H:%M:%S")") \
-    | picocom -b 115200 /dev/ttyS3
-
-
-### GPS
-
-GPS tracking is provided via [gpsd][].
-
-  [gpsd]: https://gpsd.gitlab.io/gpsd/index.html
-
-    sudo apt install -y gpsd gpsd-clients
-
-On Ubuntu, edit `/etc/default/gpsd` to configure the GPS device or network source. For example, to listen for UDP packets broadcast on the local network:
-
-    DEVICES="udp://192.168.13.255:22335"
-
-Monitor that GPS updates are being received using `gpsmon`.
-
-
-## Starting and Stopping
-
-The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
-
-    $ ./phyto-arm start config/hades.yaml
-    $ ./phyto-arm stop
-
-
-The ROS nodes will be run in the background (so that you can disconnect from the system, for example) within a `screen` session. This session can be attached with the convenience command
-
-    $ ./phyto-arm attach
-
-Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</kbd> to detach again.
-
-**Note:** All instruments must already be logging data. Some notes on configuring instruments are included below.
 
 
 
