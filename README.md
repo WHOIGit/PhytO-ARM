@@ -105,6 +105,8 @@ docker run --rm -it \
     --name phyto-arm \
     # Expose whatever port is being used by Foxglove
     --publish 8765:8765/tcp \
+    # Expose whatever port is being used by web_node
+    --publish 8098:8098/tcp \
     # Bind config directory host:container. ':ro' = read-only
     --volume "$(pwd)"/configs:/configs:ro \
     # Bind IFCBAcquire routines directory host:container
@@ -224,6 +226,7 @@ Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</
 - [ ] Data: Rosbag, data and logs directory exist as set in config YAML
 - [ ] Data: If using container, data directory volumes are mounted
 - [ ] IFCBacquire: Routines directory populated
+- [ ] IFCBacquire: web_node server port exposed if using container
 - [ ] IFCBacquire: Started and values set
 - [ ] IFCB: Address, port, serial set in config YAML
 - [ ] IFCB: Liquids loaded
