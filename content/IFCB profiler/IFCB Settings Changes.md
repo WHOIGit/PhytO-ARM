@@ -21,4 +21,4 @@ This change allows Phyto-Arm to interpret and write data received froim CTD cast
 
 ###GPSData
 
-It is also important update the GPSData source in the same settings file. Depending on where you are getting your GPS data from this could take a variety of forms but should be 0 if you are hard coding the GPS coordinate. If this data is being streamed from another port it shouold be a valid url similar to the examples above e.g. `"<http://localhost:8818/`
+It is also important update the GPSData source in the same settings file. When using the Phyto-Arm software this wants to be set to `GPSData:0`. This allows the PhytoArm software to write GPS data and turns off the internal IFCB GPS data stream. 
