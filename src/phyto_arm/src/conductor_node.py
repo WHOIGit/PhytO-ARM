@@ -183,7 +183,7 @@ def loop():
     set_state(ConductorStates.WAIT_FOR_IFCB)
     state.ifcb_is_idle.wait()
 
-    # Build up a playlist of IFCB steps that we need to run
+    # Build up a playlist of IFCB routines that we need to run
     playlist = []
 
     # Determine if it's time to run beads
@@ -202,12 +202,16 @@ def loop():
 
     # Run IFCB steps in sequence
     for state_const, routine in playlist:
+        # Wait for previous routine to finish before we submit a new one. The
+        # loop exits after we start the 'runsample' routine, then we'll wait
+        # for the position hold release.
+        state.ifcb_is_idle.wait()
+
         rospy.loginfo(f'Starting {routine} routine')
         set_state(state_const)
         state.ifcb_is_idle.clear()
         result = ifcb_run_routine(routine=routine, instrument=True)
         assert result.success
-        state.ifcb_is_idle.wait()
 
     # Wait for position hold release
     with state.position_hold_condition:
