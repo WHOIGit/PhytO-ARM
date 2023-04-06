@@ -103,10 +103,19 @@ winch:
             extra_sec: 10.0
         position: 0.1  # meters
 
-web_node:
+web:
     field_map:
         ctdDepth:
             topic: /ctd/depth
             topic_field: depth
             default: .nan
-
+        gpsLatitude:
+            topic: /fix/gps
+            topic_field: latitude
+            default: 123.123 # Useful if GPS not working but can use fixed coordinate
+        gpsLongitude:
+            topic: /fix/gps
+            topic_field: longitude
+            default: 123.123 # Useful if GPS not working but can use fixed coordinate
+        defaultOnly:
+            default: 'example' # Useful for static values
