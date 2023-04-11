@@ -2,18 +2,14 @@
 import functools
 import importlib
 import io
-import math
+import os
+
+import rospy
 
 from aiohttp import web
 
-from ds_sensor_msgs.msg import DepthPressure
-from sensor_msgs.msg import NavSatFix
-import rospy
 
-
-config_validated = {}
 response_values = {}
-
 
 def capture_field_value(name, field, msg):
     # Since the data topic is dynamic, we need to re-interpret the data as the
@@ -21,10 +17,8 @@ def capture_field_value(name, field, msg):
     # http://schulz-m.github.io/2016/07/18/rospy-subscribe-to-any-msg-type/
     pkg, _, clsname = msg._connection_header['type'].partition('/')
     msg_class = getattr(importlib.import_module(f'{pkg}.msg'), clsname)
-    if hasattr(msg_class, field):
-        config_validated[name] = True
-    else:
-        rospy.logerr(f'Field {field} not found in msg type {msg_class}. Check config of {name}.')
+    if not hasattr(msg_class, field):
+        rospy.logerr(f'Field {field} not found in msg type {msg_class}. Check config {name}.')
     buf = io.BytesIO()
     msg.serialize(buf)
     parsed = msg_class().deserialize(buf.getvalue())
@@ -38,9 +32,6 @@ routes = web.RouteTableDef()
 
 @routes.get('/')
 async def index(request):
-    for name, validated in config_validated.items():
-        if not validated: 
-            rospy.logwarn(f'For {name} config: No value received and no default, returning None')
     return web.json_response(response_values)
 
 
@@ -51,17 +42,30 @@ def main():
     # Note that rospy spawns threads for message dispatch, so we don't have to
     rospy.init_node('web_node')
 
-    # Read config and create subscribers accordingly
+    # Read config, set defaults, create subscribers
     field_map = rospy.get_param('~field_map')
     for name, config in field_map.items():
-        # Keep track of which fields are known to exist or have defaults
-        config_validated[name] = 'default' in config
-        # Initialize with default values or None if no default provided
-        response_values[name] = config.get('default')
-        # Skip creating subscriber if topic not provided. Makes default permanent
-        if 'topic' in config:
-            rospy.Subscriber(config['topic'], rospy.AnyMsg,
-                         functools.partial(capture_field_value, name, config['topic_field']))
+        if 'environment' in config:
+            if 'topic' in config:
+                rospy.logerr(f'Config {name} invalid. Mixing topic and environment not supported')
+            var_name = config['environment']
+            if var_name in os.environ:
+                response_values[name] = os.environ[var_name]
+            elif 'default' in config:
+                rospy.logwarn(f'Env var {var_name} not found, switching to default for config {name}')
+                response_values[name] = config['default']
+            else:
+                rospy.logerr(f'Config {name} invalid. Env var {var_name} not found and no default provided')
+        elif 'default' in config:
+            response_values[name] = config['default']
+            # Subscriber optional; skip if no topic. Makes default permanent
+            if 'topic' in config:
+                if 'topic_field' not in config:
+                    rospy.logerr(f'Config {name} invalid, topic_field required when topic used')
+                rospy.Subscriber(config['topic'], rospy.AnyMsg,
+                                functools.partial(capture_field_value, name, config['topic_field']))
+        else:
+            rospy.logerr(f'Config {name} invalid, must have "default" or "environment" set')
     web.run_app(app, port=8098)
 
 
