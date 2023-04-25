@@ -52,6 +52,9 @@ profiler:
     data_topic: "/ctd/aml/port5/phycoerythrin"
     data_field: "value"
 
+#  Note these values are not read by PhytO-ARM, they are sought by
+#  the included ds_util_nodes package, which publishes CTD data reads.
+#  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
 ctd_comms:
     connection:
         type: "SERIAL"
@@ -121,12 +124,12 @@ web:
         gpsLatitude:
             topic: /fix/gps
             topic_field: latitude
-            # In this example, sets a default location if GPS not on
-            default: 123.123
+            # Replace with desired default lat/long
+            default: -999999
         gpsLongitude:
             topic: /fix/gps
             topic_field: longitude
-            default: 123.123
+            default: -999999
         defaultOnly:
             # No topic means this default value is permanent
             default: 'static_value'
