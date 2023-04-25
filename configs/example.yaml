@@ -52,6 +52,9 @@ profiler:
     data_topic: "/ctd/aml/port5/phycoerythrin"
     data_field: "value"
 
+#  Note these values are not read by PhytO-ARM, they are sought by
+#  the included ds_util_nodes package, which publishes CTD data reads.
+#  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
 ctd_comms:
     connection:
         type: "SERIAL"
@@ -102,3 +105,31 @@ winch:
             extra_pct: 10.0
             extra_sec: 10.0
         position: 0.1  # meters
+
+web:
+    field_map:
+        commitHash:
+            # Will get value from COMMIT_HASH environment variable
+            environment: COMMIT_HASH
+            # Default is optional for environment variables. Will error
+            # if variable does not exist and no default provided
+            default: 'No hash'
+        ctdDepth:
+            # Must have 'default' if not 'environment'
+            default: .nan
+            # Optional 'topic' to update value
+            topic: /ctd/depth
+            # Required only when 'topic' is used
+            topic_field: depth
+        gpsLatitude:
+            topic: /fix/gps
+            topic_field: latitude
+            # Replace with desired default lat/long
+            default: -999999
+        gpsLongitude:
+            topic: /fix/gps
+            topic_field: longitude
+            default: -999999
+        defaultOnly:
+            # No topic means this default value is permanent
+            default: 'static_value'

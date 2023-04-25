@@ -160,7 +160,7 @@ Be sure to make the corresponding edits to the config file to persist changes be
 
 ### AML CTD
 
-Use `picocom` to to talk to the appropriate serial device. Press <kbd>Enter</kbd> first to interrupt any current logging and get a prompt.
+Use `picocom` to to talk to the appropriate serial device. Press <kbd>Enter</kbd> first to interrupt any current logging and get a prompt. Run the commands below in picocom to configure the AML output correctly.
 
     $ picocom -b 115200 /dev/ttyS3
     > set derive depth y
@@ -192,6 +192,34 @@ On Ubuntu, edit `/etc/default/gpsd` to configure the GPS device or network sourc
 
 Monitor that GPS updates are being received using `gpsmon`.
 
+### Other board configuration
+
+Additional Ubuntu configuration that may be necessary to ensure GPS stays powered on and available.
+
+Adding to the IP above, change `/etc/default/gpsd` to:
+```bash
+# Default settings for the gpsd init script and the hotplug wrapper.
+
+# Start the gpsd daemon automatically at boot time
+START_DAEMON="true"
+
+# Use USB hotplugging to add new USB devices automatically to the daemon
+USBAUTO="false"
+
+# Devices gpsd should collect to at boot time.
+# They need to be read/writeable, either by user gpsd or the group dialout.
+DEVICES="udp://192.168.13.255:22335"
+
+# Other options you want to pass to gpsd
+GPSD_OPTIONS=""
+```
+Then use `systemctl edit gpsd.service` (may have to invoke sudo) and set the override file to:
+```bash
+# Always start GPSD, even if no one is connected to the socket
+[Install]
+WantedBy=multi-user.target
+```
+
 
 ## Starting and Stopping
 
@@ -213,6 +241,7 @@ Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</
 
 - [ ] Config: YAML file created, compare against `example.yaml`
 - [ ] CTD: hardware is installed and powered on
+- [ ] CTD: Used picocom to configure AML
 - [ ] CTD: confirmed broadcasting in `picocom`
 - [ ] CTD: device set correctly in config YAML
 - [ ] CTD: device mapped to container if using Docker
@@ -283,7 +312,7 @@ These nodes perform lower-level interactions with hardware components. These nod
 
   - `ctd`: Driver for the AML or RBR maestro3 CTD
     - Subscribes:
-      - `/ctd_comms/in` for receiving data from CTD
+      - `/ctd_comms/in` for receiving data from CTD.
     - Publishes:
       - `/ctd` with conductivity, temperature, and pressure data
       - `/ctd/depth` with depth and pressure data

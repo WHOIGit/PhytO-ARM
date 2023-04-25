@@ -1,31 +1,29 @@
 #!/usr/bin/env python3
-import math
+import functools
+import importlib
+import io
+import os
 
 import rospy
 
 from aiohttp import web
-from ds_sensor_msgs.msg import DepthPressure
-from sensor_msgs.msg import NavSatFix
 
 
-last_depth = math.nan
-last_location = {}
+response_values = {}
 
-
-def on_depth_message(msg):
-    global last_depth
-    last_depth = msg.depth
-    if last_depth == DepthPressure.DEPTH_PRESSURE_NO_DATA:
-        last_depth = math.nan
-
-def on_gps_message(msg):
-    # These field names are chosen to match IFCBacquire so that our values end
-    # up in the same place in the HDR file.
-    global last_location
-    last_location = {
-        'gpsLatitude':  msg.latitude,
-        'gpsLongitude': msg.longitude,
-    }
+def capture_field_value(name, field, msg):
+    # Since the data topic is dynamic, we need to re-interpret the data as the
+    # correct type. This is a bit hacky, but described here:
+    # http://schulz-m.github.io/2016/07/18/rospy-subscribe-to-any-msg-type/
+    pkg, _, clsname = msg._connection_header['type'].partition('/')
+    msg_class = getattr(importlib.import_module(f'{pkg}.msg'), clsname)
+    if not hasattr(msg_class, field):
+        rospy.logerr(f'Field {field} not found in msg type {msg_class}. Check config {name}.')
+    buf = io.BytesIO()
+    msg.serialize(buf)
+    parsed = msg_class().deserialize(buf.getvalue())
+    field_value = getattr(parsed, field)
+    response_values[name] = field_value
 
 
 app = web.Application()
@@ -34,10 +32,7 @@ routes = web.RouteTableDef()
 
 @routes.get('/')
 async def index(request):
-    return web.json_response({
-        'depth': last_depth,
-        **last_location,
-    })
+    return web.json_response(response_values)
 
 
 app.add_routes(routes)
@@ -46,9 +41,31 @@ app.add_routes(routes)
 def main():
     # Note that rospy spawns threads for message dispatch, so we don't have to
     rospy.init_node('web_node')
-    rospy.Subscriber('/ctd/depth', DepthPressure, on_depth_message)
-    rospy.Subscriber('/gps/fix', NavSatFix, on_gps_message)
 
+    # Read config, set defaults, create subscribers
+    field_map = rospy.get_param('~field_map')
+    for name, config in field_map.items():
+        if 'environment' in config:
+            if 'topic' in config:
+                rospy.logerr(f'Config {name} invalid. Mixing topic and environment not supported')
+            var_name = config['environment']
+            if var_name in os.environ:
+                response_values[name] = os.environ[var_name]
+            elif 'default' in config:
+                rospy.logwarn(f'Env var {var_name} not found, switching to default for config {name}')
+                response_values[name] = config['default']
+            else:
+                rospy.logerr(f'Config {name} invalid. Env var {var_name} not found and no default provided')
+        elif 'default' in config:
+            response_values[name] = config['default']
+            # Subscriber optional; skip if no topic. Makes default permanent
+            if 'topic' in config:
+                if 'topic_field' not in config:
+                    rospy.logerr(f'Config {name} invalid, topic_field required when topic used')
+                rospy.Subscriber(config['topic'], rospy.AnyMsg,
+                                functools.partial(capture_field_value, name, config['topic_field']))
+        else:
+            rospy.logerr(f'Config {name} invalid, must have "default" or "environment" set')
     web.run_app(app, port=8098)
 
 
