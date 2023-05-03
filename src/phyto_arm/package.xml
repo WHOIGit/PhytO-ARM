@@ -42,8 +42,10 @@
     <exec_depend>compressed_image_transport</exec_depend>
     <exec_depend>rtsp_camera</exec_depend>
 
-    <!-- For streaming data to the Foxglove Studio app. -->
-    <exec_depend>foxglove_bridge</exec_depend>
+    <!--
+        Provides the rosbridge_server node, which communicates with Foxglove.
+    -->
+    <exec_depend>rosbridge_server</exec_depend>
 
     <!-- The web node depends on aiohttp which is not in rosdistro yet. -->
 </package>
