@@ -110,8 +110,6 @@ async def main():
         assert data['Depth'].unit == 'm' if 'Depth' in data else True
         assert data['Cond'].unit == 'mS/cm'
         assert data['TempCT'].unit == 'C'
-        assert data['Pressure'].unit in ('dbar', 'dBar')
-        assert data['SV'].unit == 'm/s'
 
         # The parser assumes the timestamp is in UTC
         timestamp = parsed['mux']['time']
@@ -141,10 +139,10 @@ async def main():
 
         # Construct the Ctd message
         ctd = Ctd()
-        ctd.conductivity = data['Cond'].value * 0.1  # convert to S/m
-        ctd.temperature = data['TempCT'].value
-        ctd.pressure = data['Pressure'].value
-        ctd.sound_speed = data['SV'].value
+        if 'Cond' in data: ctd.conductivity = data['Cond'].value * 0.1  # convert to S/m
+        if 'TempCT' in data: ctd.temperature = data['TempCT'].value
+        if 'Pressure' in data: ctd.pressure = data['Pressure'].value
+        if 'SV' in data: ctd.sound_speed = data['SV'].value
 
         # Clear fields with no measurement
         ctd.salinity = math.nan
@@ -159,9 +157,10 @@ async def main():
             DepthPressure.DEPTH_PRESSURE_NO_DATA
         dp.latitude = DepthPressure.DEPTH_PRESSURE_NO_DATA
         dp.tare = DepthPressure.DEPTH_PRESSURE_NO_DATA
-        dp.pressure_raw = data['Pressure'].value
-        dp.pressure_raw_unit = DepthPressure.UNIT_PRESSURE_DBAR
-        dp.pressure = data['Pressure'].value
+        if 'Pressure' in data:
+            dp.pressure_raw = data['Pressure'].value
+            dp.pressure_raw_unit = DepthPressure.UNIT_PRESSURE_DBAR
+            dp.pressure = data['Pressure'].value
 
         # Set the appropriate message timestamps and metadata
         for m in [ctd, dp] + aml_msgs:
@@ -175,7 +174,7 @@ async def main():
 
         # Publish the messages
         publishers['~ctd'].publish(ctd)
-        publishers['~depth'].publish(dp)
+        if 'Pressure' in data: publishers['~depth'].publish(dp)
         for m in aml_msgs:
             top = f'~aml/{ros_safe(m.port)}/{ros_safe(m.name)}'
             if top not in publishers:
