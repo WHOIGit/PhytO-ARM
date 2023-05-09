@@ -104,7 +104,7 @@ docker run --rm -it \
     # Name of the container in docker
     --name phyto-arm \
     # Expose whatever port is being used by Foxglove
-    --publish 8765:8765/tcp \
+    --publish 9090:9090/tcp \
     # Expose whatever port is being used by web_node
     --publish 8098:8098/tcp \
     # Bind config directory host:container. ':ro' = read-only
@@ -372,13 +372,13 @@ These nodes provide functionality for recording data and connecting to other too
 
 ## Observing with Foxglove Studio
 
-[Foxglove Studio][] is the recommended software for monitoring the PhytO-ARM system. To connect to a live system, use the "Foxglove WebSocket" connection type.
+[Foxglove Studio][] is the recommended software for monitoring the PhytO-ARM system. To connect to a live system, use the "ROS Bridge WebSocket" connection type.
 
-The Foxglove Bridge node uses TCP port 8765. Ensure this port is forwarded in your router settings *for trusted clients only*, or use SSH port forwarding:
+The ROS Bridge node uses TCP port 9090. Ensure this port is forwarded in your router settings *for trusted clients only*, or use SSH port forwarding:
 
-    $ ssh -NL 8765:localhost:8765 hades.hablab.whoi.edu
+    $ ssh -NL 9090:localhost:9090 <PhytO-ARM host address>
 
-In Studio, the connection address is `ws://hades.hablab.whoi.edu:8765` if connecting directly or `ws://localhost:8765` if using the SSH tunnel.
+In Studio, the connection address is `ws://<PhytO-ARM host address>:9090` if connecting directly or `ws://localhost:9090` if using the SSH tunnel.
 
   [Foxglove Studio]: https://foxglove.dev
 
