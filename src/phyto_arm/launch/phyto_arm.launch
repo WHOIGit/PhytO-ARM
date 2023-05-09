@@ -2,9 +2,8 @@
     <!-- Most settings are in config.yaml, which is easier to edit -->
     <rosparam command="load" file="$(arg config_file)" />
 
-    <include file="$(find foxglove_bridge)/launch/foxglove_bridge.launch">
-        <!-- Exclude the uncompressed /camera/image topic -->
-        <arg name="topic_whitelist" value="[&quot;^(?!/camera/image$).*&quot;]" />
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+        <arg name="use_compression" value="true" />
     </include>
 
     <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
@@ -44,7 +43,10 @@
     <node name="conductor" pkg="phyto_arm" type="conductor_nowinch_node.py"
           unless="$(arg winch)" />
 
-    <node name="camera" pkg="rtsp_camera" type="rtsp_camera_node" />
+    <node name="camera" pkg="rtsp_camera" type="rtsp_camera_node">
+        <remap from="~image" to="~image/do_not_use" />
+        <remap from="~image/do_not_use/compressed" to="~image/compressed" />
+    </node>
 
     <!--
     disabled
