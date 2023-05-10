@@ -130,8 +130,9 @@ def main():
     ifcb_run_routine = rospy.ServiceProxy('/ifcb/routine', RunRoutine)
     ifcb_run_routine.wait_for_service()
 
-    # Set a fake timestamp for having run beads, so that we don't run it at
-    # every startup and potentially waste our limited supply.
+    # Set a fake timestamp for having run beads and catridge debubble, so that
+    # we don't run it every startup and potentially waste time or bead supply.
+    state.last_cart_debub_time = rospy.Time.now()
     state.last_bead_time = rospy.Time.now()
 
     # Run the main loop forever
