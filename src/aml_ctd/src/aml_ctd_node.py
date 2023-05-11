@@ -108,8 +108,10 @@ async def main():
 
         # Validate assumptions about the measurement units
         assert data['Depth'].unit == 'm' if 'Depth' in data else True
-        assert data['Cond'].unit == 'mS/cm'
-        assert data['TempCT'].unit == 'C'
+        assert data['Cond'].unit == 'mS/cm' if 'Cond' in data else True
+        assert data['TempCT'].unit == 'C' if 'TempCT' in data else True
+        assert data['Pressure'].unit in ('dbar', 'dBar') if 'Pressure' in data else True
+        assert data['SV'].unit == 'm/s' if 'SV' in data else True
 
         # The parser assumes the timestamp is in UTC
         timestamp = parsed['mux']['time']
@@ -139,10 +141,11 @@ async def main():
 
         # Construct the Ctd message
         ctd = Ctd()
-        if 'Cond' in data: ctd.conductivity = data['Cond'].value * 0.1  # convert to S/m
-        if 'TempCT' in data: ctd.temperature = data['TempCT'].value
-        if 'Pressure' in data: ctd.pressure = data['Pressure'].value
-        if 'SV' in data: ctd.sound_speed = data['SV'].value
+         # convert to S/m
+        ctd.conductivity = data['Cond'].value * 0.1 if 'Cond' in data else Ctd.CTD_NO_DATA
+        ctd.temperature = data['TempCT'].value if 'TempCT' in data else Ctd.CTD_NO_DATA
+        ctd.pressure = data['Pressure'].value if 'Pressure' in data else Ctd.CTD_NO_DATA
+        ctd.sound_speed = data['SV'].value if 'SV' in data else Ctd.CTD_NO_DATA
 
         # Clear fields with no measurement
         ctd.salinity = math.nan
