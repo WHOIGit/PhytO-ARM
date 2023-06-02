@@ -21,6 +21,7 @@ add_service_files(
   SetPositionEnvelopeCmd.srv
   SetVelocityCmd.srv
   StopCmd.srv
+  ZeroCmd.srv
 )
 
 generate_messages(
