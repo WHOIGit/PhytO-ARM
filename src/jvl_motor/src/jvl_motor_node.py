@@ -61,6 +61,14 @@ def write_registers(client, reg_values):
     if not success:
         raise RuntimeError('Failed to write registers')
 
+def cmd_zero_position(client, request):
+    try:
+        write_registers(client, {
+            mac400.P_IST:  0
+        })
+    except RuntimeError:
+        rospy.logerr('Failed to clear position encoder')
+    return srv.ZeroCmdResponse()
 
 def cmd_set_position(client, request):
     try:
@@ -151,6 +159,11 @@ def main():
 
     # Create services
     services = [
+        rospy.Service(
+            '~zero_position',
+            srv.ZeroCmd,
+            functools.partial(cmd_zero_position, client)
+        ),
         rospy.Service(
             '~set_position',
             srv.SetPositionCmd,
