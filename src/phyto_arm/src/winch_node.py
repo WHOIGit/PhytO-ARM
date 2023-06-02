@@ -11,7 +11,7 @@ from scipy.integrate import quad
 
 from ds_sensor_msgs.msg import DepthPressure
 from jvl_motor.msg import Motion
-from jvl_motor.srv import SetPositionEnvelopeCmd, SetVelocityCmd, StopCmd
+from jvl_motor.srv import SetPositionEnvelopeCmd, SetVelocityCmd, StopCmd, ZeroCmd
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthFeedback, \
     MoveToDepthResult
@@ -84,6 +84,7 @@ motor = None
 
 
 # Service proxies for interacting with the motor
+zero_position = rospy.ServiceProxy('motor/zero_position', ZeroCmd)
 set_position_envelope = rospy.ServiceProxy('motor/set_position_envelope',
     SetPositionEnvelopeCmd)
 set_velocity = rospy.ServiceProxy('motor/set_velocity', SetVelocityCmd)
@@ -332,8 +333,11 @@ async def main():
     rospy.core.add_preshutdown_hook(lambda reason: loop.stop())
 
     # Wait for services to become available
-    for svc in [ set_velocity, set_position_envelope, stop ]:
+    for svc in [ zero_position, set_velocity, set_position_envelope, stop ]:
         svc.wait_for_service()
+
+    # Reset the position encoder to zero
+    zero_position()
 
     # Subscribe to incoming messages
     rospy.Subscriber(rospy.get_param('ctd_topic'), DepthPressure, depth.update_soon)
