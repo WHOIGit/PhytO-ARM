@@ -38,6 +38,7 @@ COPY ./src/ifcb/package.xml ./src/ifcb/package.xml
 COPY ./src/jvl_motor/package.xml ./src/jvl_motor/package.xml
 COPY ./src/phyto_arm/package.xml ./src/phyto_arm/package.xml
 COPY ./src/rbr_maestro3_ctd/package.xml ./src/rbr_maestro3_ctd/package.xml
+COPY ./src/triton_classifier/package.xml ./src/triton_classifier/package.xml
 
 # Install new rosdep dependencies declared in the above package.xml files
 RUN apt update \
@@ -49,7 +50,7 @@ COPY ./src ./src
 
 # Build
 RUN source ./devel/setup.bash \
- && stdbuf -o L catkin build phyto_arm
+ && stdbuf -o L catkin build phyto_arm triton_classifier
 
 # Copy the launch tool
 ENV DONT_SCREEN=1

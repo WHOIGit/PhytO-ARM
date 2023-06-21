@@ -1,4 +1,5 @@
 aiohttp==3.8.5
 pyModbusTCP==0.1.8
+tritonclient[all]==2.33.0
 
 git+https://github.com/WHOIGit/pyifcbclient.git#egg=pyifcbclient
