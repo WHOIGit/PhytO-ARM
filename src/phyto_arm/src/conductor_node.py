@@ -44,6 +44,7 @@ class state:
     last_scheduled_time = None
     next_scheduled_index = 0
 
+    last_cart_debub_time = None
     last_bead_time = None
 
 
@@ -186,9 +187,18 @@ def loop():
     # Build up a playlist of IFCB routines that we need to run
     playlist = []
 
+    # Determine if it's time to run cartridge debubble
+    cart_debub_interval = rospy.Duration(60*rospy.get_param('~cartridge_debubble_interval'))
+    run_cart_debub = not math.isclose(cart_debub_interval.to_sec(), 0.0)  # disabled
+    if run_cart_debub and rospy.Time.now() - state.last_cart_debub_time > cart_debub_interval:
+        rospy.loginfo('Will run cartridege debubble this round')
+        playlist.append((ConductorStates.IFCB_CARTRIDGE_DEBUBBLE, 'cartridgedebubble'))
+        state.last_cart_debub_time = rospy.Time.now()
+
     # Determine if it's time to run beads
     bead_interval = rospy.Duration(60*rospy.get_param('~bead_interval'))
-    if rospy.Time.now() - state.last_bead_time > bead_interval:
+    run_beads = not math.isclose(bead_interval.to_sec(), 0.0)  # disabled
+    if run_beads and rospy.Time.now() - state.last_bead_time > bead_interval:
         rospy.loginfo('Will run beads this round')
         playlist.append((ConductorStates.IFCB_DEBUBBLE, 'debubble'))
         playlist.append((ConductorStates.IFCB_BEADS,    'beads'))
@@ -245,8 +255,9 @@ def main():
     )
     move_to_depth.wait_for_server()
 
-    # Set a fake timestamp for having run beads, so that we don't run it at
-    # every startup and potentially waste our limited supply.
+    # Set a fake timestamp for having run beads and catridge debubble, so that
+    # we don't run it every startup and potentially waste time or bead supply.
+    state.last_cart_debub_time = rospy.Time.now()
     state.last_bead_time = rospy.Time.now()
 
     # Run the main loop forever
