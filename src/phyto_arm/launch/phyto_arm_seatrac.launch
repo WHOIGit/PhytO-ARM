@@ -43,6 +43,9 @@
     <node name="conductor" pkg="phyto_arm" type="conductor_nowinch_node.py"
           unless="$(arg winch)" />
 
+    <node name="classifier" pkg="triton_classifier" type="classifier_node.py"
+          unless="$(arg winch)" />
+
     <!--
     disabled
     <node name="camera" pkg="rtsp_camera" type="rtsp_camera_node" />

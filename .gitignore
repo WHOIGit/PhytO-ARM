@@ -9,3 +9,5 @@ rosbags
 __pycache__
 .venv
 logs
+configs
+!configs/example.yaml

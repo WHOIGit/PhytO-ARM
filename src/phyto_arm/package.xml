@@ -32,6 +32,7 @@
     <exec_depend>ifcb</exec_depend>
     <exec_depend>jvl_motor</exec_depend>
     <exec_depend>rbr_maestro3_ctd</exec_depend>
+    <exec_depend>triton_classifier</exec_depend>
 
     <!-- For GPS -->
     <exec_depend>gpsd_client</exec_depend>
