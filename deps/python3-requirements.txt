@@ -1,4 +1,4 @@
-aiohttp==3.7.2
+aiohttp==3.8.5
 pyModbusTCP==0.1.8
 
 git+https://github.com/WHOIGit/pyifcbclient.git#egg=pyifcbclient
