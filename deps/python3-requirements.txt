@@ -1,6 +1,6 @@
-aiohttp==3.8.5
+aiohttp==3.9.2
 pyModbusTCP==0.1.8
-
+scipy==1.10
 # Workaround - eventually should move to ros-triton-classifier
 # and make PhytO-ARM triton agnostic
 tritonclient[all]==2.33.0

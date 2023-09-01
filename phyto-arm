@@ -19,6 +19,7 @@ import urllib.request
 
 import yaml
 
+from scripts.config_validation import validate_config
 
 # Load the virtual environment and Catkin workspace and return the resulting
 # environment
@@ -98,24 +99,20 @@ def attach(args):
 
 
 def _start(args):
+    # Validate config file
+    if not args.skip_validation:
+        print(f'Validating config file {args.config} against {args.config_schema}...')
+        if validate_config(args.config, args.config_schema):
+            print('Config file is valid')
+        else:
+            sys.exit(1)
+
     # Load the config file
     with open(args.config, 'rb') as f:
         config = yaml.safe_load(f)
 
     # Prepare the environment
     env = prep_environment()
-
-    # Set up alerts for when we terminate
-    atexit.register(send_alerts, config.get('alerts', []))
-
-    # Allow the config to override where logs are stored
-    log_dir = config.get('launch_args', {}).get('log_dir')
-    if log_dir is not None:
-        env['ROS_LOG_DIR'] = log_dir
-
-    # Before we continue compress any older log files
-    #print('Compressing older logs')
-    #os.system(f'find {shlex.quote(log_dir)} -iname \*.log -exec gzip {{}} \;')
 
     # Define an atexit handler that can be used to terminate subprocesses.
     # Recall that these handlers are invoked in reverse order, so since we start
@@ -139,19 +136,33 @@ def _start(args):
             proc.wait()
             print(f'{name} ({proc.pid}) eventually exited')
 
-    # Start the ROS core processes (ROS master, etc.)
-    roscore = subprocess.Popen('roscore', env=env)
-    atexit.register(lambda: cleanup('roscore', roscore))
+    # The following should only launch once, with the main PhytO-ARM processes
+    if args.launch_name == "main":
+        # Set up alerts for when we terminate
+        atexit.register(send_alerts, config.get('alerts', []))
 
-    # Start the rosbag logging process. We run this separately from the main
-    # launch file so that if the main nodes crash, we don't terminate the rosbag
-    # prematurely.
-    command, env = prep_roslaunch(config, env, 'phyto_arm', 'rosbag.launch')
-    rosbag = subprocess.Popen(command, shell=True, env=env)
-    atexit.register(lambda: cleanup('rosbag record', rosbag, dont_kill=True))
+        # Allow the config to override where logs are stored
+        log_dir = config.get('launch_args', {}).get('log_dir')
+        if log_dir is not None:
+            env['ROS_LOG_DIR'] = log_dir
+
+        # Before we continue compress any older log files
+        #print('Compressing older logs')
+        #os.system(f'find {shlex.quote(log_dir)} -iname \*.log -exec gzip {{}} \;')
+
+        # Start the ROS core processes (ROS master, etc.)
+        roscore = subprocess.Popen('roscore', env=env)
+        atexit.register(lambda: cleanup('roscore', roscore))
+
+        # Start the rosbag logging process. We run this separately from the main
+        # launch file so that if the main nodes crash, we don't terminate the rosbag
+        # prematurely.
+        command, env = prep_roslaunch(config, env, 'phyto_arm', 'rosbag.launch')
+        rosbag = subprocess.Popen(command, shell=True, env=env)
+        atexit.register(lambda: cleanup('rosbag record', rosbag, dont_kill=True))
 
     # Prepare our roslaunch command
-    command, env = prep_roslaunch(config, env, 'phyto_arm', 'phyto_arm.launch')
+    command, env = prep_roslaunch(config, env, 'phyto_arm', f'{args.launch_name}.launch')
     nodes = subprocess.Popen(command, shell=True, env=env)
     atexit.register(lambda: cleanup('nodes', nodes))
 
@@ -204,7 +215,10 @@ if __name__ == '__main__':
     attach_parser = subparsers.add_parser('attach')
 
     start_parser = subparsers.add_parser('start')
+    start_parser.add_argument('launch_name')
     start_parser.add_argument('config')
+    start_parser.add_argument('--config_schema', default='./configs/example.yaml')
+    start_parser.add_argument('--skip_validation', action='store_true')
 
     stop_parser = subparsers.add_parser('stop')
 

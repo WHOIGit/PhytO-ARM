@@ -195,7 +195,7 @@ def main():
             ])
             reg_values.update(reg_values2)
         except RuntimeError:
-            rospy.logerr('Failed to read registers')
+            rospy.logerr('Failed to read registers, retrying on loop')
             rate.sleep()
             continue
 
