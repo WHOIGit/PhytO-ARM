@@ -1,12 +1,12 @@
 # PhytO-ARM
 
-PhytO-ARM is robot operating system (ROS)-based toolkit for integration of Imaging FlowCytobot ([IFCB][mclane]) and other ocean sensors that are commonly deployed by the [Brosnahan Lab][blab]. The supported ROS release is [Noetic Ninjemys][noetic]. 
+PhytO-ARM is robot operating system (ROS)-based toolkit for integration of Imaging FlowCytobot ([IFCB][mclane]) and other ocean sensors that are commonly deployed by the [Brosnahan Lab][blab]. The supported ROS release is [Noetic Ninjemys][noetic].
 
-There are instructions for assembling a profiling configuration at our accompanying [PhytO-ARM][parm] website. The profiling system consists of an IFCB, an [AML ctd][aml], and a winch built from a [JVL servo motor][jvl] and parts from [Conedrive][cdrive] and [Waterman Industries][wiparts]. Once assembled, code provided here enables a variety of continuous sampling behaviors including continuous CTD profiling and targeted collection of IFCB samples at chlorophyll maxima. 
+There are instructions for assembling a profiling configuration at our accompanying [PhytO-ARM][parm] website. The profiling system consists of an IFCB, an [AML ctd][aml], and a winch built from a [JVL servo motor][jvl] and parts from [Conedrive][cdrive] and [Waterman Industries][wiparts]. Once assembled, code provided here enables a variety of continuous sampling behaviors including continuous CTD profiling and targeted collection of IFCB samples at chlorophyll maxima. Other scientific payloads are also supported, and PhytO-ARM can coordinate an arbitrary number of winches running concurrently.
 
 PhytO-ARM observations of location, depth, water properties, etc. are written to IFCB metadata files at time of collection for distribution through an existing webservices system called [IFCB dashboard][ifcbdb]. Additional scripts are provided for export to [CF-compliant NetCDF][cfnet] data formats and upload to repositories like the [NOAA ERDDAP][nerddap] system.
 
-During and after deployments, system operators can review system data using standard ROS tools like [FoxGlove Studio][fglove].  
+During and after deployments, system operators can review system data using standard ROS tools like [FoxGlove Studio][fglove].
 
   [mclane]: https://mclanelabs.com/imaging-flowcytobot/
   [blab]: https://www2.whoi.edu/site/brosnahanlab/
@@ -19,24 +19,40 @@ During and after deployments, system operators can review system data using stan
   [cfnet]: http://cfconventions.org
   [nerddap]: https://www.ncei.noaa.gov/erddap/index.html
   [fglove]: https://foxglove.dev/studio
-  
+
 
 ## Contents
 
-Three types of ROS nodes are provided. Device nodes enable integration of IFCB, CTD, GPS, servo, and IP camera systems. Behavior nodes interpret device node data streams and direct changes in system behavior. System nodes log ROS traffic and make it available for real-time interactive display (Rosbridge). 
+Three types of ROS nodes are provided. Device nodes enable integration of IFCB, CTD, GPS, servo, and IP camera systems. Behavior nodes interpret device node data streams and direct changes in system behavior. System nodes log ROS traffic and make it available for real-time interactive display (Rosbridge).
 
 ## Hardware Dependencies
 The following are **required** for PhytO-ARM to run:
-- IFCB with IFCBacquire running
-- CTD
+- CTD (AML and RBR currently supported)
 - GPS (gpsd service must be present, but device itself can be absent)
 
 The following devices are optional:
+- IFCB with IFCBacquire running
 - JVL motor (see `example.yaml` for how to enable/disable)
 - IP Camera
 
 
 ## Installation
+
+
+### Install with Docker (recommended)
+
+Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system.
+
+```docker pull whoi/phyto-arm:latest```
+
+The container image can also be built with
+
+    docker build --tag whoi-phyto-arm .
+
+  [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
+
+
+### Install natively
 
 These instructions are for install of nodes on an IFCB running Debian 10 ("Buster") OS. Additional instructions are provided for installation as dockerized components that may be distributed across several systems on a network.
 
@@ -84,21 +100,35 @@ These steps assume that ROS Noetic has been installed already.
     sudo systemctl start phyto-arm
 
 
-### Install with Docker
+## Running
 
-This is a work in progress.
+The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
 
-Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system. 
 
-```docker pull whoi/phyto-arm:latest```
+```bash
+phyto-arm start [-h] [--config_schema <schema file>] [--skip_validation] <launchfile name> <config file>
 
-The container image can also be built with
+positional arguments:
+<launchfile name>                 Name of ROS launchfile to use in the phyto_arm package, excluding extension. Currently one of 'main', 'arm_ifcb' or 'arm_chanos'.
+<config file>                     Path to YAML config file.
 
-    docker build --tag whoi-phyto-arm .
 
-  [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
+options:
+-h, --help                        Show help message.
+--config_schema <schema file>     File to validate config against.
+--skip_validation                 Skip validation check altogether.
+```
 
-Running the container looks like:
+If running natively, you may also wish to attach to the screen process:
+```bash
+phyto-arm attach
+```
+Or kill it:
+```bash
+phyto-arm stop
+```
+
+Below is an example Docker run script which includes both the `phyto-arm` command as well as the necesssary docker parameters to access devices, ports, and directories on the host. For your convenience, this command is also available as a script in `scripts/docker_run.sh`.
 ```bash
 docker run --rm -it \
     # Name of the container in docker
@@ -107,6 +137,8 @@ docker run --rm -it \
     --publish 9090:9090/tcp \
     # Expose whatever port is being used by web_node
     --publish 8098:8098/tcp \
+    # If using an RBR CTD streaming over UDP, open the necessary port
+    --publish 12345:12345/udp \
     # Bind config directory host:container. ':ro' = read-only
     --volume "$(pwd)"/configs:/configs:ro \
     # Bind IFCBAcquire routines directory host:container
@@ -114,35 +146,91 @@ docker run --rm -it \
     # host:container bind for saving files to host, in this case
     # for the log_dir and rosbag_prefix settings in example.yaml
     --volume /mnt/data:/mnt/data \
-    # Give access to CTD device
+    # If using an AML CTD over serial, give access to device
     --device /dev/ttyS3 \
     # Name of Docker image:tag to use
     whoi/phyto-arm:latest \
     # Start command. Change to use desired config file, should be
     # in the container config directory mapped above.
-    ./phyto-arm start /configs/hades_docker.yaml
+    ./phyto-arm start main /configs/config.yaml
 ```
 
-The above can be saved to a bash script for repeatability, commonly `run.sh`. Remove comment lines if copying directly.
+The above script will start the main PhytO-ARM processes, but not launch any of the winch "arms" where science missions are defined. Currently there are two science payload implementations, for IFCB missions and Chanos sensor missions, called `arm_ifcb` and `arm_chanos` respectively. 
+
+Launching the arms independently means they can also be stopped, configured, and relaunched without interrupting other PhytO-ARM missions in progress.
+
+After launching `main` with the script above, you can launch the arms with the following commands:
+```bash
+docker exec -it phyto-arm ./phyto-arm start arm_ifcb /configs/config.yaml
+```
+and
+```bash
+docker exec -it phyto-arm ./phyto-arm start arm_chanos /configs/config.yaml
+```
+
+To launch all three simultaneously as separate panes in a tmux session, run the `scripts/tmux_run.sh` script. Running this a second time will attach you to the existing session. To kill the session and all processes running within, use the `scripts/tmux_kill.sh` script.
+
+### Running natively
+
+The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
+
+    $ ./phyto-arm start config/hades.yaml
+    $ ./phyto-arm stop
 
 
-Each serial device defined in the config file (e.g., for the CTD) must be passed to the container with `--device`.
+The ROS nodes will be run in the background (so that you can disconnect from the system, for example) within a `screen` session. This session can be attached with the convenience command
 
-Any network service running on the host to which a node connects must be changed to refer to the Docker host's IP address of `172.17.0.1`, such as in the params `/gps/host` and `/ifcb/address`.
+    $ ./phyto-arm attach
 
-The gpsd service on the host needs to be modified to accept inbound connections from the container. Use `systemctl edit gpsd.socket` to create an override file:
+Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</kbd> to detach again.
 
-    # Allow clients to connect to gpsd from Docker.
-    # Based on https://stackoverflow.com/q/42240757
-    [Socket]
-    ListenStream=
-    ListenStream=/var/run/gpsd.sock
-    ListenStream=0.0.0.0:2947
+**Note:** All instruments must already be logging data. Some notes on configuring instruments are included below.
 
+### Hardware mocking
+
+Note that there are also launch files which substitute the IFCB, CTDs and motors for mock versions, suitable for local development and testing. These can be launched as:
+```bash
+docker exec -it phyto-arm start mock_arm_ifcb /configs/config.yaml
+```
+and
+```
+docker exec -it phyto-arm start mock_arm_chanos /configs/config.yaml
+```
+
+# Unit tests
+
+To run unit tests, execute
+```bash
+docker run -it --rm whoi/phyto-arm:latest /bin/bash -c "source devel/setup.bash && catkin test phyto_arm"
+```
 
 ## Configuration
 
-Configuration files live in `configs/` and use the YAML format. It is recommended that each deployment get its own configuration.
+Configuration files live in `configs/` and use the YAML format. It is recommended that each deployment get its own configuration. An example config file is provided in `example.yaml`.
+
+### Config validation
+
+A strict YAML schema is not defined, instead another YAML file is used as a schema to compare against at runtime. `configs/example.yaml` is used by default, and validation is done by comparing both structure and data types.
+
+You can skip validation by passing the `--skip_validation` argument to `phyto-arm`.
+
+You can also provide your own schema by passing in the `--config_schema <file>` argument to `phyto-arm`. A few rules on how validation is completed:
+
+  1. By default, all parameters in the schema file must also exist in the config file.
+  2. Lines that contain `#optional` are not required.
+  3. The datatype for every parameter present in both config and schema must match.
+  4. Parameters in config but not schema are ignored.
+
+The config validation script includes a separate set of unit tests that can be run with
+```bash
+python3 scripts/config_validation.test.py
+```
+
+### Configuring host address
+
+When running in a container, ensure the config YAML refers to the Docker host's IP address of `172.17.0.1` instead of using `localhost` when trying to access host services, such as in the config for `/gps/host` and `/ifcb/address`.
+
+### Changing config at runtime
 
 The entries in the config file are loaded into the ROS [Parameter Server][]. Some parameters can be dynamically changed while the nodes are running:
 
@@ -179,6 +267,14 @@ The time must be set to UTC. To sync the clock, you can use:
     (echo; echo "set fulltime $(date -u "+%Y-%m-%d %H:%M:%S")") \
     | picocom -b 115200 /dev/ttyS3
 
+### RBR CTD
+
+The current setup of the Chanos arm assumes the RBR CTD data is being transmitted to the host over UDP. In our setup, a proxy is running on a Raspberry Pi Zero which has a serial connection to the RBR, and forwards the CTD messages over UDP to the host.
+
+The proxying script used is provided in `rbr_relay.sh`, a systemd service equivalent is also provided in `rbr_relay.service`.
+
+The `udp_to_ros.py` node is used to read the proxied UDP packets and publish them on a ROS topic to be used by PhytO-ARM.
+
 
 ### GPS
 
@@ -193,6 +289,16 @@ On Ubuntu, edit `/etc/default/gpsd` to configure the GPS device or network sourc
     DEVICES="udp://192.168.13.255:22335"
 
 Monitor that GPS updates are being received using `gpsmon`.
+
+When running in a container, the gpsd service on the host needs to be modified to accept inbound connections from the container. Use `systemctl edit gpsd.socket` to create an override file:
+
+    # Allow clients to connect to gpsd from Docker.
+    # Based on https://stackoverflow.com/q/42240757
+    [Socket]
+    ListenStream=
+    ListenStream=/var/run/gpsd.sock
+    ListenStream=0.0.0.0:2947
+
 
 ### Other board configuration
 
@@ -223,36 +329,25 @@ WantedBy=multi-user.target
 ```
 
 
-## Starting and Stopping
-
-The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
-
-    $ ./phyto-arm start config/hades.yaml
-    $ ./phyto-arm stop
-
-
-The ROS nodes will be run in the background (so that you can disconnect from the system, for example) within a `screen` session. This session can be attached with the convenience command
-
-    $ ./phyto-arm attach
-
-Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</kbd> to detach again.
-
-**Note:** All instruments must already be logging data. Some notes on configuring instruments are included below.
-
 ## Deployment Checklist
 
 - [ ] Config: YAML file created, compare against `example.yaml`
-- [ ] CTD: hardware is installed and powered on
-- [ ] CTD: Used picocom to configure AML
-- [ ] CTD: confirmed broadcasting in `picocom`
-- [ ] CTD: device set correctly in config YAML
-- [ ] CTD: device mapped to container if using Docker
+- [ ] CTD(s): hardware installed and powered on
+- [ ] AML CTD: Used picocom to configure AML
+- [ ] AML CTD: Confirmed broadcasting in `picocom`
+- [ ] AML CTD: Device set correctly in config YAML
+- [ ] AML CTD: Device mapped to container (if using Docker)
+- [ ] RBR CTD: Raspberry Pi relay setup and powered on
+- [ ] RBR CTD: Receiving UDP packets on host with `nc -lup 12345`
+- [ ] RBR CTD: Port mapped to container (if using Docker)
 - [ ] GPS: `gpsd` installed and running
 - [ ] GPS: If used, GPS device plugged in and IP configured
 - [ ] IP camera: IP reserved and set correctly in config YAML
-- [ ] Motor: If used, plugged in
-- [ ] Motor: `launch_args.winch` set to true if used, false otherwise
-- [ ] Motor: IP reserved and set in config YAML
+- [ ] Motor(s): If used, plugged in
+- [ ] Motor: `arm_ifcb/winch/enabled` set to true if used, false otherwise
+- [ ] Motor: `arm_chanos/winch/enabled` set to true if used, false otherwise
+- [ ] Motor(s): IPs reserved
+- [ ] Motor(s): Ensure IP for each motor matches correct arm in YAML config
 - [ ] Foxglove: If using container, Foxglove bridge port is exposed
 - [ ] Data: Rosbag, data and logs directory exist as set in config YAML
 - [ ] Data: If using container, data directory volumes are mounted
@@ -264,29 +359,74 @@ Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</
 - [ ] When ready, run PhytO-ARM for a cycle to confirm no errors
 
 
+## Development
+
+To develop in PhytO-ARM, it is recommended to use a development container with the provided development container configuration file. This can be done locally or on a remote machine (e.g. an IFCB).
+
+1. Install Visual Studio Code.
+2. After cloning the PhytO-ARM repository, open the directory in VS Code. If developing remotely, use Microsoft's _Remote SSH_ extension to open the folder on the remote device. 
+3. Open the `.devcontainer/devcontainer.json` configuration file. You may need to comment out any lines which depend on hardware (e.g., `/dev/ttyS3`) or folders (e.g. `/home/ifcb`) not present on your development machine.
+4. Install the _Dev Containers_ extension published by Microsoft.
+5. The extension should automatically detect the existing `devcontainer.json` configuration and prompt you to reopen the project as a development container.
+6. Wait for the container to open. The first time may be slow as it builds the development image, expect to wait 10 minutes or longer depending on your hardware and Internet connection.
+
+The development container allows you to develop and test from an environment identical to that used in production. If developing locally, launch arms with mocked hardware (see _Running_ section above).
+
+The `.git` repository folder is also mounted in the development container, making it possible to pull/commit/push as needed from within the container.
 
 ## Node Inventory
+
+Note that ROS path conventions are used, such that paths beginning with `/` are absolute, paths beginning with `~` start at the node, and paths without a prefix are relative to their namespace. Global namespace is used for main nodes, while `arm_ifcb` and `arm_chanos` namespaces are used for the IFCB and Chanos arms, respectively.
 
 ### Behavior nodes
 
 These nodes implement the core PhytO-ARM "algorithm" for sampling and are specific to the design of the platform.
 
-  - `conductor`: Orchestrates sampling
+  - `lock_manager`: Winch traffic control center, limits number of concurrent winch movements.
+    - Publishes:
+      - `~acquire` for arms to request permission to move their winches
+      - `~release` for arms to release permission to move
+      - `~check` for arms to check whether they might have a dangling lock (e.g. after a crash or user stop)
+
+  - `arm_ifcb`: Orchestrates IFCB payload behaviors
+    - Subscribes:
+      - `ifcb_runner/sample` to run IFCB sampling actions
+      - `profiler` for profile data, especially phy peak
+      - `winch/move_to_depth/result` to determine the success of a transit
+      - `lock_manager/acquire` for getting clearance to move a winch. Some configurations may not permit simultaneous winch movements
+      - `lock_manager/release` to inform the semaphore that movement has completed
+      - `lock_manager/check` check for dangling locks
+
+  - `ifcb_runner`: Provides one high-level action for running IFCB samples
     - Subscribes:
       - `/ifcb/in` for IFCB status messages
-      - `/profiler` for profile data
-      - `/winch/move_to_depth/result` to determine the success of a transit
     - Publishes:
-      - `/conductor/state` with the current activity
-      - `/winch/move_to_depth/goal` to set a target depth
+      - `~state` current state for debugging purposes
+      - `~sample/goal` action server for running IFCB sampling routines
+      - `~sample/feedback` sampling action feedback
+      - `~sample/result` sampling action result
+
+  - `mock_ifcb_runner`: Mock version of `ifcb_runner`
+    - Publishes:
+      - `~state` current state for debugging purposes
+      - `~sample/goal` action server for running mock sampling routines
+      - `~sample/feedback` sampling action feedback
+      - `~sample/result` sampling action result
+
+  - `arm_chanos`: Orchestrates Chanos sensor payload behaviors
+    - Subscribes:
+      - `winch/move_to_depth/result` to determine the success of a transit
+      - `lock_manager/acquire` for getting clearance to move a winch
+      - `lock_manager/release` to inform the semaphore that movement has completed
+      - `lock_manager/check` to check for dangling locks
 
   - `profiler`: Creates profiles of CTD data during a cast
     - Subscribes:
       - user-chosen topic provided in config
     - Publishes:
-      - `/profiler` with *resampled* profile data
-      - `/profiler/downcast` as above, but only downcasts
-      - `/profiler/downcast` as above, but only upcasts
+      - `~` with *resampled* profile data
+      - `~downcast` as above, but only downcasts
+      - `~downcast` as above, but only upcasts
 
   - `web`: Web API for attaching metadata to IFCB bins
     - Subscribes:
@@ -294,37 +434,47 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
 
   - `winch`: Controls depth using the motor
     - Subscribes:
-      - `/ctd/depth` for monitoring depth
-      - `/motor/motion` for monitoring motor state
-      - `/winch/move_to_depth/goal` for setting the goal depth
-      - `/winch/move_to_depth/cancel` for canceling the current goal
+      - `ctd/depth` for monitoring depth
+      - `motor/motion` for monitoring motor state
+      - `winch/move_to_depth/goal` for setting the goal depth
+      - `winch/move_to_depth/cancel` for canceling the current goal
     - Publishes:
-      - `/winch/move_to_depth/feedback` with progress updates
-      - `/winch/move_to_depth/status` with the status of the current goal
-      - `/winch/move_to_depth/result` with the result of the goal
+      - `winch/move_to_depth/feedback` with progress updates
+      - `winch/move_to_depth/status` with the status of the current goal
+      - `winch/move_to_depth/result` with the result of the goal
 
+  - `mock_winch_node`: Mock version of `winch`
+    - Publishes:
+      - `winch/move_to_depth/feedback` with progress updates
+      - `winch/move_to_depth/status` with the status of the current goal
+      - `winch/move_to_depth/result` with the result of the goal
 
 ### Device nodes (drivers)
 
 These nodes perform lower-level interactions with hardware components. These nodes are designed to be portable to future projects.
 
+
   - `camera`: Video stream
     - Publishes:
-      - `/camera/image/compressed` with the compressed video feed
+      - `~image/compressed` with the compressed video feed
 
   - `ctd`: Driver for the AML or RBR maestro3 CTD
     - Subscribes:
-      - `/ctd_comms/in` for receiving data from CTD.
+      - `ctd_comms/in` for receiving data from CTD.
     - Publishes:
-      - `/ctd` with conductivity, temperature, and pressure data
-      - `/ctd/depth` with depth and pressure data
-      - `/ctd/aml/derive/xyz` with derived values (for AML only)
-      - `/ctd/aml/port#/xyz` with measured values (for AML only)
+      - `~ctd` with conductivity, temperature, and pressure data
+      - `~depth` with depth and pressure data
+      - `~aml/derive/xyz` with derived values (for AML only)
+      - `~aml/port#/xyz` with measured values (for AML only)
 
   - `ctd_comms`: Bridge for CTD serial communications
     - Publishes:
-      - `/ctd_comms/in` for messages received from the CTD's serial port
-      - `/ctd_comms/out` for messages sent to the CTD's serial port
+      - `ctd_comms/in` for messages received from the CTD's serial port
+      - `ctd_comms/out` for messages sent to the CTD's serial port
+
+  - `udp_to_ros`: Translates UDP messages to ROS topics. Used for receiving proxied RBR data.
+      - Publishes:
+        - `udp_stream` a continuous stream of all received UDP messages.
 
   - `gps`: Provides GPS fixes to ROS from `gpsd`
     - Publishes:
@@ -332,26 +482,31 @@ These nodes perform lower-level interactions with hardware components. These nod
 
   - `ifcb`: Bridge for the IFCB websocket API
     - Publishes:
-      - `/ifcb/in` for messages received from the IFCB
-      - `/ifcb/out` for messages sent to the IFCB
-      - `/ifcb/image` for full-frame images
-      - `/ifcb/roi/image` for detected ROI images only
-      - `/ifcb/roi/image/raw` republished ROI as raw (if classifier enabled)
-      - `/ifcb/roi/markers` with rectangular bounds of ROIs
+      - `~in` for messages received from the IFCB
+      - `~out` for messages sent to the IFCB
+      - `~image` for full-frame images
+      - `~roi/image` for detected ROI images only
+      - `~roi/image/raw` republished ROI as raw (if classifier enabled)
+      - `~roi/markers` with rectangular bounds of ROIs
     - Services:
-      - `/ifcb/command` to send a message to the IFCB
-      - `/ifcb/routine` to send a routine to the IFCB
+      - `~command` to send a message to the IFCB
+      - `~routine` to send a routine to the IFCB
 
   - `motor`: Driver for the JVL motor
     - Publishes:
-      - `/motor/electrical` with electrical registers
-      - `/motor/error` with error registers
-      - `/motor/motion` with motion registers
+      - `~electrical` with electrical registers
+      - `~error` with error registers
+      - `~motion` with motion registers
     - Services:
-      - `/motor/set_position` to set the motor's position
-      - `/motor/set_position_envelope` to set position limits
-      - `/motor/set_velocity` to set the motor's velocity
-      - `/motor/stop` to stop the motor
+      - `~set_position` to set the motor's position
+      - `~set_position_envelope` to set position limits
+      - `~set_velocity` to set the motor's velocity
+      - `~stop` to stop the motor
+
+  - `mock_ctd`: Mock version of a CTD publisher
+    - Publishes:
+      - `~ctd` with conductivity, temperature, and pressure data
+      - `~depth` with depth and pressure data
 
 
 ### System nodes

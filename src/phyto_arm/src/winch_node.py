@@ -84,10 +84,10 @@ motor = None
 
 
 # Service proxies for interacting with the motor
-set_position_envelope = rospy.ServiceProxy('/motor/set_position_envelope',
+set_position_envelope = rospy.ServiceProxy('motor/set_position_envelope',
     SetPositionEnvelopeCmd)
-set_velocity = rospy.ServiceProxy('/motor/set_velocity', SetVelocityCmd)
-stop = rospy.ServiceProxy('/motor/stop', StopCmd)
+set_velocity = rospy.ServiceProxy('motor/set_velocity', SetVelocityCmd)
+stop = rospy.ServiceProxy('motor/stop', StopCmd)
 
 
 # This function returns a velocity function with the given parameters.
@@ -129,14 +129,17 @@ async def move_to_depth_chk(server, goal):
 
 
 async def move_to_depth(server, goal):
+    # Put initial status tasks in a lookup dict for traceability
+    tasks = {
+        asyncio.create_task(depth.wait()): "depth status",
+        asyncio.create_task(motor.wait()): "motor status"
+    }
     # Get an initial depth fix and motor status message
-    _, pending = await asyncio.wait([
-        asyncio.create_task(depth.wait()),
-        asyncio.create_task(motor.wait()),
-    ], timeout=2.0, return_when=asyncio.ALL_COMPLETED)
+    _, pending = await asyncio.wait(tasks.keys(), timeout=2.0, return_when=asyncio.ALL_COMPLETED)
 
     if pending:
-        server.set_aborted(text='Timed out waiting for initial status')
+        err_text = f'Timed out waiting for {", ".join([tasks[p] for p in pending])}'
+        server.set_aborted(text=err_text)
         return
 
     # Safety check: The depth reading should be valid
@@ -164,10 +167,16 @@ async def move_to_depth(server, goal):
                   f'({depth_min:.2f}, {depth_max:.2f}) m')
 
     # Velocity function
-    v = velocity_f(goal.depth, 0.02, 0.05)
-    epsilon = 0.01
+    max_speed = rospy.get_param('~max_speed' )
+    half_speed_dist = rospy.get_param('~half_speed_dist')
+    # Assert both are not None
+    assert max_speed is not None and half_speed_dist is not None, 'Winch speed config invalid'
+    assert goal.velocity < max_speed, 'Goal velocity exceeds max speed'
+    v = velocity_f(goal.depth, goal.velocity, half_speed_dist)
 
     # Estimate the time it should take to reach the destination
+    epsilon = rospy.get_param('~epsilon', 0.01)
+    assert epsilon is not None, 'Winch epsilon config invalid'
     expected_time = estimate_time(v, start_depth, goal.depth, epsilon)
     rospy.loginfo(f'Estimated movement time is {expected_time.to_sec():.0f} s')
 
@@ -241,12 +250,12 @@ async def move_to_depth(server, goal):
 
         # If too much time has elapsed, stop
         if elapsed > time_limit:
-            server.set_aborted(text='Time limited exceeded')
+            server.set_aborted(text=f'Time limit exceeded: {elapsed}/{time_limit}')
             break
 
         # If depth is outside of bounds, stop
         if not (depth_min <= depth.value.depth <= depth_max):
-            server.set_aborted(text='Exceeded depth bounds')
+            server.set_aborted(text=f'Exceeded depth bounds: {depth.value.depth} not in ({depth_min}, {depth_max})')
             break
 
         # Update bounds so we do not travel far from this position
@@ -328,12 +337,12 @@ async def main():
         svc.wait_for_service()
 
     # Subscribe to incoming messages
-    rospy.Subscriber('/ctd/depth', DepthPressure, depth.update_soon)
-    rospy.Subscriber('/motor/motion', Motion, motor.update_soon)
+    rospy.Subscriber(rospy.get_param('ctd_topic'), DepthPressure, depth.update_soon)
+    rospy.Subscriber('motor/motion', Motion, motor.update_soon)
 
     # Create an action server for the MoveToDepth action
     server = AsyncSimpleActionServer(
-        '/winch/move_to_depth',
+        'winch/move_to_depth',
         MoveToDepthAction,
         move_to_depth_chk,
         loop

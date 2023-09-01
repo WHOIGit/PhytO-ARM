@@ -12,6 +12,7 @@ RUN apt update \
 
 # Install Python dependencies
 COPY deps/python3-requirements.txt ./
+RUN pip install --upgrade setuptools==69.1.0
 RUN python3 -m pip install -r python3-requirements.txt
 
 
@@ -49,6 +50,7 @@ RUN apt update \
 
 # Copy the rest of the sources
 COPY ./src ./src
+COPY ./scripts ./scripts
 
 # Build
 RUN source ./devel/setup.bash \
