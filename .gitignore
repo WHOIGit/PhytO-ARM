@@ -11,3 +11,8 @@ __pycache__
 logs
 configs
 !configs/example.yaml
+
+# Build artifacts in devcontainer after mount
+apt-requirements.txt
+deps.rosinstall
+python3-requirements.txt

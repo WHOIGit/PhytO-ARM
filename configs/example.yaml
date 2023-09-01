@@ -2,17 +2,15 @@ name: Example
 
 
 launch_args:
-    ctd: aml
     log_dir: /mnt/data/roslogs/
     rosbag_prefix: /mnt/data/rosbags/phyto-arm
-    winch: false
     classifier: false
 
 
 alerts:
     # You can post alert messages to Slack by creating an Incoming Webhook for your channel:
-    # - type: slack
-    #   url: https://hooks.slack.com/services/...
+    - type: slack
+      url: https://hooks.slack.com/services/...
 
 
 # Node-specific configuration
@@ -20,51 +18,9 @@ alerts:
 gps:
     host: "172.17.0.1"
 
-conductor:
-    range:
-        min:  0.5  # m
-        max:  2.0  # m
-
-    # TODO: Currently unimplemented
-    speed:
-        transit: 0.02  # m/s
-        profile: 0.02  # m/s
-
-    # Minimum level of the profiled sensor data to trigger a sample at depth
-    threshold: 0.0
-
-    # Interval at which we run a cartridge debubble, necessary when IFCB on its side
-    cartridge_debubble_interval: 0 # minutes, 0 = never
-
-    # Interval at which we run a bead sample for maintenance
-    bead_interval: 1440  # minutes, 0 = never
-
-    # Scheduled depths are sampled once per time interval, or when the profile
-    # data does not exceed the configured threshold above.
-    #
-    # Note: Adjusting the scheduled depths after the node has started may resume
-    # from an arbitrary point in the new schedule.
-    schedule:
-        every: 60  # minutes, 0 = never
-        range:
-            first: 0.5  # m
-            last:  2.0  # m
-            count: 4
-
-profiler:
-    resolution: 0.02  # m
-    data_topic: "/ctd/aml/port5/phycoerythrin"
-    data_field: "value"
-
-#  Note these values are not read by PhytO-ARM, they are sought by
-#  the included ds_util_nodes package, which publishes CTD data reads.
-#  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
-ctd_comms:
-    connection:
-        type: "SERIAL"
-        port: "/dev/ttyTHS0"
-        baud: 115200
-        data_bits: 8
+lock_manager:
+    # Use this to control how many motors can be in motion at once.
+    max_moving_winches: 1
 
 ifcb:
     address: "172.17.0.1"
@@ -75,12 +31,150 @@ ifcb:
     # container or namespace.
     data_dir: "/mnt/data/ifcbdata"
 
-# If launch_args.winch = true
-motor:
-    address: "192.168.13.3"
-    port: 502
-    refresh_rate: 1  # hz
-    counts_per_turn: 8192  # defined in manual p.9
+
+arm_ifcb:
+    # Configuration related to tasks
+    tasks:
+        phy_peak:
+            # Minimum level of the profiled sensor data to trigger a sample at depth
+            threshold: 0.0
+        scheduled_depth:
+            # Scheduled depths are sampled once per time interval, or when the profile
+            # data does not exceed the configured threshold above.
+            #
+            # Note: Adjusting the scheduled depths after the node has started may resume
+            # from an arbitrary point in the new schedule.
+            every: 60  # minutes, 0 = never
+            range:
+                first: 0.7  # m
+                last:  1.5  # m
+                count: 3
+        wiz_probe:
+            # List of times to sample the Wiz probe in UTC time. List can be any size
+            times:
+                - "12:00"
+                - "14:00"
+                - "16:00"
+                - "18:00"
+            # Minutes to hold this position
+            duration: 30
+            # For this number of minutes before the next time, no other tasks will be scheduled.
+            # Allows any existing tasks to complete and gives the winch time to move into position.
+            preparation_window: 15
+            # Use phycoerythrin peak to determine sample depth
+            use_phy_peak: true
+            # If use_phy_peak == true, then this is the offset from the peak to sample at.
+            # This is added directly to the phy_peak depth, so positive values add depth.
+            peak_offset: 0.5 # m
+            # Depth to sample at if phycoerythrin peak is not used, or if peak not found
+            # Ensure this value is within the winch range or PhytO-ARM will abort
+            default_depth: 1.0
+
+    ifcb_maintenance:
+        # Interval at which we run a cartridge debubble, necessary when IFCB on its side
+        cartridge_debubble_interval: 0 # minutes, 0 = never
+        # Interval at which we run a bead sample for maintenance
+        bead_interval: 1440  # minutes, 0 = never
+
+    ctd_topic: '/arm_ifcb/ctd/depth'
+
+    #  Note these values are not read by PhytO-ARM, they are sought by
+    #  the included ds_util_nodes package, which publishes CTD data reads.
+    #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
+    ctd_comms:
+        connection:
+            type: "SERIAL"
+            port: "/dev/ttyS3"
+            baud: 115200
+            data_bits: 8
+
+    profiler:
+        resolution: 0.02  # m
+        data_topic: "/ctd/aml/port5/phycoerythrin"
+        data_field: "value"
+
+    motor:
+        address: "192.168.13.3"
+        port: 502
+        refresh_rate: 1  # hz
+        counts_per_turn: 8192  # defined in manual p.9
+
+    winch:
+        enabled: true
+
+        range:
+            min:  0.7  # m
+            max:  1.5  # m
+
+        # The spool circumference is needed for an initial estimate of speed
+        spool_circumference: 0.6604  # m
+
+        # Used for calculating rpm_ratio = 60 * gear_ratio / spool_circumference
+        gear_ratio: 60
+
+        max_speed:  0.02  # m/s
+        # Distance from target at which we will reduce speed by half. This controls
+        # the sharpness of our velocity function. A smaller number produces a more
+        # abrupt stop.
+        half_speed_dist: 0.05  # m
+
+        # Distance from the target at which we are close enough to stop.
+        epsilon: 0.01  # m
+
+        safety_envelopes:
+            position: 0.1  # meters
+            time: # Unused for now
+                extra_pct: 10.0
+                extra_sec: 10.0
+
+
+arm_chanos:
+    tasks:
+        downcast:
+            speed: 0.005  # m/s
+        upcast:
+            stage_duration: 60 # seconds
+            stages:
+                - 1.5 # meters
+                - 1.0
+                - 0.7
+
+    ctd_topic: '/arm_chanos/ctd/depth'
+
+    motor:
+        address: "192.168.13.4"
+        port: 502
+        refresh_rate: 1  # hz
+        counts_per_turn: 8192  # defined in manual p.9
+
+    winch:
+        enabled: true
+
+        range:
+                min:  0.7  # m
+                max:  1.5  # m
+
+        # The spool circumference is needed for an initial estimate of speed
+        spool_circumference: 0.6604  # m
+
+        # Used for calculating rpm_ratio = 60 * gear_ratio / spool_circumference
+        gear_ratio: 60
+
+        max_speed:  0.02  # m/s
+        # Distance from target at which we will reduce speed by half. This controls
+        # the sharpness of our velocity function. A smaller number produces a more
+        # abrupt stop.
+        half_speed_dist: 0.05  # m
+
+        # Distance from the target at which we are close enough to stop.
+        epsilon: 0.01  # m
+
+        safety_envelopes:
+            position: 0.1  # meters
+            time: # Unused for now
+                extra_pct: 10.0
+                extra_sec: 10.0
+
 
 # If launch_args.classifier = true
 classifier:
@@ -90,58 +184,28 @@ classifier:
     classifier_model: "ifcb_iv3_onnx"
 
 camera:
-    # Raymarine CAM220IP defaults
-    video_stream_url: "rtsp://admin:1234@192.168.13.30/h264"
-
-winch:
-    # TODO: Almost none of these values are used yet!
-
-    # The spool circumference is needed for an initial estimate of speed
-    spool_circumference: 0.6604  # m
-
-    gear_ratio: 60
-
-    max_speed:  0.02  # m/s
-    acceleration:  1  # m/s^2
-
-    # Distance from target at which we will reduce speed by half. This controls
-    # the sharpness of our velocity function. A smaller number produces a more
-    # abrupt stop.
-    half_speed_dist: 0.05  # m
-
-    # Distance from the target at which we are close enough to stop.
-    epsilon: 0.01  # m
-
-    safety_envelopes:
-        time:
-            extra_pct: 10.0
-            extra_sec: 10.0
-        position: 0.1  # meters
+    fore_camera:
+        video_stream_url: "rtsp://admin:example_password@192.168.13.123/"
+    aft_camera:
+        video_stream_url: "rtsp://admin:example_password@192.168.13.124/"
 
 web:
     field_map:
-        commitHash:
-            # Will get value from COMMIT_HASH environment variable
-            environment: COMMIT_HASH
-            # Default is optional for environment variables. Will error
-            # if variable does not exist and no default provided
-            default: 'No hash'
-        ctdDepth:
-            # Must have 'default' if not 'environment'
-            default: .nan
-            # Optional 'topic' to update value
-            topic: /ctd/depth
-            # Required only when 'topic' is used
-            topic_field: depth
-        gpsLatitude:
+        #optional indicates that a parameter will not be required to be present by the config validator
+        commitHash: #optional
+            environment: COMMIT_HASH #optional, get value from COMMIT_HASH environment variable
+            default: 'No hash' #optional for environment variables
+        ctdDepth: #optional
+            default: .nan # 'default' required if not using 'environment'
+            topic: /ctd/depth #optional, ROS topic to update value
+            topic_field: depth #optional unless 'topic' is used
+        gpsLatitude: #optional
             topic: /gps/fix
             topic_field: latitude
-            # Replace with desired default lat/long
-            default: -999999
-        gpsLongitude:
+            default: -999999 # Replace with desired default lat
+        gpsLongitude: #optional
             topic: /gps/fix
             topic_field: longitude
-            default: -999999
-        defaultOnly:
-            # No topic means this default value is permanent
-            default: 'static_value'
+            default: -999999 # Replace with desired default long
+        defaultOnlyExample: #optional
+            default: 'static_value' # No topic, making this default value permanent

@@ -1,0 +1,22 @@
+<launch>
+    <!-- Most settings are in config.yaml, which is easier to edit. -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <!-- RBR winch namespace. Important for separating similar nodes on different arms -->
+    <group ns="arm_chanos">
+        <!-- proxy for publishing RBR's UDP stream as ROS topic -->
+        <node name="rbr_udp" pkg="rbr_maestro3_ctd" type="udp_to_ros.py">
+            <param name="port" type="int" value="12345" />
+        </node>
+
+        <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
+            <remap from="~in" to="udp_stream" />
+        </node>
+
+        <node name="arm" pkg="phyto_arm" type="arm_chanos.py" />
+
+        <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+
+        <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+    </group>
+</launch>
