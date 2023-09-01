@@ -1,0 +1,3 @@
+[submodule "src/triton_classifier"]
+	path = src/triton_classifier
+	url = https://github.com/WHOIGit/ros-triton-image-classifier.git
