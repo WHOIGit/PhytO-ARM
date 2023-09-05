@@ -38,7 +38,6 @@ COPY ./src/ifcb/package.xml ./src/ifcb/package.xml
 COPY ./src/jvl_motor/package.xml ./src/jvl_motor/package.xml
 COPY ./src/phyto_arm/package.xml ./src/phyto_arm/package.xml
 COPY ./src/rbr_maestro3_ctd/package.xml ./src/rbr_maestro3_ctd/package.xml
-COPY ./src/triton_classifier/package.xml ./src/triton_classifier/package.xml
 
 # Install new rosdep dependencies declared in the above package.xml files
 RUN apt update \

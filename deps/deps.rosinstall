@@ -13,3 +13,7 @@
 - git:
     local-name: ros-rtsp-camera
     uri: https://github.com/WHOIGit/ros-rtsp-camera.git
+
+- git:
+    local-name: triton_classifier
+    uri: https://github.com/WHOIGit/ros-triton-classifier.git
