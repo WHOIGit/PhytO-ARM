@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import functools
-import io
 import json
 import os
 import struct
@@ -13,14 +12,10 @@ import ifcb.srv as srv
 
 from ifcbclient import IFCBClient
 
-import cv2
-from cv_bridge import CvBridge
 from ds_core_msgs.msg import RawData
 from foxglove_msgs.msg import ImageMarkerArray
 from geometry_msgs.msg import Point
-import numpy as np
-from PIL import Image as PilImage
-from sensor_msgs.msg import CompressedImage, Image
+from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import ImageMarker
 
@@ -134,19 +129,18 @@ def on_triggerimage(pub, _, image):
     pub.publish(msg)
 
 
-def on_triggercontent(roi_pub, roi_raw_pub, mkr_pub, _, daq, rois):
+def on_triggercontent(roi_pub, mkr_pub, _, daq, rois):
     timestamp = rospy.Time.now()
 
     # TODO: Publish DAQ messages too
     pass
 
     # Delegate publishing of ROI images and markers to on_triggerrois
-    on_triggerrois(roi_pub, roi_raw_pub, mkr_pub, _, rois, timestamp=timestamp)
+    on_triggerrois(roi_pub, mkr_pub, _, rois, timestamp=timestamp)
 
 
-def on_triggerrois(roi_pub, roi_raw_pub, mkr_pub, _, rois, *, timestamp=None):
+def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     timestamp = timestamp or rospy.Time.now()
-    bridge = CvBridge()
     markers = ImageMarkerArray()
     for i, (top, left, image) in enumerate(rois):
         # IFCB does not give us the width and height so we must extract from
@@ -161,16 +155,6 @@ def on_triggerrois(roi_pub, roi_raw_pub, mkr_pub, _, rois, *, timestamp=None):
         roi.format = 'png'
         roi.data = image
         roi_pub.publish(roi)
-
-        # Convert PNG to raw and publish as Image message
-        image_stream = io.BytesIO(image)
-        pil_image = PilImage.open(image_stream)
-        opencv_image = np.array(pil_image)
-        # Convert RGB to BGR
-        opencv_image = cv2.cvtColor(opencv_image, cv2.COLOR_RGB2BGR)
-        image_message = bridge.cv2_to_imgmsg(opencv_image)
-        image_message.header.stamp = timestamp
-        roi_raw_pub.publish(image_message)
 
         # Add a marker to the array
         mkr = ImageMarker()
@@ -200,7 +184,6 @@ def main():
     # Publishers for images, ROI images, and ROI markers
     img_pub = rospy.Publisher('~image', CompressedImage, queue_size=5)
     roi_pub = rospy.Publisher('~roi/image', CompressedImage, queue_size=5)
-    roi_raw_pub = rospy.Publisher('~roi/image/raw', Image, queue_size=5)
     mkr_pub = rospy.Publisher('~roi/markers', ImageMarkerArray, queue_size=5)
 
     # Create an IFCB websocket API client
@@ -224,9 +207,9 @@ def main():
     client.on(('triggerimage',),
               functools.partial(on_triggerimage, img_pub))
     client.on(('triggercontent',),
-              functools.partial(on_triggercontent, roi_pub, roi_raw_pub, mkr_pub))
+              functools.partial(on_triggercontent, roi_pub, mkr_pub))
     client.on(('triggerrois',),
-              functools.partial(on_triggerrois, roi_pub, roi_raw_pub, mkr_pub))
+              functools.partial(on_triggerrois, roi_pub, mkr_pub))
 
     # Set up callbacks for datafolder switching
     client.on(('valuechanged','interactive','stopped',),
