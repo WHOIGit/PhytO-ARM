@@ -43,8 +43,11 @@
     <node name="conductor" pkg="phyto_arm" type="conductor_nowinch_node.py"
           unless="$(arg winch)" />
 
-    <node name="classifier" pkg="triton_classifier" type="classifier_node.py"
-          unless="$(arg winch)" />
+    <group if="$(arg classifier)">
+        <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />
+
+        <node name="image_transport" pkg="phyto_arm" type="image_transport_node.py" />
+    </group>
 
     <!--
     disabled
