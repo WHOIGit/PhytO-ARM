@@ -49,7 +49,7 @@ COPY ./src ./src
 
 # Build
 RUN source ./devel/setup.bash \
- && stdbuf -o L catkin build phyto_arm triton_classifier
+ && stdbuf -o L catkin build phyto_arm
 
 # Copy the launch tool
 ENV DONT_SCREEN=1

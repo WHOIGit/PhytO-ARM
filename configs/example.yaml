@@ -81,7 +81,6 @@ motor:
     refresh_rate: 1  # hz
     counts_per_turn: 8192  # defined in manual p.9
 
-# If winch = false
 classifier:
     # Topic to get images which are sent to classifier
     image_topic: "/ifcb/roi/image"
