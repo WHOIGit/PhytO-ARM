@@ -1,5 +1,6 @@
 <launch>
-    <!-- Most settings are in config.yaml, which is easier to edit -->
+    <!-- Most settings are in config.yaml, which is easier to edit. Validate then load -->
+    <node name="config_validation" pkg="phyto_arm" type="config_validation_node" />
     <rosparam command="load" file="$(arg config_file)" />
 
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
