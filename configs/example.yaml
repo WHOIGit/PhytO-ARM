@@ -6,6 +6,7 @@ launch_args:
     log_dir: /mnt/data/roslogs/
     rosbag_prefix: /mnt/data/rosbags/phyto-arm
     winch: false
+    classifier: false
 
 
 alerts:
@@ -74,13 +75,14 @@ ifcb:
     # container or namespace.
     data_dir: "/mnt/data/ifcbdata"
 
-# If winch = true
+# If launch_args.winch = true
 motor:
     address: "192.168.13.3"
     port: 502
     refresh_rate: 1  # hz
     counts_per_turn: 8192  # defined in manual p.9
 
+# If launch_args.classifier = true
 classifier:
     # Topic to get images which are sent to classifier
     image_topic: "/ifcb/roi/image"

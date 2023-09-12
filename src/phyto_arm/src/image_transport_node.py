@@ -14,7 +14,7 @@ def republish_image(raw_pub, image):
     bridge = CvBridge()
 
     # Convert PNG to raw and publish as Image message
-    image_stream = io.BytesIO(image)
+    image_stream = io.BytesIO(image.data)
     pil_image = PilImage.open(image_stream)
     opencv_image = np.array(pil_image)
     # Convert RGB to BGR
