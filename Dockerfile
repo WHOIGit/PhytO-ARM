@@ -1,5 +1,6 @@
 FROM ros:noetic
-
+# Increment DEPSCACHE when there's a known change to deps.rosinstall
+ARG DEPSCACHE=1
 SHELL ["/usr/bin/bash", "-c"]
 WORKDIR /app
 
@@ -13,9 +14,11 @@ RUN apt update \
 COPY deps/python3-requirements.txt ./
 RUN python3 -m pip install -r python3-requirements.txt
 
+
 # Clone third-party dependencies from VCS
 COPY deps/deps.rosinstall ./
-RUN mkdir ./src \
+RUN echo Installing ROS dependencies:${DEPSCACHE} \
+ && mkdir ./src \
  && vcs import src < deps.rosinstall
 
 # Install dependencies declared in package.xml files
