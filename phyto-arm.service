@@ -7,8 +7,8 @@ After=network.target
 [Service]
 Type=simple
 Restart=on-failure
-WorkingDirectory=/home/hablab/PhytO-ARM/ros
-ExecStart=/bin/sh -c ". devel/setup.sh; roslaunch pa_base phyto_arm.launch"
+WorkingDirectory=/home/hablab/PhytO-ARM
+ExecStart=/bin/bash -c ". devel/setup.bash; roslaunch pa_base phyto_arm.launch"
 
 [Install]
 WantedBy=multi-user.target
