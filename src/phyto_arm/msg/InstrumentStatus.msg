@@ -1,0 +1,3 @@
+# Instrument status
+
+bool busy

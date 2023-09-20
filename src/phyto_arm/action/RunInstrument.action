@@ -1,0 +1,19 @@
+# RunInstrument
+# Runs instrument, winch position will hold until completed
+
+# Goal
+
+
+---
+
+# Result
+
+string status
+bool succeeded
+std_msgs/Duration time_elapsed
+
+---
+
+# Feedback
+
+std_msgs/Duration time_elapsed
