@@ -8,23 +8,29 @@
 
     <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
 
-    <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py"
-          if="$(eval arg('ctd') == 'rbr_maestro3')">
-        <remap from="~in" to="/ctd_comms/in" />
-    </node>
-
-    <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py"
+    <node name="aml_ctd" pkg="aml_ctd" type="aml_ctd_node.py"
           if="$(eval arg('ctd') == 'aml')">
         <remap from="~in" to="/ctd_comms/in" />
     </node>
 
-    <group if="$(arg winch)">
+    <!-- AML winch namespace -->
+    <group ns="aml_instrument" if="$(arg winch)">
         <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
         <node name="winch" pkg="phyto_arm" type="winch_node.py" />
 
         <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
     </group>
+
+    <!-- RBR winch namespace TODO find better conditional -->
+    <group ns="rbr_instrument" if="$(arg winch)">
+        <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+
+        <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+
+        <node name="rbr_ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py" />
+    </group>
+
 
     <node name="gps" pkg="gpsd_client" type="gpsd_client">
         <remap from="/fix" to="~fix" />

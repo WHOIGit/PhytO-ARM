@@ -328,12 +328,12 @@ async def main():
         svc.wait_for_service()
 
     # Subscribe to incoming messages
-    rospy.Subscriber('/ctd/depth', DepthPressure, depth.update_soon)
-    rospy.Subscriber('/motor/motion', Motion, motor.update_soon)
+    rospy.Subscriber(rospy.get_param('ctd_topic'), DepthPressure, depth.update_soon)
+    rospy.Subscriber('motor/motion', Motion, motor.update_soon)
 
     # Create an action server for the MoveToDepth action
     server = AsyncSimpleActionServer(
-        '/winch/move_to_depth',
+        'winch/move_to_depth',
         MoveToDepthAction,
         move_to_depth_chk,
         loop

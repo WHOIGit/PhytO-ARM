@@ -33,6 +33,9 @@ conductor:
     # Minimum level of the profiled sensor data to trigger a sample at depth
     threshold: 0.0
 
+    # Maximum number of concurrent moving winches allowed
+    max_moving_winches: 1
+
     # Interval at which we run a cartridge debubble, necessary when IFCB on its side
     cartridge_debubble_interval: 0 # minutes, 0 = never
 
@@ -51,10 +54,6 @@ conductor:
             last:  2.0  # m
             count: 4
 
-profiler:
-    resolution: 0.02  # m
-    data_topic: "/ctd/aml/port5/phycoerythrin"
-    data_field: "value"
 
 #  Note these values are not read by PhytO-ARM, they are sought by
 #  the included ds_util_nodes package, which publishes CTD data reads.
@@ -75,12 +74,80 @@ ifcb:
     # container or namespace.
     data_dir: "/mnt/data/ifcbdata"
 
-# If launch_args.winch = true
-motor:
-    address: "192.168.13.3"
-    port: 502
-    refresh_rate: 1  # hz
-    counts_per_turn: 8192  # defined in manual p.9
+
+instrument_aml:
+    ctd_topic: '/aml_ctd/depth'
+
+    profiler:
+        resolution: 0.02  # m
+        data_topic: "/ctd/aml/port5/phycoerythrin"
+        data_field: "value"
+
+    winch:
+        # TODO: Almost none of these values are used yet!
+
+        # The spool circumference is needed for an initial estimate of speed
+        spool_circumference: 0.6604  # m
+
+        gear_ratio: 60
+
+        max_speed:  0.02  # m/s
+        acceleration:  1  # m/s^2
+
+        # Distance from target at which we will reduce speed by half. This controls
+        # the sharpness of our velocity function. A smaller number produces a more
+        # abrupt stop.
+        half_speed_dist: 0.05  # m
+
+        # Distance from the target at which we are close enough to stop.
+        epsilon: 0.01  # m
+
+        safety_envelopes:
+            time:
+                extra_pct: 10.0
+                extra_sec: 10.0
+            position: 0.1  # meters
+
+    motor:
+        address: "192.168.13.3"
+        port: 502
+        refresh_rate: 1  # hz
+        counts_per_turn: 8192  # defined in manual p.9
+
+
+instrument_rbr:
+    ctd_topic: '/rbr_ctd/depth'    
+    winch:
+        # TODO: Almost none of these values are used yet!
+
+        # The spool circumference is needed for an initial estimate of speed
+        spool_circumference: 0.6604  # m
+
+        gear_ratio: 60
+
+        max_speed:  0.02  # m/s
+        acceleration:  1  # m/s^2
+
+        # Distance from target at which we will reduce speed by half. This controls
+        # the sharpness of our velocity function. A smaller number produces a more
+        # abrupt stop.
+        half_speed_dist: 0.05  # m
+
+        # Distance from the target at which we are close enough to stop.
+        epsilon: 0.01  # m
+
+        safety_envelopes:
+            time:
+                extra_pct: 10.0
+                extra_sec: 10.0
+            position: 0.1  # meters
+
+    motor:
+        address: "192.168.13.4"
+        port: 502
+        refresh_rate: 1  # hz
+        counts_per_turn: 8192  # defined in manual p.9
+
 
 # If launch_args.classifier = true
 classifier:
@@ -92,31 +159,6 @@ classifier:
 camera:
     # Raymarine CAM220IP defaults
     video_stream_url: "rtsp://admin:1234@192.168.13.30/h264"
-
-winch:
-    # TODO: Almost none of these values are used yet!
-
-    # The spool circumference is needed for an initial estimate of speed
-    spool_circumference: 0.6604  # m
-
-    gear_ratio: 60
-
-    max_speed:  0.02  # m/s
-    acceleration:  1  # m/s^2
-
-    # Distance from target at which we will reduce speed by half. This controls
-    # the sharpness of our velocity function. A smaller number produces a more
-    # abrupt stop.
-    half_speed_dist: 0.05  # m
-
-    # Distance from the target at which we are close enough to stop.
-    epsilon: 0.01  # m
-
-    safety_envelopes:
-        time:
-            extra_pct: 10.0
-            extra_sec: 10.0
-        position: 0.1  # meters
 
 web:
     field_map:
