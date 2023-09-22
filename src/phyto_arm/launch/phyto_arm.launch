@@ -14,7 +14,9 @@
     </node>
 
     <!-- AML winch namespace -->
-    <group ns="aml_instrument" if="$(arg winch)">
+    <group ns="aml_arm" if="$(arg aml_winch)">
+        <node name="arm" pkg="phyto_arm" type="aml_arm.py" />
+
         <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
         <node name="winch" pkg="phyto_arm" type="winch_node.py" />
@@ -23,7 +25,9 @@
     </group>
 
     <!-- RBR winch namespace TODO find better conditional -->
-    <group ns="rbr_instrument" if="$(arg winch)">
+    <group ns="rbr_arm" if="$(arg rbr_winch)">
+        <node name="arm" pkg="phyto_arm" type="rbr_arm.py" />
+
         <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
         <node name="winch" pkg="phyto_arm" type="winch_node.py" />

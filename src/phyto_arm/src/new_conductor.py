@@ -1,60 +1,64 @@
 
 from collections import namedtuple
+from functools import partial
 import math
-from threading import Lock
+from threading import RLock
 
 import actionlib
 import rospy
 from std_srvs.srv import Empty
 
-from phyto_arm.msg import RegisterCallback, MoveToDepthAction, MoveToDepthGoal, \
-                        RunInstrumentAction
+from phyto_arm.msg import ArmRegistration, MoveToDepthAction, MoveToDepthGoal, \
+                        InstrumentAction
 
 
-InstrumentObj = namedtuple("Instruments", "status", "goal_depth", "run", "winch")
-instruments = []
+ArmTupple = namedtuple("Arms", "winch", "instrument", "get_task")
+arms = []
 winches_moving = 0
-move_to_depth = None
-lock = Lock()
+lock = RLock()
 
 def handle_registration(req):
-    # Setup service clients
-    status_client = rospy.ServiceProxy(req.status_callback, Empty)
-    goal_depth_client = rospy.ServiceProxy(req.goal_depth_callback, Empty)
-
-    # Setup action client for controlling the winch
-    winch_client = actionlib.SimpleActionClient(
-        req.move_winch_callback,
-        MoveToDepthAction
-    )
-    winch_client.wait_for_server()
+    # If winch is used, setup client
+    winch_client = None
+    if req.winch_name != "":
+        winch_client = actionlib.SimpleActionClient(
+            req.winch_name,
+            MoveToDepthAction
+        )
+        winch_client.wait_for_server()
 
     # Setup action client for running instrument
-    run_client = actionlib.SimpleActionClient(
-        req.run_instrument_callback,
-        RunInstrumentAction
+    instrument_client = actionlib.SimpleActionClient(
+        req.instrument_name,
+        InstrumentAction
     )
-    run_client.wait_for_server()
+    instrument_client.wait_for_server()
 
-    # Add clients to instruments registry
-    instrument = InstrumentObj(status=status_client, \
-                    goal_depth=goal_depth_client, \
-                    run=run_client, \
-                    winch=winch_client)
-    instruments.append(instrument)
+    # Set up service client for getting tasks
+    task_client = rospy.ServiceProxy(req.task_server, Empty)
+    task_client.wait_for_server()
 
-    return True, "Instrument registered successfully"
+    arm = ArmTupple(winch=winch_client, instrument=instrument_client, get_task=task_client)
+    arms.append(arm)
+    return True, "Arm registered successfully"
 
 
-def move_to_depth(winch, depth):
+def run_move_task(winch, depth, instrument, instrument_arg):
+    # Safety check: Do not exceed depth bounds
+    if not (rospy.get_param('~range/min') <= depth <= rospy.get_param('~range/max')):
+        rospy.logerr('Refusing to exceed depth bounds')
+        return
     with lock:
-        winch.send_goal(MoveToDepthGoal(depth=depth), done_cb=move_callback)
         winches_moving += 1
+    winch.send_goal(MoveToDepthGoal(depth=depth), done_cb=partial(move_done, instrument, instrument_arg))
 
 
-def move_callback(self, state, result):
-    with self.lock:
-        self.number_moving -= 1
+def move_done(instrument, instrument_arg, state, result):
+    assert state == actionlib.GoalStatus.SUCCEEDED
+    # Tell instrument that requested the move it's time to run
+    instrument.send_goal(InstrumentAction(arg=instrument_arg, result=result))
+    with lock:
+        number_moving -= 1
 
 
 def is_busy(action):
@@ -63,24 +67,20 @@ def is_busy(action):
 
 
 def loop():
-    for instrument in instruments:
-        try:
-            # See if instrument is ready for more work
-            if is_busy(instrument.winch) or is_busy(instrument.run): continue
-            goal_depth = instrument.goal_depth()
-            if goal_depth.satisfied:
-                # Do the science
-                instrument.run.send_goal(RunInstrumentAction())
-            else:
-                # Check concurrent movement
-                with lock:
-                    if winches_moving >= rospy.param('~max_moving_winches'):
-                        continue
-                # Move the winch
-                move_to_depth(instrument.winch, goal_depth.depth)
-
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {str(e)}")
+    for arm in arms:
+        # See if instrument is ready for more work
+        if is_busy(arm.instrument): continue
+        task = arm.get_task()
+        # If this instrument has no winch, just run task directly
+        if arm.winch is None:
+            arm.instrument.send_goal(InstrumentAction(arg=task.instrument_arg))
+            continue
+        # Ensure winch is free and movement allowed
+        with lock:
+            if is_busy(arm.winch) or winches_moving >= rospy.param('~max_moving_winches'):
+                continue
+            # Move the winch and run instrument
+            run_move_task(arm.winch, task.depth, arm.instrument, task.instrument_arg)
 
 
 def main():
@@ -89,7 +89,8 @@ def main():
     rospy.init_node('conductor')
 
     # Setup service for registering new winch/instrument pairs
-    rospy.Service('register_instrument', RegisterCallback, handle_registration)
+    rospy.Service('register_arm', ArmRegistration, handle_registration)
+
 
     while not rospy.is_shutdown():
         # Check for new callbacks

@@ -5,7 +5,8 @@ launch_args:
     ctd: aml
     log_dir: /mnt/data/roslogs/
     rosbag_prefix: /mnt/data/rosbags/phyto-arm
-    winch: false
+    arm_winch: false
+    rbr_winch: false
     classifier: false
 
 
@@ -75,7 +76,7 @@ ifcb:
     data_dir: "/mnt/data/ifcbdata"
 
 
-instrument_aml:
+aml_arm:
     ctd_topic: '/aml_ctd/depth'
 
     profiler:
@@ -115,7 +116,7 @@ instrument_aml:
         counts_per_turn: 8192  # defined in manual p.9
 
 
-instrument_rbr:
+rbr_arm:
     ctd_topic: '/rbr_ctd/depth'    
     winch:
         # TODO: Almost none of these values are used yet!

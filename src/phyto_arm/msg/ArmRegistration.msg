@@ -1,0 +1,12 @@
+# ArmRegistration
+# Used for registering arm callbacks at runtime
+    
+string winch_name
+
+string instrument_name
+
+string task_server
+
+---
+bool success
+string message
