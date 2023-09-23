@@ -134,12 +134,12 @@ web:
             # Required only when 'topic' is used
             topic_field: depth
         gpsLatitude:
-            topic: /fix/gps
+            topic: /gps/fix
             topic_field: latitude
             # Replace with desired default lat/long
             default: -999999
         gpsLongitude:
-            topic: /fix/gps
+            topic: /gps/fix
             topic_field: longitude
             default: -999999
         defaultOnly:
