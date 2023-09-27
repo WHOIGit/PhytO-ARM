@@ -77,7 +77,7 @@ ifcb:
 
 
 aml_arm:
-    ctd_topic: '/aml_ctd/depth'
+    ctd_topic: '/aml_arm/ctd/depth'
 
     profiler:
         resolution: 0.02  # m
@@ -117,7 +117,11 @@ aml_arm:
 
 
 rbr_arm:
-    ctd_topic: '/rbr_ctd/depth'    
+    ctd_topic: '/rbr_arm/ctd/depth'
+
+    # We listen to the other arm's profiler data to find the target depth
+    profiler_topic: '/aml_arm/profiler'
+
     winch:
         # TODO: Almost none of these values are used yet!
 

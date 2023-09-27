@@ -78,8 +78,8 @@ def main():
     set_state = functools.partial(set_state,
         rospy.Publisher('~state', ConductorState, queue_size=1, latch=True))
 
-    # Subscribe to profiler messages that follow each transit
-    rospy.Subscriber('/profiler', DepthProfile, on_profile_msg)
+    # Subscribe to profiler messages from the AML arm
+    rospy.Subscriber(rospy.get_param('profiler_topic'), DepthProfile, on_profile_msg)
 
     # Setup service for fetching tasks
     service_name = rospy.get_namespace() + 'arm/get_task'
