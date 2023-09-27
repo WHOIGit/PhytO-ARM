@@ -16,7 +16,7 @@ from std_srvs.srv import Empty
 
 from ifcb.srv import RunRoutine
 from phyto_arm.msg import ConductorState, ConductorStates, DepthProfile, ArmRegistration, \
-                          InstrumentAction, ArmTask
+                          InstrumentAction, ArmTaskResponse
 
 
 # Global references to service provided by other node
@@ -132,10 +132,10 @@ def scheduled_depth():
 def build_task_queue():
     tasks = []
     if rospy.get_param('winch') is not None:
-        tasks.append(ArmTask(depth=rospy.get_param('~range/min'), arg="upcast"))
-        tasks.tasks.append(ArmTask(depth=rospy.get_param('~range/max'), arg="downcast"))
+        tasks.append(ArmTaskResponse(depth=rospy.get_param('~range/min'), arg="upcast"))
+        tasks.tasks.append(ArmTaskResponse(depth=rospy.get_param('~range/max'), arg="downcast"))
     else:
-        tasks.append(ArmTask(depth=0, arg="no_winch"))
+        tasks.append(ArmTaskResponse(depth=0, arg="no_winch"))
     return tasks
 
 
@@ -167,9 +167,9 @@ def instrument_handler(arg, result):
 
         # Next task dependent on whether we should run a scheduled interval now
         if is_scheduled_interval(target_value):
-            state.tasks.append(ArmTask(depth=scheduled_depth(), arg="scheduled_interval"))
+            state.tasks.append(ArmTaskResponse(depth=scheduled_depth(), arg="scheduled_interval"))
         else:
-            state.tasks.append(ArmTask(depth=target_depth, arg="peak_depth"))
+            state.tasks.append(ArmTaskResponse(depth=target_depth, arg="peak_depth"))
 
     elif arg == "peak_depth" or arg == "scheduled_depth":
         run_ifcb()

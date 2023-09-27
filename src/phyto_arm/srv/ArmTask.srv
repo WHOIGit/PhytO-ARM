@@ -1,5 +1,12 @@
 # ArmTask
 
+# Only response needed
+
+---
+
+# If true no movement will be performed. Useful if there are no current tasks
+bool hold
+
 # Depth at which task should be performed
 float32 depth
 

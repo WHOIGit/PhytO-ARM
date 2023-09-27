@@ -6,10 +6,9 @@ from threading import RLock
 
 import actionlib
 import rospy
-from std_srvs.srv import Empty
 
 from phyto_arm.msg import ArmRegistration, MoveToDepthAction, MoveToDepthGoal, \
-                        InstrumentAction
+                        InstrumentAction, ArmTask
 
 
 ArmTupple = namedtuple("Arms", "winch", "instrument", "get_task")
@@ -35,7 +34,7 @@ def handle_registration(req):
     instrument_client.wait_for_server()
 
     # Set up service client for getting tasks
-    task_client = rospy.ServiceProxy(req.task_server, Empty)
+    task_client = rospy.ServiceProxy(req.task_server, ArmTask)
     task_client.wait_for_server()
 
     arm = ArmTupple(winch=winch_client, instrument=instrument_client, get_task=task_client)
@@ -72,7 +71,7 @@ def loop():
         if is_busy(arm.instrument): continue
         task = arm.get_task()
         # If this instrument has no winch, just run task directly
-        if arm.winch is None:
+        if arm.winch is None or task.hold:
             arm.instrument.send_goal(InstrumentAction(arg=task.instrument_arg))
             continue
         # Ensure winch is free and movement allowed
