@@ -1,0 +1,42 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "Existing Dockerfile",
+	"build": {
+		"context": "../",
+		// Sets the run context to one level up instead of the .devcontainer folder.
+		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
+		"dockerfile": "../Dockerfile"
+	},
+	"workspaceFolder": "/app",
+	"mounts": [
+		// Manually mount each file/folder from root of repo since just mounting the parent folder
+		// would result in the container ROS workspace being erased. Ugly workaround for now.
+		// Alternatively could use postStart commands to symlink the workspace folder. Might
+		// introduce other headaches.
+		"source=${localWorkspaceFolder}/src,target=/app/src,type=bind",
+		"source=${localWorkspaceFolder}/.gitignore,target=/app/.gitignore,type=bind",
+		"source=${localWorkspaceFolder}/configs,target=/app/configs,type=bind",
+		"source=${localWorkspaceFolder}/deps,target=/app/deps,type=bind",
+		"source=${localWorkspaceFolder}/.devcontainer,target=/app/.devcontainer,type=bind",
+		"source=${localWorkspaceFolder}/.git,target=/app/.git,type=bind",
+		"source=${localWorkspaceFolder}/LICENSE,target=/app/LICENSE,type=bind",
+		"source=${localWorkspaceFolder}/phyto-arm.service,target=/app/phyto-arm.service,type=bind",
+		"source=${localWorkspaceFolder}/.github,target=/app/.github,type=bind"
+	]
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Uncomment the next line to run commands after the container is created.
+	// "postCreateCommand": "cat /etc/os-release",
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Uncomment to connect as an existing user other than the container default. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "devcontainer"
+}
