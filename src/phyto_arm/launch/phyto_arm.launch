@@ -59,10 +59,17 @@
     <node name="conductor" pkg="phyto_arm" type="conductor_nowinch_node.py"
           unless="$(arg winch)" />
 
-    <node name="camera" pkg="rtsp_camera" type="rtsp_camera_node">
-        <remap from="~image" to="~image/do_not_use" />
-        <remap from="~image/do_not_use/compressed" to="~image/compressed" />
-    </node>
+    <group ns="camera">
+        <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">
+            <remap from="~image" to="~image/do_not_use" />
+            <remap from="~image/do_not_use/compressed" to="~image/compressed" />
+        </node>
+
+        <node name="aft_camera" pkg="rtsp_camera" type="rtsp_camera_node">
+            <remap from="~image" to="~image/do_not_use" />
+            <remap from="~image/do_not_use/compressed" to="~image/compressed" />
+        </node>
+    </group>
 
     <!--
     disabled

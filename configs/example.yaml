@@ -162,6 +162,12 @@ classifier:
     classifier_model: "ifcb_iv3_onnx"
 
 camera:
+    fore_camera:
+        video_stream_url: "rtsp://admin:whoi1930@192.168.13.208/"
+    aft_camera:
+        video_stream_url: "rtsp://admin:whoi1930@192.168.13.207/"
+
+camera:
     # Raymarine CAM220IP defaults
     video_stream_url: "rtsp://admin:1234@192.168.13.30/h264"
 
