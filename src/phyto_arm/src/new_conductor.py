@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python3
 from collections import namedtuple
 from functools import partial
 import math
@@ -7,11 +7,13 @@ from threading import RLock
 import actionlib
 import rospy
 
-from phyto_arm.msg import ArmRegistration, MoveToDepthAction, MoveToDepthGoal, \
-                        InstrumentAction, ArmTask
+from phyto_arm.srv import ArmRegistration, ArmTask
+
+from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal, \
+                        InstrumentAction
 
 
-ArmTupple = namedtuple("Arms", "winch", "instrument", "get_task")
+ArmTupple = namedtuple("Arms", ["winch", "instrument", "get_task"])
 arms = []
 winches_moving = 0
 lock = RLock()
@@ -92,8 +94,6 @@ def main():
 
 
     while not rospy.is_shutdown():
-        # Check for new callbacks
-        rospy.spin_once()
         loop()
         # Rate limit to 20Hz since all actions are async
         rospy.sleep(0.05)

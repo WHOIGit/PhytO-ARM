@@ -15,8 +15,11 @@ from ds_core_msgs.msg import RawData
 from std_srvs.srv import Empty
 
 from ifcb.srv import RunRoutine
-from phyto_arm.msg import ConductorState, ConductorStates, DepthProfile, ArmRegistration, \
-                          InstrumentAction, ArmTaskResponse
+
+from phyto_arm.srv import ArmRegistration, ArmTaskResponse
+
+from phyto_arm.msg import ConductorState, ConductorStates, DepthProfile, \
+                          InstrumentAction
 
 
 # Global references to service provided by other node
@@ -24,7 +27,8 @@ ifcb_run_routine = None
 
 
 # Convenience function to publish state updates for debugging
-def set_state(pub, s):
+set_state = None
+def set_pub_state(pub, s):
     m = ConductorState()
     m.header.stamp = rospy.Time.now()
     m.state = s
@@ -236,10 +240,11 @@ def run_ifcb():
 
 
 def main():
+    global set_state
     rospy.init_node('arm', anonymous=True, log_level=rospy.DEBUG)
 
     # Publish state messages useful for debugging
-    set_state = functools.partial(set_state,
+    set_state = functools.partial(set_pub_state,
         rospy.Publisher('~state', ConductorState, queue_size=1, latch=True))
 
     # Subscribe to IFCB messages to track routine progress
@@ -265,11 +270,11 @@ def main():
         # Get winch path, setup service client, register
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
         register = rospy.ServiceProxy('/conductor/register_arm', ArmRegistration)
-        ifcb_run_routine.wait_for_service()
+        register.wait_for_service()
         registration = ArmRegistration()
         registration.winch_name = winch_name
         registration.instrument_name = instrument_name
-        registration.task_service = service_name
+        registration.task_server = service_name
         register(registration)
 
     # Build initial task queue
