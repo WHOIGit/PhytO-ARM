@@ -14,6 +14,7 @@ add_action_files(
   DIRECTORY action
   FILES
   MoveToDepth.action
+  Instrument.action
 )
 
 add_message_files(
@@ -21,6 +22,12 @@ add_message_files(
   ConductorState.msg
   ConductorStates.msg
   DepthProfile.msg
+)
+
+add_service_files(
+  FILES
+  ArmRegistration.srv
+  ArmTask.srv
 )
 
 generate_messages(

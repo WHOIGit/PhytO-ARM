@@ -5,7 +5,7 @@ launch_args:
     ctd: aml
     log_dir: /mnt/data/roslogs/
     rosbag_prefix: /mnt/data/rosbags/phyto-arm
-    arm_winch: false
+    aml_winch: false
     rbr_winch: false
     classifier: false
 
@@ -166,10 +166,6 @@ camera:
         video_stream_url: "rtsp://admin:whoi1930@192.168.13.208/"
     aft_camera:
         video_stream_url: "rtsp://admin:whoi1930@192.168.13.207/"
-
-camera:
-    # Raymarine CAM220IP defaults
-    video_stream_url: "rtsp://admin:1234@192.168.13.30/h264"
 
 web:
     field_map:
