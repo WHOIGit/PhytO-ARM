@@ -1,0 +1,15 @@
+[Unit]
+Description=Service for relaying RBR data over UDP to another device
+After=network.target
+
+[Service]
+# To use, update IP address, copy to systemd folder, then enable + start
+ExecStart=/bin/bash -c 'while true; do socat -d -d /dev/ttyUSB0,b115200,raw,echo=0 UDP:<YOUR DESTINATION IP HERE>:12345; sleep 1; done'
+Restart=always
+# User must have access to the necessary tty device. Change user or add "nobody" to dialout group with
+# sudo usermod -aG dialout nobody
+User=nobody
+
+
+[Install]
+WantedBy=multi-user.target
