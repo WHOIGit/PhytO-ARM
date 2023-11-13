@@ -165,8 +165,10 @@ Use `picocom` to to talk to the appropriate serial device. Press <kbd>Enter</kbd
     $ picocom -b 115200 /dev/ttyS3
     > set derive depth y
     > set scan dep
-    > set derive sv y
-    > set scan sound
+    > set derive salc y
+    > set scan sal
+    > set derive density y
+    > set scan den
     > mmonitor
     ...
 
