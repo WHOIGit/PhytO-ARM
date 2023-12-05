@@ -7,13 +7,22 @@
     </include>
 
 
+    <node name="rbr_udp" pkg="rbr_maestro3_ctd" type="udp_to_ros.py">
+        <param name="port" type="int" value="12345" />
+    </node>
+
     <!-- AML winch namespace -->
     <group ns="aml_arm" if="$(arg aml_winch)">
-        <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
+        <!-- <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
 
         <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
             <remap from="~in" to="/ctd_comms/in" />
+        </node> -->
+
+        <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
+            <remap from="~in" to="/udp_stream" />
         </node>
+
 
         <node name="arm" pkg="phyto_arm" type="aml_arm.py" />
 
@@ -26,10 +35,8 @@
 
     <!-- RBR winch namespace TODO find better conditional -->
     <group ns="rbr_arm" if="$(arg rbr_winch)">
-        <node name="rbr_udp" pkg="rbr_maestro3_ctd" type="udp_to_ros.py">
-
         <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
-            <remap from="~in" to="udp_stream" />
+            <remap from="~in" to="/udp_stream" />
         </node>
 
         <node name="arm" pkg="phyto_arm" type="rbr_arm.py" />
@@ -53,11 +60,7 @@
 
     <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
 
-    <node name="conductor" pkg="phyto_arm" type="conductor_node.py"
-          if="$(arg winch)" />
-
-    <node name="conductor" pkg="phyto_arm" type="conductor_nowinch_node.py"
-          unless="$(arg winch)" />
+    <node name="conductor" pkg="phyto_arm" type="new_conductor.py" />
 
     <group ns="camera">
         <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">
@@ -65,10 +68,10 @@
             <remap from="~image/do_not_use/compressed" to="~image/compressed" />
         </node>
 
-        <node name="aft_camera" pkg="rtsp_camera" type="rtsp_camera_node">
+        <!-- <node name="aft_camera" pkg="rtsp_camera" type="rtsp_camera_node">
             <remap from="~image" to="~image/do_not_use" />
             <remap from="~image/do_not_use/compressed" to="~image/compressed" />
-        </node>
+        </node> -->
     </group>
 
     <!--

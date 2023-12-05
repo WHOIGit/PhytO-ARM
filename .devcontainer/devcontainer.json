@@ -14,7 +14,11 @@
 		// would result in the container ROS workspace being erased. Ugly workaround for now.
 		// Alternatively could use postStart commands to symlink the workspace folder. Might
 		// introduce other headaches.
-		"source=${localWorkspaceFolder}/src,target=/app/src,type=bind",
+		"source=${localWorkspaceFolder}/src/aml_ctd,target=/app/src/aml_ctd,type=bind",
+        "source=${localWorkspaceFolder}/src/ifcb,target=/app/src/ifcb,type=bind",
+        "source=${localWorkspaceFolder}/src/jvl_motor,target=/app/src/jvl_motor,type=bind",
+        "source=${localWorkspaceFolder}/src/phyto_arm,target=/app/src/phyto_arm,type=bind",
+        "source=${localWorkspaceFolder}/src/rbr_maestro3_ctd,target=/app/src/rbr_maestro3_ctd,type=bind",
 		"source=${localWorkspaceFolder}/.gitignore,target=/app/.gitignore,type=bind",
 		"source=${localWorkspaceFolder}/configs,target=/app/configs,type=bind",
 		"source=${localWorkspaceFolder}/deps,target=/app/deps,type=bind",
@@ -22,8 +26,16 @@
 		"source=${localWorkspaceFolder}/.git,target=/app/.git,type=bind",
 		"source=${localWorkspaceFolder}/LICENSE,target=/app/LICENSE,type=bind",
 		"source=${localWorkspaceFolder}/phyto-arm.service,target=/app/phyto-arm.service,type=bind",
-		"source=${localWorkspaceFolder}/.github,target=/app/.github,type=bind"
-	]
+		"source=${localWorkspaceFolder}/.github,target=/app/.github,type=bind",
+		"source=/home/ifcb/IFCBacquire/Host/Routines,target=/routines,type=bind",
+		"source=/mnt/data,target=/mnt/data,type=bind"
+	],
+	"runArgs": [
+        "--device=/dev/ttyS3",
+		"--publish=9090:9090/tcp",
+    	"--publish=8098:8098/tcp",
+		"--publish=12345:12345/udp"
+    ]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
