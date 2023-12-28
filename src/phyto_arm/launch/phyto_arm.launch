@@ -12,7 +12,7 @@
     </node>
 
     <!-- AML winch namespace -->
-    <group ns="aml_arm" if="$(arg aml_winch)">
+    <group ns="aml_arm" if="$(arg aml_arm)">
         <!-- <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
 
         <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
@@ -34,7 +34,7 @@
     </group>
 
     <!-- RBR winch namespace TODO find better conditional -->
-    <group ns="rbr_arm" if="$(arg rbr_winch)">
+    <group ns="rbr_arm" if="$(arg rbr_arm)">
         <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
             <remap from="~in" to="/udp_stream" />
         </node>

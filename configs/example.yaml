@@ -22,38 +22,13 @@ gps:
     host: "172.17.0.1"
 
 conductor:
-    range:
-        min:  0.5  # m
-        max:  2.0  # m
-
     # TODO: Currently unimplemented
     speed:
         transit: 0.02  # m/s
         profile: 0.02  # m/s
 
-    # Minimum level of the profiled sensor data to trigger a sample at depth
-    threshold: 0.0
-
     # Maximum number of concurrent moving winches allowed
     max_moving_winches: 1
-
-    # Interval at which we run a cartridge debubble, necessary when IFCB on its side
-    cartridge_debubble_interval: 0 # minutes, 0 = never
-
-    # Interval at which we run a bead sample for maintenance
-    bead_interval: 1440  # minutes, 0 = never
-
-    # Scheduled depths are sampled once per time interval, or when the profile
-    # data does not exceed the configured threshold above.
-    #
-    # Note: Adjusting the scheduled depths after the node has started may resume
-    # from an arbitrary point in the new schedule.
-    schedule:
-        every: 60  # minutes, 0 = never
-        range:
-            first: 0.5  # m
-            last:  2.0  # m
-            count: 4
 
 
 #  Note these values are not read by PhytO-ARM, they are sought by
@@ -84,8 +59,36 @@ aml_arm:
         data_topic: "/ctd/aml/port5/phycoerythrin"
         data_field: "value"
 
+    tasks:
+        # Minimum level of the profiled sensor data to trigger a sample at depth
+        threshold: 0.0
+
+        # Interval at which we run a cartridge debubble, necessary when IFCB on its side
+        cartridge_debubble_interval: 0 # minutes, 0 = never
+
+        # Interval at which we run a bead sample for maintenance
+        bead_interval: 1440  # minutes, 0 = never
+
+        # Scheduled depths are sampled once per time interval, or when the profile
+        # data does not exceed the configured threshold above.
+        #
+        # Note: Adjusting the scheduled depths after the node has started may resume
+        # from an arbitrary point in the new schedule.
+        schedule:
+            every: 60  # minutes, 0 = never
+            range:
+                first: 0.5  # m
+                last:  2.0  # m
+                count: 4
+
     winch:
-        # TODO: Almost none of these values are used yet!
+        enabled: false
+
+        range:
+            min:  0.5  # m
+            max:  2.0  # m
+
+        # TODO: Almost none of the values below are used yet!
 
         # The spool circumference is needed for an initial estimate of speed
         spool_circumference: 0.6604  # m
@@ -123,6 +126,11 @@ rbr_arm:
     profiler_topic: '/aml_arm/profiler'
 
     winch:
+        enabled: false
+
+        range:
+                min:  0.5  # m
+                max:  2.0  # m
         # TODO: Almost none of these values are used yet!
 
         # The spool circumference is needed for an initial estimate of speed
