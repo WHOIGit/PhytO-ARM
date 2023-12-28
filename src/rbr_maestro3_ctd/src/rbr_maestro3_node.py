@@ -98,7 +98,7 @@ async def main():
         
         # Construct the DepthPressure message
         dp = DepthPressure()
-        dp.depth = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.depth = depth
         dp.latitude = DepthPressure.DEPTH_PRESSURE_NO_DATA
         dp.tare = DepthPressure.DEPTH_PRESSURE_NO_DATA
         dp.pressure_raw = pressure
