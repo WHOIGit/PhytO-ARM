@@ -12,11 +12,10 @@ from ifcbclient.protocol import parse_response as parse_ifcb_msg
 from ifcb.instrumentation import parse_marker as parse_ifcb_marker
 
 from ds_core_msgs.msg import RawData
-from std_srvs.srv import Empty
 
 from ifcb.srv import RunRoutine
 
-from phyto_arm.srv import ArmRegistration, ArmTaskResponse
+from phyto_arm.srv import ArmRegistration, ArmTask, ArmTaskResponse
 from phyto_arm.msg import ConductorState, DepthProfile, \
                           InstrumentAction
 
@@ -49,7 +48,7 @@ def on_profile_msg(msg):
 
 
 # Responds to conductor with the next task
-def get_task_handler():
+def get_task_handler(request):
     if not state.tasks:
         return ArmTaskResponse(hold=True)
     return state.tasks[0]
@@ -71,7 +70,7 @@ def instrument_handler(arg, result):
     target_depth = state.latest_profile.depths[argmax]
     
     # Move ESP to the peak depth
-    state.tasks.append(ArmTaskResponse(depth=target_depth, arg="peak_depth"))
+    state.tasks.append(ArmTaskResponse(depth=target_depth, instrument_arg="peak_depth"))
 
 
 def main():
@@ -87,7 +86,7 @@ def main():
 
     # Setup service for fetching tasks
     service_name = rospy.get_namespace() + 'arm/get_task'
-    rospy.Service(service_name, Empty, get_task_handler)
+    rospy.Service(service_name, ArmTask, get_task_handler)
 
     # Setup action server for waiting while ESP samples
     instrument_name = rospy.get_namespace() + 'arm/run_instrument'
@@ -100,11 +99,7 @@ def main():
     # Register with conductor
     register = rospy.ServiceProxy('/conductor/register_arm', ArmRegistration)
     register.wait_for_service()
-    registration = ArmRegistration()
-    registration.winch_name = winch_name
-    registration.instrument_name = instrument_name
-    registration.task_server = service_name
-    register(registration)
+    register(rospy.get_namespace(), winch_name, instrument_name, service_name)
 
 
 if __name__ == '__main__':

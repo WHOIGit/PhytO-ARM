@@ -3,10 +3,10 @@
 
 # Goal
 
-# General-purpose argument that a mission can use to pass parameters to itself
+# General-purpose argument that an instrument can use to pass parameters to itself
 string arg
 # Result of movement that triggered this action, if any
-phyto_arm/MoveToDepthActionResult result
+phyto_arm/MoveToDepthActionResult move_result
 
 ---
 

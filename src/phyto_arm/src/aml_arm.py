@@ -12,19 +12,19 @@ from ifcbclient.protocol import parse_response as parse_ifcb_msg
 from ifcb.instrumentation import parse_marker as parse_ifcb_marker
 
 from ds_core_msgs.msg import RawData
-from std_srvs.srv import Empty
 
 from ifcb.srv import RunRoutine
 
-from phyto_arm.srv import ArmRegistration, ArmTaskResponse
+from phyto_arm.srv import ArmRegistration, ArmTask, ArmTaskResponse
 
 from phyto_arm.msg import ConductorState, ConductorStates, DepthProfile, \
-                          InstrumentAction
+                          InstrumentAction, InstrumentResult
 
 
 # Global references to service provided by other node
 ifcb_run_routine = None
 
+instrument_server = None
 
 # Convenience function to publish state updates for debugging
 set_state = None
@@ -101,7 +101,7 @@ def on_profile_msg(msg):
 
 def is_scheduled_interval(peak_value):
     # Decide if we want to use the scheduled depth
-    scheduled_interval = rospy.Duration(60*rospy.get_param('~schedule/every'))
+    scheduled_interval = rospy.Duration(60*rospy.get_param('tasks/schedule/every'))
 
     if math.isclose(scheduled_interval.to_sec(), 0.0):  # disabled
         run_schedule = False
@@ -109,7 +109,7 @@ def is_scheduled_interval(peak_value):
         run_schedule = True
     elif rospy.Time.now() - state.last_scheduled_time > scheduled_interval:
         run_schedule = True
-    elif peak_value < rospy.get_param('~threshold'):
+    elif peak_value < rospy.get_param('tasks/threshold'):
         run_schedule = True
     else:
         run_schedule = False
@@ -118,9 +118,9 @@ def is_scheduled_interval(peak_value):
 
 def scheduled_depth():
     scheduled_depths = np.linspace(
-        rospy.get_param('~schedule/range/first'),
-        rospy.get_param('~schedule/range/last'),
-        rospy.get_param('~schedule/range/count'),
+        rospy.get_param('tasks/schedule/range/first'),
+        rospy.get_param('tasks/schedule/range/last'),
+        rospy.get_param('tasks/schedule/range/count'),
     )
 
     target_depth = scheduled_depths[state.next_scheduled_index \
@@ -135,21 +135,21 @@ def scheduled_depth():
 # Initial task list
 def build_task_queue():
     tasks = []
-    if rospy.get_param('winch') is not None:
-        tasks.append(ArmTaskResponse(depth=rospy.get_param('~range/min'), arg="upcast"))
-        tasks.tasks.append(ArmTaskResponse(depth=rospy.get_param('~range/max'), arg="downcast"))
+    if rospy.get_param('winch/enabled') == True:
+        tasks.append(ArmTaskResponse(depth=rospy.get_param('winch/range/min'), instrument_arg="upcast"))
+        tasks.append(ArmTaskResponse(depth=rospy.get_param('winch/range/max'), instrument_arg="downcast"))
     else:
-        tasks.append(ArmTaskResponse(depth=0, arg="no_winch"))
+        tasks.append(ArmTaskResponse(depth=0, instrument_arg="no_winch"))
     return tasks
 
 
 # Responds to conductor with the next task
-def get_task_handler():
+def get_task_handler(request):
     return state.tasks[0]
 
 
 # Handles action calls from the conductor when a given task depth is reached
-def instrument_handler(arg, result):
+def instrument_handler(arg, result=None):
     if arg == "upcast":
         state.tasks.pop(0)
 
@@ -178,9 +178,15 @@ def instrument_handler(arg, result):
     elif arg == "peak_depth" or arg == "scheduled_depth":
         run_ifcb()
         state.tasks = build_task_queue()
-    
     elif arg == "no_winch":
-        run_ifcb()
+        try:
+            run_ifcb()
+            result = InstrumentResult()
+            instrument_server.set_succeeded(result)
+        except:
+            instrument_server.set_aborted(text='An exception occurred')
+            raise
+
     
 
 def run_ifcb():
@@ -198,7 +204,7 @@ def run_ifcb():
     playlist = []
 
     # Determine if it's time to run cartridge debubble
-    cart_debub_interval = rospy.Duration(60*rospy.get_param('~cartridge_debubble_interval'))
+    cart_debub_interval = rospy.Duration(60*rospy.get_param('tasks/cartridge_debubble_interval'))
     run_cart_debub = not math.isclose(cart_debub_interval.to_sec(), 0.0)  # disabled
     if run_cart_debub and rospy.Time.now() - state.last_cart_debub_time > cart_debub_interval:
         rospy.loginfo('Will run cartridege debubble this round')
@@ -206,7 +212,7 @@ def run_ifcb():
         state.last_cart_debub_time = rospy.Time.now()
 
     # Determine if it's time to run beads
-    bead_interval = rospy.Duration(60*rospy.get_param('~bead_interval'))
+    bead_interval = rospy.Duration(60*rospy.get_param('tasks/bead_interval'))
     run_beads = not math.isclose(bead_interval.to_sec(), 0.0)  # disabled
     if run_beads and rospy.Time.now() - state.last_bead_time > bead_interval:
         rospy.loginfo('Will run beads this round')
@@ -241,6 +247,7 @@ def run_ifcb():
 
 def main():
     global set_state
+    global instrument_server
     rospy.init_node('arm', anonymous=True, log_level=rospy.DEBUG)
 
     # Publish state messages useful for debugging
@@ -259,23 +266,20 @@ def main():
 
     # Setup service for fetching tasks
     service_name = rospy.get_namespace() + 'arm/get_task'
-    rospy.Service(service_name, Empty, get_task_handler)
+    rospy.Service(service_name, ArmTask, get_task_handler)
 
     # Setup action server for running IFCB
     instrument_name = rospy.get_namespace() + 'arm/run_instrument'
-    server = actionlib.SimpleActionServer(instrument_name, InstrumentAction, instrument_handler, False)
-    server.start()
+    instrument_server = actionlib.SimpleActionServer(instrument_name, InstrumentAction, instrument_handler, False)
+    instrument_server.start()
 
-    if rospy.get_param('winch') is not None:
-        # Get winch path, setup service client, register
+    # Get winch path, setup service client, register
+    winch_name = ''
+    if rospy.get_param('winch/enabled') == True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
-        register = rospy.ServiceProxy('/conductor/register_arm', ArmRegistration)
-        register.wait_for_service()
-        registration = ArmRegistration()
-        registration.winch_name = winch_name
-        registration.instrument_name = instrument_name
-        registration.task_server = service_name
-        register(registration)
+    register = rospy.ServiceProxy('/conductor/register_arm', ArmRegistration)
+    register.wait_for_service()
+    register(rospy.get_namespace(), winch_name, instrument_name, service_name)
 
     # Build initial task queue
     state.tasks = build_task_queue()
