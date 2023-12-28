@@ -84,10 +84,10 @@ motor = None
 
 
 # Service proxies for interacting with the motor
-set_position_envelope = rospy.ServiceProxy('/motor/set_position_envelope',
+set_position_envelope = rospy.ServiceProxy('motor/set_position_envelope',
     SetPositionEnvelopeCmd)
-set_velocity = rospy.ServiceProxy('/motor/set_velocity', SetVelocityCmd)
-stop = rospy.ServiceProxy('/motor/stop', StopCmd)
+set_velocity = rospy.ServiceProxy('motor/set_velocity', SetVelocityCmd)
+stop = rospy.ServiceProxy('motor/stop', StopCmd)
 
 
 # This function returns a velocity function with the given parameters.

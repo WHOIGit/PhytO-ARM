@@ -1,6 +1,8 @@
 # ArmRegistration
 # Used for registering arm callbacks at runtime
 
+string arm_namespace
+
 string winch_name
 
 string instrument_name
