@@ -55,9 +55,12 @@ def get_task_handler(request):
 
 
 # Handles action callback from the conductor
-def instrument_handler(arg, result):
+def instrument_handler(goal):
+    arg = goal.arg
+    result = goal.move_result
+
     # If we got here via a task, remove it
-    if (arg == "peak_depth"): state.tasks.pop(0)
+    if (arg == "peak_phy_depth"): state.tasks.pop(0)
     
     # Wait for the profile data for this cast
     while state.latest_profile is None or \
@@ -70,7 +73,7 @@ def instrument_handler(arg, result):
     target_depth = state.latest_profile.depths[argmax]
     
     # Move ESP to the peak depth
-    state.tasks.append(ArmTaskResponse(depth=target_depth, instrument_arg="peak_depth"))
+    state.tasks.append(ArmTaskResponse(depth=target_depth, instrument_arg="peak_phy_depth"))
 
 
 def main():
@@ -100,6 +103,8 @@ def main():
     register = rospy.ServiceProxy('/conductor/register_arm', ArmRegistration)
     register.wait_for_service()
     register(rospy.get_namespace(), winch_name, instrument_name, service_name)
+
+    rospy.spin()
 
 
 if __name__ == '__main__':

@@ -23,8 +23,9 @@ from phyto_arm.msg import ConductorState, ConductorStates, DepthProfile, \
 
 # Global references to service provided by other node
 ifcb_run_routine = None
-
 instrument_server = None
+
+lock = threading.RLock()
 
 # Convenience function to publish state updates for debugging
 set_state = None
@@ -145,49 +146,9 @@ def build_task_queue():
 
 # Responds to conductor with the next task
 def get_task_handler(request):
-    return state.tasks[0]
+    with lock:
+        return state.tasks[0]
 
-
-# Handles action calls from the conductor when a given task depth is reached
-def instrument_handler(arg, result=None):
-    if arg == "upcast":
-        state.tasks.pop(0)
-
-    elif arg == "downcast":
-        # Wait for the profile data for this cast
-        while state.latest_profile is None or \
-            state.latest_profile.goal_uuid != result.uuid:
-            state.profile_activity.wait()
-
-        # Find the maximal value in the profile
-        argmax = max(range(len(state.latest_profile.values)),
-                    key=lambda i: state.latest_profile.values[i])
-        target_value = state.latest_profile.values[argmax]
-        target_depth = state.latest_profile.depths[argmax]
-        
-        rospy.loginfo(f'Profile peak is {target_value:.2f} at {target_depth:.2f} m')
-
-        state.tasks.pop(0)
-
-        # Next task dependent on whether we should run a scheduled interval now
-        if is_scheduled_interval(target_value):
-            state.tasks.append(ArmTaskResponse(depth=scheduled_depth(), arg="scheduled_interval"))
-        else:
-            state.tasks.append(ArmTaskResponse(depth=target_depth, arg="peak_depth"))
-
-    elif arg == "peak_depth" or arg == "scheduled_depth":
-        run_ifcb()
-        state.tasks = build_task_queue()
-    elif arg == "no_winch":
-        try:
-            run_ifcb()
-            result = InstrumentResult()
-            instrument_server.set_succeeded(result)
-        except:
-            instrument_server.set_aborted(text='An exception occurred')
-            raise
-
-    
 
 def run_ifcb():
     # Activate position hold, which will be released at a certain point during
@@ -240,15 +201,76 @@ def run_ifcb():
         assert result.success
 
     # Wait for position hold release
+    rospy.loginfo('Routines finished - awaiting position hold release')
     with state.position_hold_condition:
         state.position_hold_condition.wait_for(lambda: not state.position_hold)
     rospy.loginfo('Position hold released')
 
 
+# Handles action calls from the conductor when a given task depth is reached
+def instrument_handler(goal):
+    arg = goal.arg
+    move_result = goal.move_result
+
+    if arg == "upcast":
+        rospy.logerr('Upcast complete, popping task')
+        with lock:
+            state.tasks.pop(0)
+        instrument_server.set_succeeded(InstrumentResult())
+
+    elif arg == "downcast":
+        # Wait for the profile data for this cast
+        while state.latest_profile is None or \
+            state.latest_profile.goal_uuid != move_result.uuid:
+            state.profile_activity.wait()
+
+        # Find the maximal value in the profile
+        argmax = max(range(len(state.latest_profile.values)),
+                    key=lambda i: state.latest_profile.values[i])
+        target_value = state.latest_profile.values[argmax]
+        target_depth = state.latest_profile.depths[argmax]
+        
+        rospy.loginfo(f'Profile peak is {target_value:.2f} at {target_depth:.2f} m')
+
+        with lock:
+            rospy.logerr('Downcast complete, popping task')
+            state.tasks.pop(0)
+            # Next task dependent on whether we should run a scheduled interval now
+            if is_scheduled_interval(target_value):
+                state.tasks.append(ArmTaskResponse(depth=scheduled_depth(), arg="scheduled_interval"))
+            else:
+                state.tasks.append(ArmTaskResponse(depth=target_depth, arg="peak_phy_depth"))
+        
+        instrument_server.set_succeeded(InstrumentResult())
+
+    elif arg == "peak_phy_depth" or arg == "scheduled_depth":
+        rospy.logerr('Phy/scheduled depth complete, popping task')
+        run_ifcb()
+        with lock:
+            state.tasks = build_task_queue()
+        instrument_server.set_succeeded(InstrumentResult())
+
+    elif arg == "no_winch":
+        try:
+            rospy.logerr('Running ifcb')
+            run_ifcb()
+            instrument_server.set_succeeded(InstrumentResult())
+        except:
+            instrument_server.set_aborted(text='An exception occurred')
+            raise
+    else:
+        raise ValueError(f'Unrecognized argument {arg} in instrument_handler')
+
+
 def main():
     global set_state
     global instrument_server
+    global ifcb_run_routine
     rospy.init_node('arm', anonymous=True, log_level=rospy.DEBUG)
+
+    # Build initial task queue
+    with lock:
+        state.tasks = build_task_queue()
 
     # Publish state messages useful for debugging
     set_state = functools.partial(set_pub_state,
@@ -281,13 +303,12 @@ def main():
     register.wait_for_service()
     register(rospy.get_namespace(), winch_name, instrument_name, service_name)
 
-    # Build initial task queue
-    state.tasks = build_task_queue()
-
     # Set a fake timestamp for having run beads and catridge debubble, so that
     # we don't run it every startup and potentially waste time or bead supply.
     state.last_cart_debub_time = rospy.Time.now()
     state.last_bead_time = rospy.Time.now()
+
+    rospy.spin()
 
 
 if __name__ == '__main__':

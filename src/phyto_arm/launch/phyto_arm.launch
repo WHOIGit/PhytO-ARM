@@ -6,23 +6,19 @@
         <arg name="use_compression" value="true" />
     </include>
 
-
+    <!-- proxy for publishing RBR's UDP stream as ROS topic -->
     <node name="rbr_udp" pkg="rbr_maestro3_ctd" type="udp_to_ros.py">
         <param name="port" type="int" value="12345" />
     </node>
 
+    <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
+    <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+        <remap from="~in" to="/ctd_comms/in" />
+    </node>
+
     <!-- AML winch namespace -->
     <group ns="aml_arm" if="$(arg aml_arm)">
-        <!-- <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
-
-        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
-            <remap from="~in" to="/ctd_comms/in" />
-        </node> -->
-
-        <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
-            <remap from="~in" to="/udp_stream" />
-        </node>
-
+        
 
         <node name="arm" pkg="phyto_arm" type="aml_arm.py" />
 
@@ -44,8 +40,6 @@
         <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
         <node name="winch" pkg="phyto_arm" type="winch_node.py" />
-
-        <node name="rbr_ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py" />
     </group>
 
 
