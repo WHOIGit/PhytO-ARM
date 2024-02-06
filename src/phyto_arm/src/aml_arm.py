@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import functools
 import math
+from queue import Queue
 import threading
 import sys
 
@@ -25,7 +26,6 @@ from phyto_arm.msg import ConductorState, ConductorStates, DepthProfile, \
 ifcb_run_routine = None
 instrument_server = None
 
-lock = threading.RLock()
 
 # Convenience function to publish state updates for debugging
 set_state = None
@@ -53,7 +53,7 @@ class state:
     last_cart_debub_time = None
     last_bead_time = None
 
-    tasks = []
+    tasks = Queue()
 
 
 def on_ifcb_msg(msg):
@@ -135,24 +135,23 @@ def scheduled_depth():
 
 # Initial task list
 def build_task_queue():
-    tasks = []
+    # Clear queue. Do this instead of creating a new Queue to maintain thread safety
+    with state.tasks.mutex:
+        state.tasks.queue.clear()
     if rospy.get_param('winch/enabled') == True:
-        tasks.append(ArmTaskResponse(depth=rospy.get_param('winch/range/min'), instrument_arg="upcast"))
-        tasks.append(ArmTaskResponse(depth=rospy.get_param('winch/range/max'), instrument_arg="downcast"))
+        state.tasks.put(ArmTaskResponse(name="upcast", depth=rospy.get_param('winch/range/min'), args=[]))
+        state.tasks.put(ArmTaskResponse(name="downcast", depth=rospy.get_param('winch/range/max'), args=[]))
     else:
-        tasks.append(ArmTaskResponse(depth=0, instrument_arg="no_winch"))
-    return tasks
+        state.tasks.put(ArmTaskResponse(name="no_winch", depth=0, args=[]))
 
 
 # Responds to conductor with the next task
-def get_task_handler(request):
-    with lock:
-        return state.tasks[0]
+def handle_get_task(request):
+    return state.tasks.get()
 
 
 def run_ifcb():
-    # Activate position hold, which will be released at a certain point during
-    # sampling.
+    # Activate position hold, which will be released at a certain point during sampling.
     rospy.loginfo('Activating position hold')
     with state.position_hold_condition:
         state.position_hold = True
@@ -209,16 +208,14 @@ def run_ifcb():
 
 # Handles action calls from the conductor when a given task depth is reached
 def instrument_handler(goal):
-    arg = goal.arg
+    name = goal.name
     move_result = goal.move_result
 
-    if arg == "upcast":
-        rospy.logerr('Upcast complete, popping task')
-        with lock:
-            state.tasks.pop(0)
+    if name == "upcast":
+        rospy.logerr('Upcast complete')
         instrument_server.set_succeeded(InstrumentResult())
 
-    elif arg == "downcast":
+    elif name == "downcast":
         # Wait for the profile data for this cast
         while state.latest_profile is None or \
             state.latest_profile.goal_uuid != move_result.uuid:
@@ -232,25 +229,21 @@ def instrument_handler(goal):
         
         rospy.loginfo(f'Profile peak is {target_value:.2f} at {target_depth:.2f} m')
 
-        with lock:
-            rospy.logerr('Downcast complete, popping task')
-            state.tasks.pop(0)
-            # Next task dependent on whether we should run a scheduled interval now
-            if is_scheduled_interval(target_value):
-                state.tasks.append(ArmTaskResponse(depth=scheduled_depth(), arg="scheduled_interval"))
-            else:
-                state.tasks.append(ArmTaskResponse(depth=target_depth, arg="peak_phy_depth"))
+        # Next task dependent on whether we should run a scheduled interval now
+        if is_scheduled_interval(target_value):
+            state.tasks.put(ArmTaskResponse(name="scheduled_depth", depth=scheduled_depth(), args=[]))
+        else:
+            state.tasks.put(ArmTaskResponse(name="peak_phy_depth", depth=target_depth, args=[]))
         
         instrument_server.set_succeeded(InstrumentResult())
 
-    elif arg == "peak_phy_depth" or arg == "scheduled_depth":
-        rospy.logerr('Phy/scheduled depth complete, popping task')
+    elif name in ["scheduled_depth", "peak_phy_depth"]:
         run_ifcb()
-        with lock:
-            state.tasks = build_task_queue()
+        # Should be end of queue; start over
+        build_task_queue()
         instrument_server.set_succeeded(InstrumentResult())
 
-    elif arg == "no_winch":
+    elif name == "no_winch":
         try:
             rospy.logerr('Running ifcb')
             run_ifcb()
@@ -259,7 +252,7 @@ def instrument_handler(goal):
             instrument_server.set_aborted(text='An exception occurred')
             raise
     else:
-        raise ValueError(f'Unrecognized argument {arg} in instrument_handler')
+        raise ValueError(f'Unrecognized argument {name} in instrument_handler')
 
 
 def main():
@@ -269,8 +262,7 @@ def main():
     rospy.init_node('arm', anonymous=True, log_level=rospy.DEBUG)
 
     # Build initial task queue
-    with lock:
-        state.tasks = build_task_queue()
+    build_task_queue()
 
     # Publish state messages useful for debugging
     set_state = functools.partial(set_pub_state,
@@ -288,7 +280,7 @@ def main():
 
     # Setup service for fetching tasks
     service_name = rospy.get_namespace() + 'arm/get_task'
-    rospy.Service(service_name, ArmTask, get_task_handler)
+    rospy.Service(service_name, ArmTask, handle_get_task)
 
     # Setup action server for running IFCB
     instrument_name = rospy.get_namespace() + 'arm/run_instrument'

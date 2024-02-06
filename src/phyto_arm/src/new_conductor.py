@@ -2,7 +2,7 @@
 from collections import namedtuple
 from dataclasses import dataclass
 from functools import partial
-import threading
+from threading import BoundedSemaphore, Event, Thread
 
 import actionlib
 import rospy
@@ -17,11 +17,14 @@ class Arm:
     winch: actionlib.SimpleActionClient
     instrument: actionlib.SimpleActionClient
     get_task: rospy.ServiceProxy
-    busy: threading.Event = threading.Event()
+    ready: Event = Event()
 
+
+# Global list of registered arms
 arms = []
-winches_moving = 0
-lock = threading.RLock()
+# Thread safe counter for limiting concurrent winch movements
+movement_semaphore = None
+
 
 def err_arm(arm, msg):
     rospy.logerr(f"[{arm.namespace}]: {msg}")
@@ -61,6 +64,12 @@ def handle_registration(req):
                     get_task=task_client)
     arms.append(arm)
     rospy.logwarn(f'Arm {req.arm_namespace} registered successfully')
+
+    # Default to ready
+    arm.ready.set()
+    # Start loop for this arm in a new thread
+    Thread(target=partial(loop, arm)).start()
+
     return True, "Arm registered successfully"
 
 
@@ -69,26 +78,21 @@ def is_busy(action):
     return state == actionlib.GoalStatus.PENDING or state == actionlib.GoalStatus.ACTIVE
 
 
-# Callback executed after an instrument action completes
-def instrument_done(arm, state, result):
-    assert state == actionlib.GoalStatus.SUCCEEDED
-    arm.busy.clear()
-
-
-# Callback executed after a winch move action completes
-def move_done(arm, instrument_arg, state, result):
-    global winches_moving
-    # Ensure winch move was successful and instrument ready
-    assert state == actionlib.GoalStatus.SUCCEEDED
+def send_instrument_goal(arm, task, callback, move_result=None):
+    # Ensure instrument is ready
     assert not is_busy(arm.instrument)
-    # Tell instrument requesting the move that it's time to run
-    arm.instrument.send_goal(InstrumentGoal(arg=instrument_arg, move_result=result), done_cb=partial(instrument_done, arm))
-    # Let loop know another winch can move now
-    with lock:
-        winches_moving -= 1
+
+    # Callback executed after an instrument action completes
+    def instrument_done(state, result):
+        assert state == actionlib.GoalStatus.SUCCEEDED
+        callback()
+
+    goal = InstrumentGoal(name=task.name, args=task.args, move_result=move_result)
+    arm.instrument.send_goal(goal, done_cb=instrument_done)
 
 
-def send_winch_move(arm, depth, instrument_arg):
+
+def send_winch_goal(arm, depth, callback):
     global winches_moving
     debug_arm(arm, f"Sending winch move to {depth}")
     # Ensure winch is enabled
@@ -103,50 +107,57 @@ def send_winch_move(arm, depth, instrument_arg):
         err_arm(arm, f'Move aborted: depth {depth} is above max {rospy.get_param("~range/max")}')
         return
     assert not is_busy(arm.winch)
-    with lock:
-        winches_moving += 1
-    debug_arm(arm, f"Checks passed; Moving winch to {depth}")
-    arm.winch.send_goal(MoveToDepthGoal(depth=depth), done_cb=partial(move_done, arm, instrument_arg))
+    # Safety check: Do not exceed max concurrent winch movements
+    movement_semaphore.acquire()
+    debug_arm(arm, f"All checks passed; Moving winch to {depth}")
+
+    # Callback executed after a winch move action completes
+    def winch_done(state, result):
+        global winches_moving
+        # Ensure winch move was successful
+        assert state == actionlib.GoalStatus.SUCCEEDED
+        # Free up semaphore for another winch movement
+        movement_semaphore.release()
+        callback(result)
+
+    arm.winch.send_goal(MoveToDepthGoal(depth=depth), done_cb=winch_done)
 
 
 
-def loop():
+def loop(arm):
     while not rospy.is_shutdown():
-        # Rate limit to 20Hz since all actions are async
-        rospy.sleep(0.05)
-        for arm in arms:
-            # See if instrument is ready for more work
-            if arm.busy.is_set(): continue
-            # Otherwise, get a task from the server
-            task = arm.get_task()
-            with lock:
-                arm.busy.set()
-                # If this instrument has no winch, just run task directly
-                if arm.winch is None or task.hold:
-                    debug_arm(arm, f"Running task:\n{task}")
-                    arm.instrument.send_goal(InstrumentGoal(arg=task.instrument_arg, move_result=None), done_cb=partial(instrument_done, arm))
-                # Otherwise, move winch and run instrument
-                elif winches_moving < rospy.get_param('~max_moving_winches'):
-                    send_winch_move(arm, task.depth, task.instrument_arg)
-                # Or try again later
-                else: 
-                    # debug_arm(arm, f"Max winches already moving: {winches_moving}/{rospy.get_param('~max_moving_winches')}")
-                    arm.busy.clear()
-                
+        # Wait until instrument is ready for more work
+        arm.ready.wait()
+        arm.ready.clear()
+        task = arm.get_task()
+        rospy.loginfo(f'[{arm.namespace}]: Received task {task.name}')
+        # Setup callback for when task is complete
+        def task_complete():
+            rospy.loginfo(f'[{arm.namespace}]: Task {task.name} complete')
+            arm.ready.set()
+
+        # If no movement is required
+        if arm.winch is None:
+            # Then run instrument
+            send_instrument_goal(arm, task, task_complete)
+        # Otherwise, move winch
+        else:
+            send_winch_goal(arm, task.depth, \
+                            # Then run instrument
+                            lambda result: 
+                                send_instrument_goal(arm, task, task_complete, move_result=result))
 
 
 def main():
     global move_to_depth
+    global movement_semaphore
     rospy.init_node('conductor', log_level=rospy.DEBUG)
 
-    # Start the loop in a separate thread
-    loop_thread = threading.Thread(target=loop)
-    loop_thread.start()
+    # Setup semaphore for limiting concurrent winch movements
+    movement_semaphore = BoundedSemaphore(rospy.get_param('~max_moving_winches'))
 
     # Setup service for registering new winch/instrument pairs
     rospy.Service('~register_arm', ArmRegistration, handle_registration)
-
-    rospy.loginfo("Service path: /register_arm")
 
     # Keep your node from exiting until it has been shutdown
     rospy.spin()

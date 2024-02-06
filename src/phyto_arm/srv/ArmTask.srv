@@ -4,11 +4,11 @@
 
 ---
 
-# If true no movement will be performed. Useful if there are no current tasks
-bool hold
+# Identifier for type of task
+string name
 
 # Depth at which task should be performed
 float32 depth
 
 # General purpose argument to pass to instrument when depth is reached
-string instrument_arg
+string[] args

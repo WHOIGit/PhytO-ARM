@@ -3,8 +3,10 @@
 
 # Goal
 
-# General-purpose argument that an instrument can use to pass parameters to itself
-string arg
+# Identifier for type of task to run
+string name
+# General-purpose task arguments that an instrument can use to pass parameters to itself
+string[] args
 # Result of movement that triggered this action, if any
 phyto_arm/MoveToDepthResult move_result
 
