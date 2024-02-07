@@ -19,12 +19,12 @@ from ifcb.srv import RunRoutine
 from phyto_arm.srv import ArmRegistration, ArmTask, ArmTaskResponse
 
 from phyto_arm.msg import ConductorState, ConductorStates, DepthProfile, \
-                          InstrumentAction, InstrumentResult
+                          PayloadAction, PayloadResult
 
 
 # Global references to service provided by other node
 ifcb_run_routine = None
-instrument_server = None
+payload_server = None
 
 
 # Convenience function to publish state updates for debugging
@@ -207,13 +207,13 @@ def run_ifcb():
 
 
 # Handles action calls from the conductor when a given task depth is reached
-def handle_instrument_task(goal):
+def handle_payload_task(goal):
     name = goal.name
     move_result = goal.move_result
 
     if name == "upcast":
         rospy.logerr('Upcast complete')
-        instrument_server.set_succeeded(InstrumentResult())
+        payload_server.set_succeeded(PayloadResult())
 
     elif name == "downcast":
         # Wait for the profile data for this cast
@@ -224,7 +224,7 @@ def handle_instrument_task(goal):
             if not notified:
                 rospy.logwarn('No profile data received, switching to scheduled depth')
                 state.tasks.put(ArmTaskResponse(name="scheduled_depth", depth=scheduled_depth(), args=[]))
-                instrument_server.set_succeeded(InstrumentResult())
+                payload_server.set_succeeded(PayloadResult())
                 return
 
         # Find the maximal value in the profile
@@ -240,29 +240,29 @@ def handle_instrument_task(goal):
             state.tasks.put(ArmTaskResponse(name="scheduled_depth", depth=scheduled_depth(), args=[]))
         else:
             state.tasks.put(ArmTaskResponse(name="peak_phy_depth", depth=target_depth, args=[]))
-        instrument_server.set_succeeded(InstrumentResult())
+        payload_server.set_succeeded(PayloadResult())
 
     elif name in ["scheduled_depth", "peak_phy_depth"]:
         run_ifcb()
         # Should be end of queue; start over
         build_task_queue()
-        instrument_server.set_succeeded(InstrumentResult())
+        payload_server.set_succeeded(PayloadResult())
 
     elif name == "no_winch":
         try:
             rospy.logerr('Running ifcb')
             run_ifcb()
-            instrument_server.set_succeeded(InstrumentResult())
+            payload_server.set_succeeded(PayloadResult())
         except:
-            instrument_server.set_aborted(text='An exception occurred')
+            payload_server.set_aborted(text='An exception occurred')
             raise
     else:
-        raise ValueError(f'Unrecognized argument {name} in instrument_handler')
+        raise ValueError(f'Unrecognized argument {name} in payload_handler')
 
 
 def main():
     global set_state
-    global instrument_server
+    global payload_server
     global ifcb_run_routine
     rospy.init_node('arm', anonymous=True, log_level=rospy.DEBUG)
 
@@ -288,9 +288,9 @@ def main():
     rospy.Service(service_name, ArmTask, handle_get_task)
 
     # Setup action server for running IFCB
-    instrument_name = rospy.get_namespace() + 'arm/run_instrument'
-    instrument_server = actionlib.SimpleActionServer(instrument_name, InstrumentAction, handle_instrument_task, False)
-    instrument_server.start()
+    payload_name = rospy.get_namespace() + 'arm/run_payload'
+    payload_server = actionlib.SimpleActionServer(payload_name, PayloadAction, handle_payload_task, False)
+    payload_server.start()
 
     # Get winch path, setup service client, register
     winch_name = ''
@@ -298,7 +298,7 @@ def main():
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
     register = rospy.ServiceProxy('/conductor/register_arm', ArmRegistration)
     register.wait_for_service()
-    register(rospy.get_namespace(), winch_name, instrument_name, service_name)
+    register(rospy.get_namespace(), winch_name, payload_name, service_name)
 
     # Set a fake timestamp for having run beads and catridge debubble, so that
     # we don't run it every startup and potentially waste time or bead supply.

@@ -14,7 +14,7 @@ add_action_files(
   DIRECTORY action
   FILES
   MoveToDepth.action
-  Instrument.action
+  Payload.action
 )
 
 add_message_files(

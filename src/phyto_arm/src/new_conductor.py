@@ -8,14 +8,14 @@ import actionlib
 import rospy
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal, \
-                        InstrumentAction, InstrumentGoal
+                        PayloadAction, PayloadGoal
 from phyto_arm.srv import ArmRegistration, ArmTask
 
 @dataclass
 class Arm:
     namespace: str
     winch: actionlib.SimpleActionClient
-    instrument: actionlib.SimpleActionClient
+    payload: actionlib.SimpleActionClient
     get_task: rospy.ServiceProxy
     ready: Event = Event()
 
@@ -35,7 +35,7 @@ def debug_arm(arm, msg):
 
 
 def handle_registration(req):
-    rospy.logwarn(f"Registering arm {req.arm_namespace} with {req.winch_name} and {req.instrument_name}")
+    rospy.logwarn(f"Registering arm {req.arm_namespace} with {req.winch_name} and {req.payload_name}")
     # If winch is used, setup client
     winch_client = None
     if req.winch_name != "":
@@ -46,12 +46,12 @@ def handle_registration(req):
         rospy.logwarn(f"Awaiting winch server for {req.winch_name}")
         winch_client.wait_for_server()
 
-    # Setup action client for running instrument
-    instrument_client = actionlib.SimpleActionClient(
-        req.instrument_name,
-        InstrumentAction
+    # Setup action client for running payload
+    payload_client = actionlib.SimpleActionClient(
+        req.payload_name,
+        PayloadAction
     )
-    instrument_client.wait_for_server()
+    payload_client.wait_for_server()
 
     # Set up service client for getting tasks
     task_client = rospy.ServiceProxy(req.task_server, ArmTask)
@@ -60,7 +60,7 @@ def handle_registration(req):
 
     arm = Arm(namespace=req.arm_namespace, \
                     winch=winch_client, \
-                    instrument=instrument_client, \
+                    payload=payload_client, \
                     get_task=task_client)
     arms.append(arm)
     rospy.logwarn(f'Arm {req.arm_namespace} registered successfully')
@@ -78,17 +78,17 @@ def is_busy(action):
     return state == actionlib.GoalStatus.PENDING or state == actionlib.GoalStatus.ACTIVE
 
 
-def send_instrument_goal(arm, task, callback, move_result=None):
-    # Ensure instrument is ready
-    assert not is_busy(arm.instrument)
+def send_payload_goal(arm, task, callback, move_result=None):
+    # Ensure payload is ready
+    assert not is_busy(arm.payload)
 
-    # Callback executed after an instrument action completes
-    def instrument_done(state, result):
+    # Callback executed after an payload action completes
+    def payload_done(state, result):
         assert state == actionlib.GoalStatus.SUCCEEDED
         callback()
 
-    goal = InstrumentGoal(name=task.name, args=task.args, move_result=move_result)
-    arm.instrument.send_goal(goal, done_cb=instrument_done)
+    goal = PayloadGoal(name=task.name, args=task.args, move_result=move_result)
+    arm.payload.send_goal(goal, done_cb=payload_done)
 
 
 
@@ -126,7 +126,7 @@ def send_winch_goal(arm, depth, callback):
 
 def loop(arm):
     while not rospy.is_shutdown():
-        # Wait until instrument is ready for more work
+        # Wait until payload is ready for more work
         arm.ready.wait()
         arm.ready.clear()
         task = arm.get_task()
@@ -138,14 +138,14 @@ def loop(arm):
 
         # If no movement is required
         if arm.winch is None:
-            # Then run instrument
-            send_instrument_goal(arm, task, task_complete)
+            # Then run payload
+            send_payload_goal(arm, task, task_complete)
         # Otherwise, move winch
         else:
             send_winch_goal(arm, task.depth, \
-                            # Then run instrument
+                            # Then run payload
                             lambda result: 
-                                send_instrument_goal(arm, task, task_complete, move_result=result))
+                                send_payload_goal(arm, task, task_complete, move_result=result))
 
 
 def main():
@@ -156,7 +156,7 @@ def main():
     # Setup semaphore for limiting concurrent winch movements
     movement_semaphore = BoundedSemaphore(rospy.get_param('~max_moving_winches'))
 
-    # Setup service for registering new winch/instrument pairs
+    # Setup service for registering new winch/payload pairs
     rospy.Service('~register_arm', ArmRegistration, handle_registration)
 
     # Keep your node from exiting until it has been shutdown

@@ -8,16 +8,11 @@ import actionlib
 import numpy as np
 import rospy
 
-from ifcbclient.protocol import parse_response as parse_ifcb_msg
-from ifcb.instrumentation import parse_marker as parse_ifcb_marker
-
 from ds_core_msgs.msg import RawData
-
-from ifcb.srv import RunRoutine
 
 from phyto_arm.srv import ArmRegistration, ArmTask, ArmTaskResponse
 from phyto_arm.msg import ConductorState, DepthProfile, \
-                          InstrumentAction
+                          PayloadAction
 
 
 # Global references to service provided by other node
@@ -55,7 +50,7 @@ def get_task_handler(request):
 
 
 # Handles action callback from the conductor
-def instrument_handler(goal):
+def payload_handler(goal):
     arg = goal.arg
     result = goal.move_result
 
@@ -73,7 +68,7 @@ def instrument_handler(goal):
     target_depth = state.latest_profile.depths[argmax]
     
     # Move ESP to the peak depth
-    state.tasks.append(ArmTaskResponse(depth=target_depth, instrument_arg="peak_phy_depth"))
+    state.tasks.append(ArmTaskResponse(depth=target_depth, payload_arg="peak_phy_depth"))
 
 
 def main():
@@ -92,8 +87,8 @@ def main():
     rospy.Service(service_name, ArmTask, get_task_handler)
 
     # Setup action server for waiting while ESP samples
-    instrument_name = rospy.get_namespace() + 'arm/run_instrument'
-    server = actionlib.SimpleActionServer(instrument_name, InstrumentAction, instrument_handler, False)
+    payload_name = rospy.get_namespace() + 'arm/run_payload'
+    server = actionlib.SimpleActionServer(payload_name, PayloadAction, payload_handler, False)
     server.start()
 
     # Get winch path
@@ -102,7 +97,7 @@ def main():
     # Register with conductor
     register = rospy.ServiceProxy('/conductor/register_arm', ArmRegistration)
     register.wait_for_service()
-    register(rospy.get_namespace(), winch_name, instrument_name, service_name)
+    register(rospy.get_namespace(), winch_name, payload_name, service_name)
 
     rospy.spin()
 

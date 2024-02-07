@@ -10,5 +10,5 @@ string name
 # Depth at which task should be performed
 float32 depth
 
-# General purpose argument to pass to instrument when depth is reached
+# General purpose arguments to pass to payload when depth is reached
 string[] args

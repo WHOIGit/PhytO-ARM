@@ -5,7 +5,7 @@ string arm_namespace
 
 string winch_name
 
-string instrument_name
+string payload_name
 
 string task_server
 
