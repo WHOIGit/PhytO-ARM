@@ -104,7 +104,7 @@ def on_profile_msg(msg):
 
 def is_scheduled_interval(peak_value):
     # Decide if we want to use the scheduled depth
-    scheduled_interval = rospy.Duration(60*rospy.get_param('tasks/schedule/every'))
+    scheduled_interval = rospy.Duration(60*rospy.get_param('tasks/scheduled_depth/every'))
 
     if math.isclose(scheduled_interval.to_sec(), 0.0):  # disabled
         run_schedule = False
@@ -112,7 +112,7 @@ def is_scheduled_interval(peak_value):
         run_schedule = True
     elif rospy.Time.now() - state.last_scheduled_time > scheduled_interval:
         run_schedule = True
-    elif peak_value < rospy.get_param('tasks/threshold'):
+    elif peak_value < rospy.get_param('tasks/phy_peak/threshold'):
         run_schedule = True
     else:
         run_schedule = False
@@ -121,9 +121,9 @@ def is_scheduled_interval(peak_value):
 
 def scheduled_depth():
     scheduled_depths = np.linspace(
-        rospy.get_param('tasks/schedule/range/first'),
-        rospy.get_param('tasks/schedule/range/last'),
-        rospy.get_param('tasks/schedule/range/count'),
+        rospy.get_param('tasks/scheduled_depth/range/first'),
+        rospy.get_param('tasks/scheduled_depth/range/last'),
+        rospy.get_param('tasks/scheduled_depth/range/count'),
     )
 
     target_depth = scheduled_depths[state.next_scheduled_index % scheduled_depths.shape[0]]
@@ -166,7 +166,7 @@ def run_ifcb():
     playlist = []
 
     # Determine if it's time to run cartridge debubble
-    cart_debub_interval = rospy.Duration(60*rospy.get_param('tasks/cartridge_debubble_interval'))
+    cart_debub_interval = rospy.Duration(60*rospy.get_param('ifcb_maintenance/cartridge_debubble_interval'))
     run_cart_debub = not math.isclose(cart_debub_interval.to_sec(), 0.0)  # disabled
     if run_cart_debub and rospy.Time.now() - state.last_cart_debub_time > cart_debub_interval:
         rospy.loginfo('Will run cartridege debubble this round')
@@ -174,7 +174,7 @@ def run_ifcb():
         state.last_cart_debub_time = rospy.Time.now()
 
     # Determine if it's time to run beads
-    bead_interval = rospy.Duration(60*rospy.get_param('tasks/bead_interval'))
+    bead_interval = rospy.Duration(60*rospy.get_param('ifcb_maintenance/bead_interval'))
     run_beads = not math.isclose(bead_interval.to_sec(), 0.0)  # disabled
     if run_beads and rospy.Time.now() - state.last_bead_time > bead_interval:
         rospy.loginfo('Will run beads this round')
@@ -230,11 +230,10 @@ def handle_payload_task(goal):
                 return
 
         # Find the maximal value in the profile
-        argmax = max(range(len(state.latest_profile.values)),
-                    key=lambda i: state.latest_profile.values[i])
+        argmax = max(range(len(state.latest_profile.values)), key=lambda i: state.latest_profile.values[i])
         target_value = state.latest_profile.values[argmax]
         target_depth = state.latest_profile.depths[argmax]
-        
+
         rospy.loginfo(f'Profile peak is {target_value:.2f} at {target_depth:.2f} m')
 
         # Next task dependent on whether we should run a scheduled interval now

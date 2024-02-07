@@ -59,27 +59,45 @@ aml_arm:
         data_topic: "/ctd/aml/port5/phycoerythrin"
         data_field: "value"
 
-    tasks:
-        # Minimum level of the profiled sensor data to trigger a sample at depth
-        threshold: 0.0
-
+    ifcb_maintenance:
         # Interval at which we run a cartridge debubble, necessary when IFCB on its side
         cartridge_debubble_interval: 0 # minutes, 0 = never
-
         # Interval at which we run a bead sample for maintenance
         bead_interval: 1440  # minutes, 0 = never
 
-        # Scheduled depths are sampled once per time interval, or when the profile
-        # data does not exceed the configured threshold above.
-        #
-        # Note: Adjusting the scheduled depths after the node has started may resume
-        # from an arbitrary point in the new schedule.
-        schedule:
-            every: 60  # minutes, 0 = never
-            range:
-                first: 0.5  # m
-                last:  2.0  # m
-                count: 4
+    tasks:
+        phy_peak:
+            # Minimum level of the profiled sensor data to trigger a sample at depth
+            threshold: 0.0
+        scheduled_depth:
+            # Scheduled depths are sampled once per time interval, or when the profile
+            # data does not exceed the configured threshold above.
+            #
+            # Note: Adjusting the scheduled depths after the node has started may resume
+            # from an arbitrary point in the new schedule.
+            schedule:
+                every: 60  # minutes, 0 = never
+                range:
+                    first: 0.5  # m
+                    last:  2.0  # m
+                    count: 4
+        wiz_probe:
+            # List of times to sample the Wiz probe in UTC time. List can be any size
+            times:
+                - "12:00"
+                - "14:00"
+                - "16:00"
+                - "18:00"
+            # Minutes to hold this position
+            duration: 30
+            # For this number of minutes before the next time, no other tasks will be scheduled.
+            # Allows any existing tasks to complete and gives the winch time to move into position.
+            preparation_window: 15
+            # Use phycoerythrin peak to determine sample depth
+            use_phy_peak: true
+            # Depth to sample at if phycoerythrin peak is not used, or if peak not found
+            # Ensure this value is within the winch range or PhytO-ARM will abort
+            default_depth: 1.0
 
     winch:
         enabled: false
@@ -124,6 +142,11 @@ rbr_arm:
 
     # We listen to the other arm's profiler data to find the target depth
     profiler_topic: '/aml_arm/profiler'
+
+    tasks:
+        upcast:
+        downcast:
+
 
     winch:
         enabled: false
