@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
+from dataclasses import dataclass
 import functools
 import math
 from queue import Queue
-import threading
-import sys
+from threading import Event, Condition
 
 import actionlib
 import numpy as np
@@ -36,15 +36,15 @@ def set_pub_state(pub, s):
     pub.publish(m)
 
 
-# N.B.: This is an abuse of Python syntax, don't do as I do!
-class state:
-    profile_activity = threading.Event()
+@dataclass
+class AmlArmState:
+    profile_activity = Event()
     latest_profile = None
 
-    ifcb_is_idle = threading.Event()
+    ifcb_is_idle = Event()
 
     position_hold = False
-    position_hold_condition = threading.Condition()
+    position_hold_condition = Condition()
 
     scheduled_depths = []
     last_scheduled_time = None
@@ -54,6 +54,8 @@ class state:
     last_bead_time = None
 
     tasks = Queue()
+
+state = AmlArmState()
 
 
 def on_ifcb_msg(msg):
