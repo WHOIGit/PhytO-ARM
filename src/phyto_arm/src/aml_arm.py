@@ -124,13 +124,13 @@ def scheduled_depth():
         rospy.get_param('tasks/schedule/range/count'),
     )
 
-    target_depth = scheduled_depths[state.next_scheduled_index \
-                                    % scheduled_depths.shape[0]]
+    target_depth = scheduled_depths[state.next_scheduled_index % scheduled_depths.shape[0]]
 
     rospy.loginfo(f'Using scheduled depth of {target_depth:.2f} m')
 
     state.next_scheduled_index += 1
     state.last_scheduled_time = rospy.Time.now()
+    return target_depth
 
 
 # Initial task list
@@ -207,7 +207,7 @@ def run_ifcb():
 
 
 # Handles action calls from the conductor when a given task depth is reached
-def instrument_handler(goal):
+def handle_instrument_task(goal):
     name = goal.name
     move_result = goal.move_result
 
@@ -219,7 +219,13 @@ def instrument_handler(goal):
         # Wait for the profile data for this cast
         while state.latest_profile is None or \
             state.latest_profile.goal_uuid != move_result.uuid:
-            state.profile_activity.wait()
+            notified = state.profile_activity.wait(60)
+            # For short downcasts profiling will likely fail; switch to scheduled depth
+            if not notified:
+                rospy.logwarn('No profile data received, switching to scheduled depth')
+                state.tasks.put(ArmTaskResponse(name="scheduled_depth", depth=scheduled_depth(), args=[]))
+                instrument_server.set_succeeded(InstrumentResult())
+                return
 
         # Find the maximal value in the profile
         argmax = max(range(len(state.latest_profile.values)),
@@ -234,7 +240,6 @@ def instrument_handler(goal):
             state.tasks.put(ArmTaskResponse(name="scheduled_depth", depth=scheduled_depth(), args=[]))
         else:
             state.tasks.put(ArmTaskResponse(name="peak_phy_depth", depth=target_depth, args=[]))
-        
         instrument_server.set_succeeded(InstrumentResult())
 
     elif name in ["scheduled_depth", "peak_phy_depth"]:
@@ -284,7 +289,7 @@ def main():
 
     # Setup action server for running IFCB
     instrument_name = rospy.get_namespace() + 'arm/run_instrument'
-    instrument_server = actionlib.SimpleActionServer(instrument_name, InstrumentAction, instrument_handler, False)
+    instrument_server = actionlib.SimpleActionServer(instrument_name, InstrumentAction, handle_instrument_task, False)
     instrument_server.start()
 
     # Get winch path, setup service client, register
