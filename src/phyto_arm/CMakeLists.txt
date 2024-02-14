@@ -15,6 +15,7 @@ add_action_files(
   FILES
   MoveToDepth.action
   Payload.action
+  RunIFCB.action
 )
 
 add_message_files(

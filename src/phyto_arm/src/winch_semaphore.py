@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import rospy
 from std_srvs.srv import Trigger, TriggerResponse
 from threading import BoundedSemaphore
@@ -24,6 +24,6 @@ def handle_release(req):
 if __name__ == "__main__":
     rospy.init_node('winch_semaphore')
     movement_semaphore = BoundedSemaphore(value=rospy.get_param('~max_moving_winches'))
-    rospy.Service('acquire', Trigger, handle_acquire)
-    rospy.Service('release', Trigger, handle_release)
+    rospy.Service('~acquire', Trigger, handle_acquire)
+    rospy.Service('~release', Trigger, handle_release)
     rospy.spin()
