@@ -156,7 +156,8 @@ def _start(args):
     atexit.register(lambda: cleanup('rosbag record', rosbag, dont_kill=True))
 
     # Prepare our roslaunch command
-    command, env = prep_roslaunch(config, env, 'phyto_arm', 'phyto_arm.launch')
+    launchfile = 'mock_phyto_arm.launch' if args.mock else 'phyto_arm.launch'
+    command, env = prep_roslaunch(config, env, 'phyto_arm', launchfile)
     nodes = subprocess.Popen(command, shell=True, env=env)
     atexit.register(lambda: cleanup('nodes', nodes))
 
@@ -211,6 +212,7 @@ if __name__ == '__main__':
     start_parser = subparsers.add_parser('start')
     start_parser.add_argument('config')
     start_parser.add_argument('--example_config', default='/configs/example.yaml')
+    start_parser.add_argument('--mock', action='store_true')
 
     stop_parser = subparsers.add_parser('stop')
 

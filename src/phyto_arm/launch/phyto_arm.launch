@@ -18,15 +18,15 @@
 
     <!-- AML winch namespace -->
     <group ns="aml_arm" if="$(arg aml_arm)">
-        
-
-        <node name="arm" pkg="phyto_arm" type="aml_arm.py" />
+        <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
 
         <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
         <node name="winch" pkg="phyto_arm" type="winch_node.py" />
 
         <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+
+        <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
     </group>
 
     <!-- RBR winch namespace TODO find better conditional -->
