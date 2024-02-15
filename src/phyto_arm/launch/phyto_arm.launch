@@ -6,6 +6,8 @@
         <arg name="use_compression" value="true" />
     </include>
 
+    <node name="winch_semaphore" pkg="phyto_arm" type="winch_semaphore.py" />
+
     <!-- proxy for publishing RBR's UDP stream as ROS topic -->
     <node name="rbr_udp" pkg="rbr_maestro3_ctd" type="udp_to_ros.py">
         <param name="port" type="int" value="12345" />
@@ -53,8 +55,6 @@
     <node name="ifcb" pkg="ifcb" type="ifcb" />
 
     <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
-
-    <node name="conductor" pkg="phyto_arm" type="new_conductor.py" />
 
     <group ns="camera">
         <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">

@@ -241,12 +241,12 @@ async def move_to_depth(server, goal):
 
         # If too much time has elapsed, stop
         if elapsed > time_limit:
-            server.set_aborted(text='Time limited exceeded')
+            server.set_aborted(text=f'Time limit exceeded: {elapsed}/{time_limit}')
             break
 
         # If depth is outside of bounds, stop
         if not (depth_min <= depth.value.depth <= depth_max):
-            server.set_aborted(text='Exceeded depth bounds')
+            server.set_aborted(text=f'Exceeded depth bounds: {depth.value.depth} not in ({depth_min}, {depth_max})')
             break
 
         # Update bounds so we do not travel far from this position

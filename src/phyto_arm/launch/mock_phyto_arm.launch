@@ -6,6 +6,8 @@
         <arg name="use_compression" value="true" />
     </include>
 
+    <node name="winch_semaphore" pkg="phyto_arm" type="winch_semaphore.py" />
+
     <node name="ctd" pkg="phyto_arm" type="mock_ctd.py" />
 
     <!-- AML winch namespace -->
@@ -31,8 +33,6 @@
     <node name="web" pkg="phyto_arm" type="web_node.py" />
 
     <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
-
-    <node name="winch_semaphore" pkg="phyto_arm" type="winch_semaphore.py" />
 
     <group ns="camera">
         <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">

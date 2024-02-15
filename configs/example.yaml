@@ -21,15 +21,9 @@ alerts:
 gps:
     host: "172.17.0.1"
 
-conductor:
-    # TODO: Currently unimplemented
-    speed:
-        transit: 0.02  # m/s
-        profile: 0.02  # m/s
-
-    # Maximum number of concurrent moving winches allowed
+winch_semaphore:
+    # Use this to control how many motors can be in motion at once.
     max_moving_winches: 1
-
 
 #  Note these values are not read by PhytO-ARM, they are sought by
 #  the included ds_util_nodes package, which publishes CTD data reads.

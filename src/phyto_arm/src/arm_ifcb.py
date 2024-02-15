@@ -31,8 +31,8 @@ class ArmIFCB(ArmBase):
     next_scheduled_index = 0
 
 
-# Global reference to service provided by other node
-ifcb_run = None
+# Global reference to action provided by other node
+ifcb_runner = None
 # Global reference to arm state
 arm = None
 
@@ -77,10 +77,10 @@ def scheduled_depth():
     return target_depth
 
 
-def run_ifcb():
+def send_ifcb_action():
     goal = RunIFCBGoal()
-    ifcb_run.send_goal(goal)
-    ifcb_run.wait_for_result()
+    ifcb_runner.send_goal(goal)
+    ifcb_runner.wait_for_result()
 
 
 def handle_downcast(move_result):
@@ -111,7 +111,7 @@ def handle_downcast(move_result):
 
 
 def handle_target_depth(move_result):
-    run_ifcb()
+    send_ifcb_action()
     # Should be end of queue; start over
     build_task_queue()
     arm.start_next_task()
@@ -120,7 +120,7 @@ def handle_target_depth(move_result):
 def handle_nowinch():
     try:
         rospy.logerr('Running ifcb')
-        run_ifcb()
+        send_ifcb_action()
         arm.start_next_task()
     except:
         raise
@@ -141,7 +141,7 @@ def build_task_queue():
 def main():
     global arm
     global set_state
-    global ifcb_run
+    global ifcb_runner
     rospy.init_node('arm', anonymous=True, log_level=rospy.DEBUG)
 
     # Get winch path, setup service client, register
@@ -154,9 +154,9 @@ def main():
     rospy.Subscriber('/profiler', DepthProfile, on_profile_msg)
 
     # Setup action client for running IFCB
-    ifcb_run = actionlib.SimpleActionClient('ifcb_runner/run', RunIFCBAction)
+    ifcb_runner = actionlib.SimpleActionClient('ifcb_runner/sample', RunIFCBAction)
     rospy.loginfo(f'Arm {rospy.get_name()} awaiting IFCB-run action server')
-    ifcb_run.wait_for_server()
+    ifcb_runner.wait_for_server()
     rospy.loginfo(f'Arm {rospy.get_name()} IFCB-run action server acquired')
 
     # Set a fake timestamp for having run beads and catridge debubble, so that

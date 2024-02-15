@@ -36,8 +36,8 @@ def set_pub_state(pub, s):
 class IFCBState:
     ifcb_is_idle = Event()
 
-    ifcb_busy = False
-    ifcb_busy_condition = Condition()
+    position_hold = False
+    position_hold_condition = Condition()
 
     last_cart_debub_time = None
     last_bead_time = None
@@ -77,17 +77,18 @@ def on_ifcb_msg(msg):
 
         rospy.loginfo('Should release position hold now')
 
-        with state.ifcb_busy_condition:
-            state.ifcb_busy = False
-            state.ifcb_busy_condition.notify()
+        with state.position_hold_condition:
+            state.position_hold = False
+            state.position_hold_condition.notify()
 
 
 
-def run_ifcb():
+def run_sample_routines(goal):
+    rospy.logerr("Running the IFCB like it should!!!!")
     # Activate position hold, which will be released at a certain point during sampling.
     rospy.loginfo('Activating position hold')
-    with state.ifcb_busy_condition:
-        state.ifcb_busy = True
+    with state.position_hold_condition:
+        state.position_hold = True
 
     # Wait for current IFCB activity to finish
     set_state(ConductorStates.WAIT_FOR_IFCB)
@@ -134,8 +135,8 @@ def run_ifcb():
 
     # Wait for position hold release
     rospy.loginfo('Routines finished - awaiting position hold release')
-    with state.ifcb_busy_condition:
-        state.ifcb_busy_condition.wait_for(lambda: not state.ifcb_busy)
+    with state.position_hold_condition:
+        state.position_hold_condition.wait_for(lambda: not state.position_hold)
         ifcb_action_server.set_succeeded(RunIFCBResult())
     rospy.loginfo('Position hold released')
 
@@ -159,7 +160,7 @@ def main():
     ifcb_run_routine.wait_for_service()
 
     # Setup action server for running IFCB
-    ifcb_action_server = actionlib.SimpleActionServer('~run', RunIFCBAction, run_ifcb, False)
+    ifcb_action_server = actionlib.SimpleActionServer('~sample', RunIFCBAction, run_sample_routines, False)
     ifcb_action_server.start()
 
 
