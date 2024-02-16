@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-from dataclasses import dataclass
-import functools
+from datetime import datetime, timedelta
 import math
 from queue import Queue
 from threading import Event, Condition
@@ -30,6 +29,30 @@ class ArmIFCB(ArmBase):
     last_scheduled_time = None
     next_scheduled_index = 0
 
+    phy_peak_depth = None
+    phy_peak_value = None
+
+    def get_next_task(self, last_task):
+        if not rospy.get_param('winch/enabled'):
+            return Task("no_winch", None, handle_nowinch)
+        if its_wiz_time():
+            wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
+            if rospy.get_param('tasks/wiz_probe/use_phy_peak') and self.phy_peak_depth is not None:
+                wiz_depth = self.phy_peak_depth
+            return Task("wiz_probe", wiz_depth, await_wiz_probe)
+        if last_task is None or last_task.name in ["scheduled_depth", "peak_phy_depth", "wiz_probe"]:
+            return Task("upcast", rospy.get_param('winch/range/min'), self.start_next_task)
+        if last_task.name == "upcast":
+            return Task("downcast", rospy.get_param('winch/range/max'), handle_downcast)
+        if last_task.name == "downcast":
+            if its_scheduled_depth_time(self.phy_peak_value):
+                return Task("scheduled_depth", depth=scheduled_depth(), callback=handle_target_depth)
+            if self.phy_peak_depth is not None:
+                return Task("peak_phy_depth", self.phy_peak_depth, handle_target_depth)
+            # If we don't have a peak depth, we can't do anything, so just run scheduled depth
+            return Task("scheduled_depth", depth=scheduled_depth(), callback=handle_target_depth)
+        raise ValueError(f"Unhandled next-task state where last task={last_task.name}")
+
 
 # Global reference to action provided by other node
 ifcb_runner = None
@@ -44,20 +67,75 @@ def on_profile_msg(msg):
     arm.profile_activity.clear()
 
 
-def is_scheduled_interval(peak_value):
+# Convert HH:MM to a rospy.Time datetime. Take into account the current time,
+# pushing the requested time to the next day if it's already passed.
+def wiz_to_rostime(hhmm_time):
+    # Today's time
+    today_time = datetime.now().time()
+    # Convert HH:MM to a timestamp
+    wiz_time = datetime.strptime(hhmm_time, "%H:%M").time()
+    wiz_date = datetime.now().date()
+    # wiz_time should always come after the current time, even if it's the next day
+    if wiz_time < today_time:
+        wiz_date = datetime.now().date() + timedelta(days=1)
+    unix_timestamp = datetime.combine(wiz_date, wiz_time).timestamp()
+    # Create a rospy.Time object
+    return rospy.Time.from_sec(unix_timestamp)
+
+
+def find_next_wiz_time():
+    # Get array of HH:MM times
+    wiz_probe_times = rospy.get_param('tasks/wiz_probe/times')
+    # Find the next time
+    next_time = None
+    for wiz_time in wiz_probe_times:
+        wiz_time = wiz_to_rostime(wiz_time)
+        # wiz_time will always be in the future, just find the earliest one
+        if next_time is None or wiz_time < next_time:
+            next_time = wiz_time
+    return next_time
+
+
+# Check if it's time to run the wiz probe routine
+def its_wiz_time():
+    prep_window = rospy.Duration(60*rospy.get_param('tasks/wiz_probe/preparation_window'))
+    # If we're within the preparation window, it's wizin' time
+    if (find_next_wiz_time() - rospy.Time.now()) < prep_window:
+        return True
+    return False
+
+
+def await_wiz_probe(move_result):
+    # Find the next time to run the wiz probe
+    next_time = find_next_wiz_time()
+    # Ensure we're still in the preparation window
+    prep_window = rospy.Duration(60*rospy.get_param('tasks/wiz_probe/preparation_window'))
+    preptime_remaining = next_time - rospy.Time.now()
+    if preptime_remaining <= prep_window:
+        raise ValueError(f'Next wiz time is {preptime_remaining.to_sec()}s away, should be less than \
+                          {prep_window.to_sec()}s. Preparation window likely too short.')
+    # Wait for the rest of the window + the wiz probe duration
+    rospy.loginfo('Waiting for wiz probe to finish')
+    wiz_duration = 60*rospy.get_param('tasks/wiz_probe/duration')
+    rospy.sleep(wiz_duration + preptime_remaining.to_sec())
+    # TODO: Run IFCB while waiting
+    rospy.loginfo('Wiz probe wait time complete')
+    arm.start_next_task()
+
+
+def its_scheduled_depth_time(peak_value):
     # Decide if we want to use the scheduled depth
     scheduled_interval = rospy.Duration(60*rospy.get_param('tasks/scheduled_depth/every'))
 
+    run_schedule = False
     if math.isclose(scheduled_interval.to_sec(), 0.0):  # disabled
         run_schedule = False
     elif arm.last_scheduled_time is None:
         run_schedule = True
     elif rospy.Time.now() - arm.last_scheduled_time > scheduled_interval:
         run_schedule = True
-    elif peak_value < rospy.get_param('tasks/phy_peak/threshold'):
+    elif peak_value is not None and peak_value < rospy.get_param('tasks/phy_peak/threshold'):
         run_schedule = True
-    else:
-        run_schedule = False
     return run_schedule
 
 
@@ -90,30 +168,23 @@ def handle_downcast(move_result):
         notified = arm.profile_activity.wait(60)
         # For short downcasts profiling will likely fail; switch to scheduled depth
         if not notified:
-            rospy.logwarn('No profile data received, switching to scheduled depth')
-            arm.tasks.put(Task(name="scheduled_depth", depth=scheduled_depth(), callback=handle_target_depth))
+            rospy.logwarn('No profile data received')
+            arm.phy_peak_depth = None
+            arm.phy_peak_value = None
             arm.start_next_task()
             return
 
     # Find the maximal value in the profile
     argmax = max(range(len(arm.latest_profile.values)), key=lambda i: arm.latest_profile.values[i])
-    target_value = arm.latest_profile.values[argmax]
-    target_depth = arm.latest_profile.depths[argmax]
+    arm.phy_peak_value = arm.latest_profile.values[argmax]
+    arm.phy_peak_depth = arm.latest_profile.depths[argmax]
 
-    rospy.loginfo(f'Profile peak is {target_value:.2f} at {target_depth:.2f} m')
-
-    # Next task dependent on whether we should run a scheduled interval now
-    if is_scheduled_interval(target_value):
-        arm.tasks.put(Task(name="scheduled_depth", depth=scheduled_depth(), callback=handle_target_depth))
-    else:
-        arm.tasks.put(Task(name="peak_phy_depth", depth=target_depth, callback=handle_target_depth))
+    rospy.loginfo(f'Profile peak is {arm.phy_peak_value:.2f} at {arm.phy_peak_depth:.2f} m')
     arm.start_next_task()
 
 
 def handle_target_depth(move_result):
     send_ifcb_action()
-    # Should be end of queue; start over
-    build_task_queue()
     arm.start_next_task()
 
 
@@ -124,18 +195,6 @@ def handle_nowinch():
         arm.start_next_task()
     except:
         raise
-
-
-# Initial task list
-def build_task_queue():
-    # Clear queue. Do this instead of creating a new Queue to maintain thread safety
-    with arm.tasks.mutex:
-        arm.tasks.queue.clear()
-    if rospy.get_param('winch/enabled') == True:
-        arm.tasks.put(Task("upcast", rospy.get_param('winch/range/min'), arm.start_next_task))
-        arm.tasks.put(Task("downcast", rospy.get_param('winch/range/max'), handle_downcast))
-    else:
-        arm.tasks.put(Task("no_winch", None, handle_nowinch))
 
 
 def main():
@@ -163,9 +222,6 @@ def main():
     # we don't run it every startup and potentially waste time or bead supply.
     arm.last_cart_debub_time = rospy.Time.now()
     arm.last_bead_time = rospy.Time.now()
-
-    # Build initial task queue
-    build_task_queue()
 
     arm.loop()
 

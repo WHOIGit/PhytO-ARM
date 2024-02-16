@@ -21,7 +21,6 @@ class Task:
     callback: callable
 
 class ArmBase:
-    tasks = Queue()
     task_lock = Lock()
 
     def __init__(self, winch_name=None):
@@ -84,20 +83,27 @@ class ArmBase:
 
         self.winch_client.send_goal(MoveToDepthGoal(depth=depth), done_cb=winch_done)
 
+    
+    # Logic for determining arm tasks goes heres, all implementations should override this
+    def get_next_task(self, last_task):
+        return None
+
 
     # Callback for when a task is complete. Unused result argument is required
     # for cases where this method is used as a task callback
     def start_next_task(self, move_result=None):
         self.task_lock.release()
 
+
     # Primary loop that should be the same for all arms, override should not be needed
     def loop(self):
+        task = None
         while not rospy.is_shutdown():
             # Don't block so that we can keeping checking for shutdowns
             if self.task_lock.acquire(blocking=False):
                 # If no movement is required
                 if self.winch_client is None:
-                    task = self.tasks.get()
+                    task = self.get_next_task(task)
                     rospy.logwarn(f'No winch; running {task.name}')
                     task.callback()
                 # Otherwise, move winch
@@ -109,7 +115,7 @@ class ArmBase:
                     # movement will be needed; this is not always the case. Not a problem for 1 or 2
                     # winches, but could get slow if the number of winches greatly exceeds the
                     # max_moving_winches limit.
-                    task = self.tasks.get()
+                    task = self.get_next_task(task)
                     rospy.logwarn(f'Sending winch goal for {task.name}')
                     self.send_winch_goal(task.depth, task.callback)
 

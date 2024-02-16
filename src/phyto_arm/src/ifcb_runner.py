@@ -84,7 +84,6 @@ def on_ifcb_msg(msg):
 
 
 def run_sample_routines(goal):
-    rospy.logerr("Running the IFCB like it should!!!!")
     # Activate position hold, which will be released at a certain point during sampling.
     rospy.loginfo('Activating position hold')
     with state.position_hold_condition:
