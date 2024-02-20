@@ -39,7 +39,7 @@ class ArmIFCB(ArmBase):
             wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
             if rospy.get_param('tasks/wiz_probe/use_phy_peak') and self.phy_peak_depth is not None:
                 wiz_depth = self.phy_peak_depth
-            return Task("wiz_probe", wiz_depth, await_wiz_probe)
+            return Task("wiz_probe", wiz_depth, lambda move_result: await_wiz_probe(self.start_next_task))
         if last_task is None or last_task.name in ["scheduled_depth", "peak_phy_depth", "wiz_probe"]:
             return Task("upcast", rospy.get_param('winch/range/min'), self.start_next_task)
         if last_task.name == "upcast":
@@ -100,18 +100,18 @@ def find_next_wiz_time():
 def its_wiz_time():
     prep_window = rospy.Duration(60*rospy.get_param('tasks/wiz_probe/preparation_window'))
     # If we're within the preparation window, it's wizin' time
-    if (find_next_wiz_time() - rospy.Time.now()) < prep_window:
+    if (find_next_wiz_time() - rospy.Time.now()) <= prep_window:
         return True
     return False
 
 
-def await_wiz_probe(move_result):
+def await_wiz_probe(callback):
     # Find the next time to run the wiz probe
     next_time = find_next_wiz_time()
     # Ensure we're still in the preparation window
     prep_window = rospy.Duration(60*rospy.get_param('tasks/wiz_probe/preparation_window'))
     preptime_remaining = next_time - rospy.Time.now()
-    if preptime_remaining <= prep_window:
+    if preptime_remaining > prep_window:
         raise ValueError(f'Next wiz time is {preptime_remaining.to_sec()}s away, should be less than \
                           {prep_window.to_sec()}s. Preparation window likely too short.')
     # Wait for the rest of the window + the wiz probe duration
@@ -120,7 +120,7 @@ def await_wiz_probe(move_result):
     rospy.sleep(wiz_duration + preptime_remaining.to_sec())
     # TODO: Run IFCB while waiting
     rospy.loginfo('Wiz probe wait time complete')
-    arm.start_next_task()
+    callback()
 
 
 def its_scheduled_depth_time(peak_value):
@@ -190,7 +190,6 @@ def handle_target_depth(move_result):
 
 def handle_nowinch():
     try:
-        rospy.logerr('Running ifcb')
         send_ifcb_action()
         arm.start_next_task()
     except:
