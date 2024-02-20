@@ -4,7 +4,7 @@
 # Goal
 
 float32 depth  # m
-
+float32 velocity  # m/s
 ---
 
 # Result

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 from datetime import datetime, timedelta
 import math
-from queue import Queue
-from threading import Event, Condition
+from threading import Event
 
 import actionlib
 import numpy as np
@@ -10,12 +9,6 @@ import rospy
 
 from ifcbclient.protocol import parse_response as parse_ifcb_msg
 from ifcb.instrumentation import parse_marker as parse_ifcb_marker
-
-from ds_core_msgs.msg import RawData
-
-from ifcb.srv import RunRoutine
-
-
 from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
 
 from arm_base import ArmBase, Task
@@ -34,23 +27,23 @@ class ArmIFCB(ArmBase):
 
     def get_next_task(self, last_task):
         if not rospy.get_param('winch/enabled'):
-            return Task("no_winch", None, handle_nowinch)
+            return Task("no_winch", handle_nowinch)
         if its_wiz_time():
             wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
             if rospy.get_param('tasks/wiz_probe/use_phy_peak') and self.phy_peak_depth is not None:
                 wiz_depth = self.phy_peak_depth
-            return Task("wiz_probe", wiz_depth, lambda move_result: await_wiz_probe(self.start_next_task))
+            return Task("wiz_probe", lambda move_result: await_wiz_probe(self.start_next_task, wiz_depth))
         if last_task is None or last_task.name in ["scheduled_depth", "peak_phy_depth", "wiz_probe"]:
-            return Task("upcast", rospy.get_param('winch/range/min'), self.start_next_task)
+            return Task("upcast", self.start_next_task, rospy.get_param('winch/range/min'))
         if last_task.name == "upcast":
-            return Task("downcast", rospy.get_param('winch/range/max'), handle_downcast)
+            return Task("downcast", handle_downcast, rospy.get_param('winch/range/max'))
         if last_task.name == "downcast":
             if its_scheduled_depth_time(self.phy_peak_value):
-                return Task("scheduled_depth", depth=scheduled_depth(), callback=handle_target_depth)
+                return Task("scheduled_depth", handle_target_depth, scheduled_depth())
             if self.phy_peak_depth is not None:
-                return Task("peak_phy_depth", self.phy_peak_depth, handle_target_depth)
+                return Task("peak_phy_depth", handle_target_depth, self.phy_peak_depth)
             # If we don't have a peak depth, we can't do anything, so just run scheduled depth
-            return Task("scheduled_depth", depth=scheduled_depth(), callback=handle_target_depth)
+            return Task("scheduled_depth", handle_target_depth, scheduled_depth())
         raise ValueError(f"Unhandled next-task state where last task={last_task.name}")
 
 
@@ -202,7 +195,6 @@ def main():
     global ifcb_runner
     rospy.init_node('arm', anonymous=True, log_level=rospy.DEBUG)
 
-    # Get winch path, setup service client, register
     winch_name = None
     if rospy.get_param('winch/enabled') == True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'

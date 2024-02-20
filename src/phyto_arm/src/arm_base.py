@@ -17,8 +17,9 @@ from std_srvs.srv import Trigger, TriggerResponse
 @dataclass
 class Task:
     name: str
-    depth: float
     callback: callable
+    depth: float = None
+    speed: float = None
 
 class ArmBase:
     task_lock = Lock()
@@ -49,7 +50,7 @@ class ArmBase:
         return state == actionlib.GoalStatus.PENDING or state == actionlib.GoalStatus.ACTIVE
 
 
-    def send_winch_goal(self, depth, callback):
+    def send_winch_goal(self, depth, speed, callback):
         global winches_moving
         rospy.loginfo(f"Sending winch move to {depth}")
         # Ensure winch is enabled
@@ -63,9 +64,16 @@ class ArmBase:
         elif depth > rospy.get_param(f'winch/range/max'):
             rospy.logerr(f'Move aborted: depth {depth} is above max {rospy.get_param("winch/range/max")}')
             return
+        # Set max speed if not specified
+        if speed is None:
+            speed = rospy.get_param('winch/max_speed')
+        # Safety check: Speed cannot exceed max speed
+        elif speed > rospy.get_param(f'winch/max_speed'):
+            rospy.logerr(f'Move aborted: speed {speed} is above max {rospy.get_param("winch/max_speed")}')
+            return
         assert not self.winch_busy()
-
         rospy.loginfo(f"All checks passed; Moving winch to {depth}")
+
 
         # Intermediate callback for ensuring move was a success and to release semaphore 
         # before calling the task's callback
@@ -81,7 +89,7 @@ class ArmBase:
                 rospy.signal_shutdown(f"Shutting down due to unexpected error: {e}")
                 raise e
 
-        self.winch_client.send_goal(MoveToDepthGoal(depth=depth), done_cb=winch_done)
+        self.winch_client.send_goal(MoveToDepthGoal(depth=depth, velocity=speed), done_cb=winch_done)
 
     
     # Logic for determining arm tasks goes heres, all implementations should override this
@@ -117,5 +125,5 @@ class ArmBase:
                     # max_moving_winches limit.
                     task = self.get_next_task(task)
                     rospy.logwarn(f'Sending winch goal for {task.name}')
-                    self.send_winch_goal(task.depth, task.callback)
+                    self.send_winch_goal(task.depth, task.speed, task.callback)
 

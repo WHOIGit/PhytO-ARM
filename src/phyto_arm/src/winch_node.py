@@ -164,10 +164,16 @@ async def move_to_depth(server, goal):
                   f'({depth_min:.2f}, {depth_max:.2f}) m')
 
     # Velocity function
-    v = velocity_f(goal.depth, 0.02, 0.05)
-    epsilon = 0.01
+    max_speed = rospy.get_param('~max_speed' )
+    half_speed_dist = rospy.get_param('~half_speed_dist')
+    # Assert both are not None
+    assert max_speed is not None and half_speed_dist is not None, 'Winch speed config invalid'
+    assert goal.velocity < max_speed, 'Goal velocity exceeds max speed'
+    v = velocity_f(goal.depth, goal.velocity, half_speed_dist)
 
     # Estimate the time it should take to reach the destination
+    epsilon = rospy.get_param('~epsilon', 0.01)
+    assert epsilon is not None, 'Winch epsilon config invalid'
     expected_time = estimate_time(v, start_depth, goal.depth, epsilon)
     rospy.loginfo(f'Estimated movement time is {expected_time.to_sec():.0f} s')
 

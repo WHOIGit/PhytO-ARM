@@ -11,7 +11,7 @@
     <node name="ctd" pkg="phyto_arm" type="mock_ctd.py" />
 
     <!-- AML winch namespace -->
-    <group ns="aml_arm" if="$(arg aml_arm)">
+    <group ns="arm_ifcb" if="$(arg arm_ifcb)">
         <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
 
         <node name="winch" pkg="phyto_arm" type="mock_winch_node.py" />
@@ -22,10 +22,10 @@
     </group>
 
     <!-- RBR winch namespace TODO find better conditional -->
-    <group ns="rbr_arm" if="$(arg rbr_arm)">
+    <group ns="arm_chanos" if="$(arg arm_chanos)">
         <node name="ctd" pkg="phyto_arm" type="mock_ctd.py" />
 
-        <node name="arm" pkg="phyto_arm" type="rbr_arm.py" />
+        <node name="arm" pkg="phyto_arm" type="arm_chanos.py" />
 
         <node name="winch" pkg="phyto_arm" type="mock_winch_node.py" />
     </group>

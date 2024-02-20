@@ -19,7 +19,7 @@
     </node>
 
     <!-- AML winch namespace -->
-    <group ns="aml_arm" if="$(arg aml_arm)">
+    <group ns="arm_ifcb" if="$(arg arm_chanos)">
         <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
 
         <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
@@ -31,13 +31,13 @@
         <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
     </group>
 
-    <!-- RBR winch namespace TODO find better conditional -->
-    <group ns="rbr_arm" if="$(arg rbr_arm)">
+    <!-- RBR winch namespace -->
+    <group ns="arm_chanos" if="$(arg arm_chanos)">
         <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
             <remap from="~in" to="/udp_stream" />
         </node>
 
-        <node name="arm" pkg="phyto_arm" type="rbr_arm.py" />
+        <node name="arm" pkg="phyto_arm" type="arm_chanos.py" />
 
         <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
