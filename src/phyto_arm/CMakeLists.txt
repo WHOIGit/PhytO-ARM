@@ -14,7 +14,6 @@ add_action_files(
   DIRECTORY action
   FILES
   MoveToDepth.action
-  Payload.action
   RunIFCB.action
 )
 
@@ -27,8 +26,6 @@ add_message_files(
 
 add_service_files(
   FILES
-  ArmRegistration.srv
-  ArmTask.srv
 )
 
 generate_messages(
