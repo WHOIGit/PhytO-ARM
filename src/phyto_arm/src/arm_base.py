@@ -13,8 +13,16 @@ from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 
 from std_srvs.srv import Trigger, TriggerResponse
 
+
+
 @dataclass
 class Task:
+    '''A task to be executed by an arm.
+    - name: a string identifying the task
+    - callback: a function to call when the task is complete
+    - depth: the depth to move to (optional, won't move if not provided)
+    - speed: the speed to move at (optional, will use config max if not provided)
+    '''
     name: str
     callback: callable
     depth: float = None

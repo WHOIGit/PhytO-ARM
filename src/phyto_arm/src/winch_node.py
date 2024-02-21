@@ -129,14 +129,17 @@ async def move_to_depth_chk(server, goal):
 
 
 async def move_to_depth(server, goal):
+    # Put initial status tasks in a lookup dict for traceability
+    tasks = {
+        asyncio.create_task(depth.wait()): "depth status",
+        asyncio.create_task(motor.wait()): "motor status"
+    }
     # Get an initial depth fix and motor status message
-    _, pending = await asyncio.wait([
-        asyncio.create_task(depth.wait()),
-        asyncio.create_task(motor.wait()),
-    ], timeout=2.0, return_when=asyncio.ALL_COMPLETED)
+    _, pending = await asyncio.wait(tasks.keys(), timeout=2.0, return_when=asyncio.ALL_COMPLETED)
 
     if pending:
-        server.set_aborted(text='Timed out waiting for initial status')
+        err_text = f'Timed out waiting for {", ".join([tasks[p] for p in pending])}'
+        server.set_aborted(text=err_text)
         return
 
     # Safety check: The depth reading should be valid

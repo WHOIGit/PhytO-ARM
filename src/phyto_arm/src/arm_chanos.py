@@ -8,16 +8,24 @@ from arm_base import ArmBase, Task
 class ArmChanos(ArmBase):
     stage_index = 0
 
+    # Primary method for determining the next task to execute
+    # Each Task object takes:
+    #  - name: a string identifying the task
+    #  - callback: a function to call when the task is complete
+    #  - depth: the depth to move to (optional, won't move if not provided)
+    #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
         assert rospy.get_param('winch/enabled'), 'Winch is not enabled'
-        if last_task is None or last_task.name == "upcast_final":
+        if last_task is None:
+            return Task("upcast", self.start_next_task, rospy.get_param('winch/range/min'))
+        if last_task.name == "upcast":
             downcast_depth = rospy.get_param('winch/range/max')
             downcast_speed = rospy.get_param('tasks/downcast/speed')
             return Task("downcast", self.start_next_task, downcast_depth, downcast_speed)
         if last_task.name in ["downcast", "upcast_stage"]:
             if self.stage_index + 1 == rospy.get_param('tasks/upcast/number_of_stages'):
                 self.stage_index = 0
-                return Task("upcast_final", await_stage, rospy.get_param('winch/range/min'))
+                return Task("upcast", await_stage, rospy.get_param('winch/range/min'))
             next_depth = stage_depth(self.stage_index)
             self.stage_index += 1
             return Task("upcast_stage",await_stage, next_depth)

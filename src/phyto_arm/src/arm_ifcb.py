@@ -25,14 +25,24 @@ class ArmIFCB(ArmBase):
     phy_peak_depth = None
     phy_peak_value = None
 
+
+    # Primary method for determining the next task to execute
+    # Each Task object takes:
+    #  - name: a string identifying the task
+    #  - callback: a function to call when the task is complete
+    #  - depth: the depth to move to (optional, won't move if not provided)
+    #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
         if not rospy.get_param('winch/enabled'):
             return Task("no_winch", handle_nowinch)
         if its_wiz_time():
             wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
-            if rospy.get_param('tasks/wiz_probe/use_phy_peak') and self.phy_peak_depth is not None:
-                wiz_depth = self.phy_peak_depth
-            return Task("wiz_probe", lambda move_result: await_wiz_probe(self.start_next_task, wiz_depth))
+            if rospy.get_param('tasks/wiz_probe/use_phy_peak'):
+                if self.phy_peak_depth is not None:
+                    wiz_depth = self.phy_peak_depth
+                else:
+                    rospy.logwarn('No phy peak depth available, using default wiz probe depth')
+            return Task("wiz_probe", lambda _: await_wiz_probe(self.start_next_task, wiz_depth))
         if last_task is None or last_task.name in ["scheduled_depth", "peak_phy_depth", "wiz_probe"]:
             return Task("upcast", self.start_next_task, rospy.get_param('winch/range/min'))
         if last_task.name == "upcast":
