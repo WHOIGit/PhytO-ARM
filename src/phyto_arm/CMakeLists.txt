@@ -24,10 +24,6 @@ add_message_files(
   DepthProfile.msg
 )
 
-add_service_files(
-  FILES
-)
-
 generate_messages(
   DEPENDENCIES
   actionlib_msgs
