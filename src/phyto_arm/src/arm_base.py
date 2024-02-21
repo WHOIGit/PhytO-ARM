@@ -128,7 +128,7 @@ class ArmBase:
                 # Otherwise, move winch
                 else:
                     # Wait until central semaphore clears us to move
-                    while not rospy.is_shutdown() and not self.acquire_move_clearance():
+                    while not rospy.is_shutdown() and not self.acquire_move_clearance().success:
                         rospy.sleep(1)
                     # TODO: Optimize task evaluation. Currently we are blocking on the assumption that
                     # movement will be needed; this is not always the case. Not a problem for 1 or 2
