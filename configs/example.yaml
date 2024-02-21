@@ -2,11 +2,8 @@ name: Example
 
 
 launch_args:
-    ctd: aml
     log_dir: /mnt/data/roslogs/
     rosbag_prefix: /mnt/data/rosbags/phyto-arm
-    arm_ifcb: false
-    arm_chanos: false
     classifier: false
 
 
@@ -25,16 +22,6 @@ winch_semaphore:
     # Use this to control how many motors can be in motion at once.
     max_moving_winches: 1
 
-#  Note these values are not read by PhytO-ARM, they are sought by
-#  the included ds_util_nodes package, which publishes CTD data reads.
-#  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
-ctd_comms:
-    connection:
-        type: "SERIAL"
-        port: "/dev/ttyTHS0"
-        baud: 115200
-        data_bits: 8
-
 ifcb:
     address: "172.17.0.1"
     port: 8092
@@ -46,7 +33,17 @@ ifcb:
 
 
 arm_ifcb:
-    ctd_topic: '/ctd/depth'
+    ctd_topic: '/arm_ifcb/ctd/depth'
+
+    #  Note these values are not read by PhytO-ARM, they are sought by
+    #  the included ds_util_nodes package, which publishes CTD data reads.
+    #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
+    ctd_comms:
+        connection:
+            type: "SERIAL"
+            port: "/dev/ttyTHS0"
+            baud: 115200
+            data_bits: 8
 
     profiler:
         resolution: 0.02  # m
