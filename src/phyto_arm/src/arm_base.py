@@ -20,6 +20,10 @@ class Task:
     depth: float = None
     speed: float = None
 
+
+# This is the base class for all arms. It should be subclassed and the get_next_task
+# method should be overridden to provide the arm's specific task logic.
+# Do not use this class directly.
 class ArmBase:
     task_lock = Lock()
 
