@@ -27,11 +27,13 @@
 		"source=${localWorkspaceFolder}/LICENSE,target=/app/LICENSE,type=bind",
 		"source=${localWorkspaceFolder}/phyto-arm.service,target=/app/phyto-arm.service,type=bind",
 		"source=${localWorkspaceFolder}/.github,target=/app/.github,type=bind",
+		"source=${localWorkspaceFolder}/phyto-arm,target=/app/phyto-arm,type=bind",
+		"source=${localWorkspaceFolder}/scripts,target=/app/scripts,type=bind",
 		"source=/home/ifcb/IFCBacquire/Host/Routines,target=/routines,type=bind",
 		"source=/mnt/data,target=/mnt/data,type=bind"
 	],
 	"runArgs": [
-        "--device=/dev/ttyS3",
+         "--device=/dev/ttyS3",
 		"--publish=9090:9090/tcp",
     	"--publish=8098:8098/tcp",
 		"--publish=12345:12345/udp"

@@ -100,8 +100,12 @@ def attach(args):
 
 def _start(args):
     # Validate config file
-    if not validate_config(args.config, args.example_config):
-        sys.exit(1)
+    if not args.skip_validation:
+        print('Validating config file...')
+        if validate_config(args.config, args.config_schema):
+            print('Config file is valid')
+        else:
+            sys.exit(1)
 
     # Load the config file
     with open(args.config, 'rb') as f:
@@ -211,7 +215,8 @@ if __name__ == '__main__':
 
     start_parser = subparsers.add_parser('start')
     start_parser.add_argument('config')
-    start_parser.add_argument('--example_config', default='/configs/example.yaml')
+    start_parser.add_argument('--config_schema', default='./configs/example.yaml')
+    start_parser.add_argument('--skip_validation', action='store_true')
     start_parser.add_argument('--mock', action='store_true')
 
     stop_parser = subparsers.add_parser('stop')
