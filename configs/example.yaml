@@ -168,7 +168,7 @@ arm_chanos:
                 extra_sec: 10.0
 
     motor:
-        address: "192.169.13.4"
+        address: "192.168.13.4"
         port: 502
         refresh_rate: 1  # hz
         counts_per_turn: 8192  # defined in manual p.9

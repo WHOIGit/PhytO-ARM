@@ -19,7 +19,7 @@
     </node>
 
     <!-- AML winch namespace -->
-    <group ns="arm_ifcb" if="$(arg arm_chanos)">
+    <group ns="arm_ifcb" if="$(arg arm_ifcb)">
         <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
 
         <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
