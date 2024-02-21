@@ -9,8 +9,7 @@ import actionlib
 import numpy as np
 import rospy
 
-from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal, \
-                        PayloadAction, PayloadGoal
+from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 
 from std_srvs.srv import Trigger, TriggerResponse
 
