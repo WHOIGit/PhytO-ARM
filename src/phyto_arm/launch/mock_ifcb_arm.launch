@@ -1,0 +1,16 @@
+<launch>
+    <!-- Most settings are in config.yaml, which is easier to edit -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <group ns="arm_ifcb" if="$(arg arm_ifcb)">
+        <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
+
+        <node name="ctd" pkg="phyto_arm" type="mock_ctd.py" />
+
+        <node name="winch" pkg="phyto_arm" type="mock_winch_node.py" />
+
+        <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+
+        <node name="ifcb_runner" pkg="phyto_arm" type="mock_ifcb_runner.py" />
+    </group>
+</launch>
