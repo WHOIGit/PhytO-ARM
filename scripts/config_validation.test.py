@@ -1,6 +1,6 @@
 import unittest
 import os
-from config_validation_node import validate_config
+from config_validation import validate_config
 
 class TestYAMLValidator(unittest.TestCase):
 

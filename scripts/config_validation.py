@@ -36,6 +36,8 @@ def extract_annotations(file_path):
 
 
 def validate_config_recursive(user_data, default_data, annotations, key_path=[]):
+    all_valid = True
+
     for key, default_value in default_data.items():
         current_path = key_path + [key]
         tuple_path = tuple(current_path)
@@ -44,30 +46,29 @@ def validate_config_recursive(user_data, default_data, annotations, key_path=[])
 
             # Check if key exists in user data for required keys
             if status == 'required' and key not in user_data:
-                print(f"Error: Key {'.'.join(current_path)} is required but missing from the user YAML")
-                return False
+                print(f"Key {'.'.join(current_path)} is required but missing from the user YAML")
+                all_valid = False
 
             # If the key is optional and is missing in user data, then skip checking its children
             elif status == 'optional' and key not in user_data:
                 continue
 
             # Check type if key exists in both
-            if key in user_data:
+            elif key in user_data:
                 if type(user_data[key]) != type(default_value):
-                    print(f"Error: Key {'.'.join(current_path)} has a different type in user YAML. Expected type: {type(default_value)}, found type: {type(user_data[key])}")
-                    return False
+                    print(f"Key {'.'.join(current_path)} has a different type in user YAML. Expected type: {type(default_value)}, found type: {type(user_data[key])}")
+                    all_valid = False
 
                 # Recursive validation for nested dictionaries
-                if isinstance(default_value, dict):
+                elif isinstance(default_value, dict):
                     if not validate_config_recursive(user_data[key], default_value, annotations, current_path):
-                        return False
-        else:
-            # If a key from default config is not in the annotations, it's assumed required.
-            if key not in user_data:
-                print(f"Error: Key {'.'.join(current_path)} is required since not #optional but missing from the user YAML")
-                return False
+                        all_valid = False
+        # If a key from default config is not in the annotations, it's assumed required.
+        elif key not in user_data:
+            print(f"Key {'.'.join(current_path)} is required since not #optional but missing from the user YAML")
+            all_valid = False
 
-    return True
+    return all_valid
 
 def validate_config(user_file, default_file):
     with open(user_file, 'r') as f:
@@ -81,5 +82,5 @@ def validate_config(user_file, default_file):
     return validate_config_recursive(user_data, default_data, annotations)
 
 if __name__ == "__main__":
-    if not validate_config(sys.argv[1], "../../../configs/example.yaml"):
+    if not validate_config(sys.argv[1], sys.argv[2]):
         sys.exit(1)

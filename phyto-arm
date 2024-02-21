@@ -19,6 +19,7 @@ import urllib.request
 
 import yaml
 
+from scripts.config_validation import validate_config
 
 # Load the virtual environment and Catkin workspace and return the resulting
 # environment
@@ -98,6 +99,10 @@ def attach(args):
 
 
 def _start(args):
+    # Validate config file
+    if not validate_config(args.config, args.example_config):
+        sys.exit(1)
+
     # Load the config file
     with open(args.config, 'rb') as f:
         config = yaml.safe_load(f)
@@ -205,6 +210,7 @@ if __name__ == '__main__':
 
     start_parser = subparsers.add_parser('start')
     start_parser.add_argument('config')
+    start_parser.add_argument('--example_config', default='/configs/example.yaml')
 
     stop_parser = subparsers.add_parser('stop')
 
