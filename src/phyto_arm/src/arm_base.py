@@ -127,8 +127,11 @@ class ArmBase:
                     task.callback()
                 # Otherwise, move winch
                 else:
-                    # Wait until central semaphore clears us to move
+                    # TODO: Consider replacing this with a queueing mechanism.  Requires setting up 
+                    # callbacks via ROS service calls. Unnecessarily complex for a 2 winch system, 
+                    # but might be the only way to achieve round-robin for many winches.
                     while not rospy.is_shutdown() and not self.acquire_move_clearance().success:
+                        # Wait until central semaphore clears us to move
                         rospy.sleep(1)
                     # TODO: Optimize task evaluation. Currently we are blocking on the assumption that
                     # movement will be needed; this is not always the case. Not a problem for 1 or 2
