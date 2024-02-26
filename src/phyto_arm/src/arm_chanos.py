@@ -36,9 +36,9 @@ arm = None
 
 def await_stage(move_result):
     duration = rospy.get_param('tasks/upcast/stage_duration')
-    rospy.logwarn(f"Waiting {duration} seconds for DC sensor to complete.")
+    rospy.loginfo(f"Waiting {duration} seconds for DC sensor to complete.")
     rospy.sleep(duration)
-    rospy.logwarn(f'Done waiting for DC sensor to complete.')
+    rospy.loginfo(f'Done waiting for DC sensor to complete.')
     arm.start_next_task()
 
 

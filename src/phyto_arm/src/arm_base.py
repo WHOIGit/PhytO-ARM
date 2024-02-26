@@ -65,24 +65,21 @@ class ArmBase:
         global winches_moving
         rospy.loginfo(f"Sending winch move to {depth}")
         # Ensure winch is enabled
-        if rospy.get_param(f'winch/enabled') != True:
-            rospy.logerr(f'Move aborted: winch is disabled in config')
-            return
+        if rospy.get_param('winch/enabled') != True:
+            raise ValueError('Move aborted: winch is disabled in config')
         # Safety check: Do not exceed depth bounds
-        if depth < rospy.get_param(f'winch/range/min'):
-            rospy.logerr(f'Move aborted: depth {depth} is below min {rospy.get_param("winch/range/max")}')
-            return
-        elif depth > rospy.get_param(f'winch/range/max'):
-            rospy.logerr(f'Move aborted: depth {depth} is above max {rospy.get_param("winch/range/max")}')
-            return
+        if depth < rospy.get_param('winch/range/min'):
+            raise ValueError(f'Move aborted: depth {depth} is below min {rospy.get_param("winch/range/max")}')
+        elif depth > rospy.get_param('winch/range/max'):
+            raise ValueError(f'Move aborted: depth {depth} is above max {rospy.get_param("winch/range/max")}')
         # Set max speed if not specified
         if speed is None:
             speed = rospy.get_param('winch/max_speed')
         # Safety check: Speed cannot exceed max speed
-        elif speed > rospy.get_param(f'winch/max_speed'):
-            rospy.logerr(f'Move aborted: speed {speed} is above max {rospy.get_param("winch/max_speed")}')
-            return
-        assert not self.winch_busy()
+        elif speed > rospy.get_param('winch/max_speed'):
+            raise ValueError(f'Move aborted: speed {speed} is above max {rospy.get_param("winch/max_speed")}')
+        if self.winch_busy():
+            raise RuntimeError('Move aborted: winch in unexpected busy state')
         rospy.loginfo(f"All checks passed; Moving winch to {depth}")
 
 
@@ -123,7 +120,7 @@ class ArmBase:
                 # If no movement is required
                 if self.winch_client is None:
                     task = self.get_next_task(task)
-                    rospy.logwarn(f'No winch; running {task.name}')
+                    rospy.loginfo(f'No winch; running {task.name}')
                     task.callback()
                 # Otherwise, move winch
                 else:
@@ -138,6 +135,6 @@ class ArmBase:
                     # winches, but could get slow if the number of winches greatly exceeds the
                     # max_moving_winches limit.
                     task = self.get_next_task(task)
-                    rospy.logwarn(f'Sending winch goal for {task.name}')
+                    rospy.logwarn(f'Arm {self.name} goal depth {task.depth} for task {task.name}')
                     self.send_winch_goal(task.depth, task.speed, task.callback)
 
