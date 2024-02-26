@@ -86,6 +86,9 @@ arm_ifcb:
             preparation_window: 15
             # Use phycoerythrin peak to determine sample depth
             use_phy_peak: true
+            # If use_phy_peak == true, then this is the offset from the peak to sample at.
+            # This is added directly to the phy_peak depth, so positive values add depth.
+            peak_offset: 0.5 # m
             # Depth to sample at if phycoerythrin peak is not used, or if peak not found
             # Ensure this value is within the winch range or PhytO-ARM will abort
             default_depth: 1.0

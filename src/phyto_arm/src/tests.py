@@ -91,6 +91,63 @@ class TestItsWizTime(unittest.TestCase):
             mock_rospy_time_now.return_value = rospy.Time.from_sec(datetime(2024, 2, 16, 12, 0).timestamp())
             self.assertFalse(arm_ifcb.its_wiz_time(), "It should not be wiz time yet.")
 
+class TestComputeWizDepth(unittest.TestCase):
+    @patch('arm_ifcb.rospy')
+    def test_use_phy_peak_disabled(self, mock_rospy):
+        mock_rospy.get_param.return_value = False  # Disable use_phy_peak
+        default_depth = 100  # Set a default depth for when phy_peak usage is disabled
+        mock_rospy.get_param.return_value = default_depth
+        result = arm_ifcb.compute_wiz_depth(50)  # The input value shouldn't matter in this case
+        self.assertEqual(result, default_depth, "Should return default depth when use_phy_peak is disabled.")
+
+    @patch('arm_ifcb.rospy')
+    def test_no_phy_peak_depth_available(self, mock_rospy):
+        mock_rospy.get_param.side_effect = [True, 200, None]  # Enable use_phy_peak, set default depth to 200
+        result = arm_ifcb.compute_wiz_depth(None)  # No peak depth available
+        self.assertEqual(result, 200, "Should return default depth when no phy peak depth is available.")
+
+    @patch('arm_ifcb.rospy')
+    def test_preferred_depth_within_winch_range(self, mock_rospy):
+        mock_rospy.get_param.side_effect = lambda param: {
+            'tasks/wiz_probe/use_phy_peak': True,
+            'tasks/wiz_probe/offset': 10,
+            'winch/range/max': 300,
+            'winch/range/min': 100,
+            'tasks/wiz_probe/default_depth': 200
+        }[param]
+        peak_depth = 150
+        expected_depth = 160  # peak_depth + offset
+        result = arm_ifcb.compute_wiz_depth(peak_depth)
+        self.assertEqual(result, expected_depth, "Should return preferred depth within winch range.")
+
+    @patch('arm_ifcb.rospy')
+    def test_preferred_depth_exceeds_max_depth(self, mock_rospy):
+        mock_rospy.get_param.side_effect = lambda param: {
+            'tasks/wiz_probe/use_phy_peak': True,
+            'tasks/wiz_probe/offset': 50,
+            'winch/range/max': 200,
+            'winch/range/min': 50,
+            'tasks/wiz_probe/default_depth': 150
+        }[param]
+        peak_depth = 160
+        expected_depth = 200  # Max depth
+        result = arm_ifcb.compute_wiz_depth(peak_depth)
+        self.assertEqual(result, expected_depth, "Should return max depth if preferred depth exceeds max depth.")
+
+    @patch('arm_ifcb.rospy')
+    def test_preferred_depth_below_min_depth(self, mock_rospy):
+        mock_rospy.get_param.side_effect = lambda param: {
+            'tasks/wiz_probe/use_phy_peak': True,
+            'tasks/wiz_probe/offset': -20,
+            'winch/range/max': 250,
+            'winch/range/min': 100,
+            'tasks/wiz_probe/default_depth': 150
+        }[param]
+        peak_depth = 110
+        expected_depth = 100  # Min depth
+        result = arm_ifcb.compute_wiz_depth(peak_depth)
+        self.assertEqual(result, expected_depth, "Should return min depth if preferred depth is below min depth.")
+
 
 class TestAwaitWizProbe(unittest.TestCase):
     @patch('arm_ifcb.rospy')

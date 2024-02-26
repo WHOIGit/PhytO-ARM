@@ -36,12 +36,7 @@ class ArmIFCB(ArmBase):
         if not rospy.get_param('winch/enabled'):
             return Task("no_winch", handle_nowinch)
         if its_wiz_time():
-            wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
-            if rospy.get_param('tasks/wiz_probe/use_phy_peak'):
-                if self.phy_peak_depth is not None:
-                    wiz_depth = self.phy_peak_depth
-                else:
-                    rospy.logwarn('No phy peak depth available, using default wiz probe depth')
+            wiz_depth = compute_wiz_depth(self.phy_peak_depth)
             return Task("wiz_probe", lambda _: await_wiz_probe(self.start_next_task, wiz_depth))
         if last_task is None or last_task.name in ["scheduled_depth", "peak_phy_depth", "wiz_probe"]:
             return Task("upcast", self.start_next_task, rospy.get_param('winch/range/min'))
@@ -106,6 +101,23 @@ def its_wiz_time():
     if (find_next_wiz_time() - rospy.Time.now()) <= prep_window:
         return True
     return False
+
+
+def compute_wiz_depth(peak_depth):
+    if rospy.get_param('tasks/wiz_probe/use_phy_peak'):
+        if peak_depth is None:
+            rospy.logwarn('No phy peak depth available, using default wiz probe depth')
+            return rospy.get_param('tasks/wiz_probe/default_depth')
+        preferred_depth = peak_depth + rospy.get_param('tasks/wiz_probe/offset')
+        if preferred_depth > rospy.get_param('winch/range/max'):
+            rospy.logwarn('Preferred wiz probe depth exceeds max depth, using max depth')
+            return rospy.get_param('winch/range/max')
+        if preferred_depth < rospy.get_param('winch/range/min'):
+            rospy.logwarn('Preferred wiz probe depth is less than min depth, using min depth')
+            return rospy.get_param('winch/range/min')
+        return preferred_depth
+    else:
+        return rospy.get_param('tasks/wiz_probe/default_depth')
 
 
 def await_wiz_probe(callback):

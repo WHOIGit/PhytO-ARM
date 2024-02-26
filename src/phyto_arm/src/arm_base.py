@@ -124,6 +124,7 @@ class ArmBase:
                     task.callback()
                 # Otherwise, move winch
                 else:
+                    rospy.loginfo(f'Arm waiting for clearance')
                     # TODO: Consider replacing this with a queueing mechanism.  Requires setting up 
                     # callbacks via ROS service calls. Unnecessarily complex for a 2 winch system, 
                     # but might be the only way to achieve round-robin for many winches.
@@ -135,6 +136,6 @@ class ArmBase:
                     # winches, but could get slow if the number of winches greatly exceeds the
                     # max_moving_winches limit.
                     task = self.get_next_task(task)
-                    rospy.logwarn(f'Arm {self.name} goal depth {task.depth} for task {task.name}')
+                    rospy.loginfo(f'Arm goal depth {task.depth} for task {task.name}')
                     self.send_winch_goal(task.depth, task.speed, task.callback)
 
