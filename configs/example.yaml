@@ -138,9 +138,9 @@ arm_chanos:
         upcast:
             stage_duration: 60 # seconds
             stages:
-                - 1.0 # meters
-                - 2.5
-                - 5.0
+                - 1.5 # meters
+                - 1.0
+                - 0.7
 
     winch:
         enabled: true
