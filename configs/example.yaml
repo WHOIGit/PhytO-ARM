@@ -133,8 +133,11 @@ arm_chanos:
         downcast:
             speed: 0.005 # m/s
         upcast:
-            number_of_stages: 5
-            stage_duration: 1  # seconds
+            stage_duration: 60 # seconds
+            stages:
+                - 1.0 # meters
+                - 2.5
+                - 5.0
 
     winch:
         enabled: true
