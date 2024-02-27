@@ -9,7 +9,7 @@
         <arg name="use_compression" value="true" />
     </include>
 
-    <node name="winch_semaphore" pkg="phyto_arm" type="winch_semaphore.py" />
+    <node name="lock_manager" pkg="phyto_arm" type="lock_manager.py" />
 
     <group if="$(arg classifier)">
         <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />

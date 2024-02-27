@@ -54,7 +54,7 @@ def main():
     winch_name = None
     if rospy.get_param('winch/enabled') == True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
-    arm = ArmChanos(winch_name)
+    arm = ArmChanos(rospy.get_name(), winch_name)
 
     arm.loop()
 

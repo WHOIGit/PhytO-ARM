@@ -24,6 +24,12 @@ add_message_files(
   DepthProfile.msg
 )
 
+add_service_files(
+  FILES
+  LockOperation.srv
+  LockCheck.srv
+)
+
 generate_messages(
   DEPENDENCIES
   actionlib_msgs

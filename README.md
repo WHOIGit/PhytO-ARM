@@ -1,12 +1,12 @@
 # PhytO-ARM
 
-PhytO-ARM is robot operating system (ROS)-based toolkit for integration of Imaging FlowCytobot ([IFCB][mclane]) and other ocean sensors that are commonly deployed by the [Brosnahan Lab][blab]. The supported ROS release is [Noetic Ninjemys][noetic]. 
+PhytO-ARM is robot operating system (ROS)-based toolkit for integration of Imaging FlowCytobot ([IFCB][mclane]) and other ocean sensors that are commonly deployed by the [Brosnahan Lab][blab]. The supported ROS release is [Noetic Ninjemys][noetic].
 
 There are instructions for assembling a profiling configuration at our accompanying [PhytO-ARM][parm] website. The profiling system consists of an IFCB, an [AML ctd][aml], and a winch built from a [JVL servo motor][jvl] and parts from [Conedrive][cdrive] and [Waterman Industries][wiparts]. Once assembled, code provided here enables a variety of continuous sampling behaviors including continuous CTD profiling and targeted collection of IFCB samples at chlorophyll maxima. Other scientific payloads are also supported, and PhytO-ARM can coordinate an arbitrary number of winches running concurrently.
 
 PhytO-ARM observations of location, depth, water properties, etc. are written to IFCB metadata files at time of collection for distribution through an existing webservices system called [IFCB dashboard][ifcbdb]. Additional scripts are provided for export to [CF-compliant NetCDF][cfnet] data formats and upload to repositories like the [NOAA ERDDAP][nerddap] system.
 
-During and after deployments, system operators can review system data using standard ROS tools like [FoxGlove Studio][fglove].  
+During and after deployments, system operators can review system data using standard ROS tools like [FoxGlove Studio][fglove].
 
   [mclane]: https://mclanelabs.com/imaging-flowcytobot/
   [blab]: https://www2.whoi.edu/site/brosnahanlab/
@@ -19,11 +19,11 @@ During and after deployments, system operators can review system data using stan
   [cfnet]: http://cfconventions.org
   [nerddap]: https://www.ncei.noaa.gov/erddap/index.html
   [fglove]: https://foxglove.dev/studio
-  
+
 
 ## Contents
 
-Three types of ROS nodes are provided. Device nodes enable integration of IFCB, CTD, GPS, servo, and IP camera systems. Behavior nodes interpret device node data streams and direct changes in system behavior. System nodes log ROS traffic and make it available for real-time interactive display (Rosbridge). 
+Three types of ROS nodes are provided. Device nodes enable integration of IFCB, CTD, GPS, servo, and IP camera systems. Behavior nodes interpret device node data streams and direct changes in system behavior. System nodes log ROS traffic and make it available for real-time interactive display (Rosbridge).
 
 ## Hardware Dependencies
 The following are **required** for PhytO-ARM to run:
@@ -41,7 +41,7 @@ The following devices are optional:
 
 ### Install with Docker (recommended)
 
-Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system. 
+Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system.
 
 ```docker pull whoi/phyto-arm:latest```
 
@@ -118,8 +118,6 @@ options:
 --config_schema <schema file>     File to validate config against.
 --skip_validation                 Skip validation check altogether.
 ```
-
-Note that 
 
 If running natively, you may also wish to attach to the screen process:
 ```bash
@@ -210,7 +208,7 @@ Configuration files live in `configs/` and use the YAML format. It is recommende
 
 ### Config validation
 
-A strict YAML schema is not defined, instead another YAML file is used as a schema to compare against at runtime. `configs/example.yaml` is used by default, and validation is done by comparing both structure and data types. 
+A strict YAML schema is not defined, instead another YAML file is used as a schema to compare against at runtime. `configs/example.yaml` is used by default, and validation is done by comparing both structure and data types.
 
 You can skip validation by passing the `--skip_validation` argument to `phyto-arm`.
 
@@ -269,9 +267,9 @@ The time must be set to UTC. To sync the clock, you can use:
 
 ### RBR CTD
 
-The current setup of the Chanos arm assumes the RBR CTD data is being transmitted to the host over UDP. In our setup, a proxy is running on a Raspberry Pi Zero which has a serial connection to the RBR, and forwards the CTD messages over UDP to the host. 
+The current setup of the Chanos arm assumes the RBR CTD data is being transmitted to the host over UDP. In our setup, a proxy is running on a Raspberry Pi Zero which has a serial connection to the RBR, and forwards the CTD messages over UDP to the host.
 
-The proxying script used is provided in `rbr_relay.sh`, a systemd service equivalent is also provided in `rbr_relay.service`. 
+The proxying script used is provided in `rbr_relay.sh`, a systemd service equivalent is also provided in `rbr_relay.service`.
 
 The `udp_to_ros.py` node is used to read the proxied UDP packets and publish them on a ROS topic to be used by PhytO-ARM.
 
@@ -368,18 +366,20 @@ Note that ROS path conventions are used, such that paths beginning with `/` are 
 
 These nodes implement the core PhytO-ARM "algorithm" for sampling and are specific to the design of the platform.
 
-  - `winch_semaphore`: Winch traffic control center, limits number of concurrent winch movements.
+  - `lock_manager`: Winch traffic control center, limits number of concurrent winch movements.
     - Publishes:
       - `~acquire` for arms to request permission to move their winches
       - `~release` for arms to release permission to move
+      - `~check` for arms to check whether they might have a dangling lock (e.g. after a crash or user stop)
 
   - `arm_ifcb`: Orchestrates IFCB payload behaviors
     - Subscribes:
       - `ifcb_runner/sample` to run IFCB sampling actions
       - `profiler` for profile data, especially phy peak
       - `winch/move_to_depth/result` to determine the success of a transit
-      - `winch_semaphore/acquire` for getting clearance to move a winch. Some configurations may not permit simultaneous winch movements
-      - `winch_semaphore/release` to inform the semaphore that movement has completed
+      - `lock_manager/acquire` for getting clearance to move a winch. Some configurations may not permit simultaneous winch movements
+      - `lock_manager/release` to inform the semaphore that movement has completed
+      - `lock_manager/check` check for dangling locks
 
   - `ifcb_runner`: Provides one high-level action for running IFCB samples
     - Subscribes:
@@ -400,8 +400,9 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
   - `arm_chanos`: Orchestrates Chanos sensor payload behaviors
     - Subscribes:
       - `winch/move_to_depth/result` to determine the success of a transit
-      - `winch_semaphore/acquire` for getting clearance to move a winch
-      - `winch_semaphore/release` to inform the semaphore that movement has completed
+      - `lock_manager/acquire` for getting clearance to move a winch
+      - `lock_manager/release` to inform the semaphore that movement has completed
+      - `lock_manager/check` to check for dangling locks
 
   - `profiler`: Creates profiles of CTD data during a cast
     - Subscribes:
@@ -425,7 +426,7 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
       - `winch/move_to_depth/feedback` with progress updates
       - `winch/move_to_depth/status` with the status of the current goal
       - `winch/move_to_depth/result` with the result of the goal
-  
+
   - `mock_winch_node`: Mock version of `winch`
     - Publishes:
       - `winch/move_to_depth/feedback` with progress updates

@@ -220,7 +220,7 @@ def main():
     winch_name = None
     if rospy.get_param('winch/enabled') == True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
-    arm = ArmIFCB(winch_name)
+    arm = ArmIFCB(rospy.get_name(), winch_name)
 
     # Subscribe to profiler messages that follow each transit
     rospy.Subscriber('/profiler', DepthProfile, on_profile_msg)
