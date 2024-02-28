@@ -138,7 +138,7 @@ docker run --rm -it \
     # Expose whatever port is being used by web_node
     --publish 8098:8098/tcp \
     # If using an RBR CTD streaming over UDP, open the necessary port
-    --publish 1234:1234/tcp \
+    --publish 12345:12345/udp \
     # Bind config directory host:container. ':ro' = read-only
     --volume "$(pwd)"/configs:/configs:ro \
     # Bind IFCBAcquire routines directory host:container
@@ -161,11 +161,11 @@ Launching the arms independently means they can also be stopped, configured, and
 
 After launching `main` with the script above, you can launch the arms with the following commands:
 ```bash
-docker exec -it phyto-arm start arm_ifcb /configs/config.yaml
+docker exec -it phyto-arm ./phyto-arm start arm_ifcb /configs/config.yaml
 ```
 and
 ```bash
-docker exec -it phyto-arm start arm_chanos /configs/config.yaml
+docker exec -it phyto-arm ./phyto-arm start arm_chanos /configs/config.yaml
 ```
 
 To launch all three simultaneously as separate panes in a tmux session, run the `scripts/tmux_run.sh` script. Running this a second time will attach you to the existing session. To kill the session and all processes running within, use the `scripts/tmux_kill.sh` script.
