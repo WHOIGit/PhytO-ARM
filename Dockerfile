@@ -50,6 +50,7 @@ RUN apt update \
 
 # Copy the rest of the sources
 COPY ./src ./src
+COPY ./scripts ./scripts
 
 # Build
 RUN source ./devel/setup.bash \

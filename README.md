@@ -128,7 +128,7 @@ Or kill it:
 phyto-arm stop
 ```
 
-Below is an example Docker run script which includes both the `phyto-arm` command as well as the necesssary docker parameters to access devices, ports, and directories on the host. Remove the inline comments before running this script directly.
+Below is an example Docker run script which includes both the `phyto-arm` command as well as the necesssary docker parameters to access devices, ports, and directories on the host. For your convenience, this command is also available as a script in `scripts/docker_run.sh`.
 ```bash
 docker run --rm -it \
     # Name of the container in docker
@@ -155,7 +155,7 @@ docker run --rm -it \
     ./phyto-arm start main /configs/config.yaml
 ```
 
-The above script will start the main PhytO-ARM processes, but not launch any of the winch "arms" where science missions are defined. Currently there are two science payload implementations, for IFCB missions and Chanos sensor missions, called `arm_ifcb` and `arm_chanos` respectively.
+The above script will start the main PhytO-ARM processes, but not launch any of the winch "arms" where science missions are defined. Currently there are two science payload implementations, for IFCB missions and Chanos sensor missions, called `arm_ifcb` and `arm_chanos` respectively. 
 
 Launching the arms independently means they can also be stopped, configured, and relaunched without interrupting other PhytO-ARM missions in progress.
 
@@ -167,6 +167,8 @@ and
 ```bash
 docker exec -it phyto-arm start arm_chanos /configs/config.yaml
 ```
+
+To launch all three simultaneously as separate panes in a tmux session, run the `scripts/tmux_run.sh` script. Running this a second time will attach you to the existing session. To kill the session and all processes running within, use the `scripts/tmux_kill.sh` script.
 
 ### Running natively
 
@@ -199,7 +201,7 @@ docker exec -it phyto-arm start mock_arm_chanos /configs/config.yaml
 
 To run unit tests, execute
 ```bash
-docker run -it --rm whoi/phyto-arm:latest source devel/setup.bash && catkin test phyto_arm
+docker run -it --rm whoi/phyto-arm:latest /bin/bash -c "source devel/setup.bash && catkin test phyto_arm"
 ```
 
 ## Configuration
