@@ -33,29 +33,6 @@ ifcb:
 
 
 arm_ifcb:
-    ctd_topic: '/arm_ifcb/ctd/depth'
-
-    #  Note these values are not read by PhytO-ARM, they are sought by
-    #  the included ds_util_nodes package, which publishes CTD data reads.
-    #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
-    ctd_comms:
-        connection:
-            type: "SERIAL"
-            port: "/dev/ttyTHS0"
-            baud: 115200
-            data_bits: 8
-
-    profiler:
-        resolution: 0.02  # m
-        data_topic: "/ctd/aml/port5/phycoerythrin"
-        data_field: "value"
-
-    ifcb_maintenance:
-        # Interval at which we run a cartridge debubble, necessary when IFCB on its side
-        cartridge_debubble_interval: 0 # minutes, 0 = never
-        # Interval at which we run a bead sample for maintenance
-        bead_interval: 1440  # minutes, 0 = never
-
     # Configuration related to tasks
     tasks:
         phy_peak:
@@ -93,6 +70,35 @@ arm_ifcb:
             # Ensure this value is within the winch range or PhytO-ARM will abort
             default_depth: 1.0
 
+    ifcb_maintenance:
+        # Interval at which we run a cartridge debubble, necessary when IFCB on its side
+        cartridge_debubble_interval: 0 # minutes, 0 = never
+        # Interval at which we run a bead sample for maintenance
+        bead_interval: 1440  # minutes, 0 = never
+
+    ctd_topic: '/arm_ifcb/ctd/depth'
+
+    #  Note these values are not read by PhytO-ARM, they are sought by
+    #  the included ds_util_nodes package, which publishes CTD data reads.
+    #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
+    ctd_comms:
+        connection:
+            type: "SERIAL"
+            port: "/dev/ttyS3"
+            baud: 115200
+            data_bits: 8
+
+    profiler:
+        resolution: 0.02  # m
+        data_topic: "/ctd/aml/port5/phycoerythrin"
+        data_field: "value"
+
+    motor:
+        address: "192.168.13.3"
+        port: 502
+        refresh_rate: 1  # hz
+        counts_per_turn: 8192  # defined in manual p.9
+
     winch:
         enabled: true
 
@@ -122,25 +128,24 @@ arm_ifcb:
                 extra_sec: 10.0
 
 
-    motor:
-        address: "192.168.13.3"
-        port: 502
-        refresh_rate: 1  # hz
-        counts_per_turn: 8192  # defined in manual p.9
-
-
 arm_chanos:
-    ctd_topic: '/arm_chanos/ctd/depth'
-
     tasks:
         downcast:
-            speed: 0.005 # m/s
+            speed: 0.005  # m/s
         upcast:
             stage_duration: 60 # seconds
             stages:
                 - 1.5 # meters
                 - 1.0
                 - 0.7
+
+    ctd_topic: '/arm_chanos/ctd/depth'
+
+    motor:
+        address: "192.168.13.4"
+        port: 502
+        refresh_rate: 1  # hz
+        counts_per_turn: 8192  # defined in manual p.9
 
     winch:
         enabled: true
@@ -170,12 +175,6 @@ arm_chanos:
                 extra_pct: 10.0
                 extra_sec: 10.0
 
-    motor:
-        address: "192.168.13.4"
-        port: 502
-        refresh_rate: 1  # hz
-        counts_per_turn: 8192  # defined in manual p.9
-
 
 # If launch_args.classifier = true
 classifier:
@@ -186,12 +185,13 @@ classifier:
 
 camera:
     fore_camera:
-        video_stream_url: "rtsp://admin:whoi1930@192.168.13.208/"
+        video_stream_url: "rtsp://admin:example_password@192.168.13.123/"
     aft_camera:
-        video_stream_url: "rtsp://admin:whoi1930@192.168.13.207/"
+        video_stream_url: "rtsp://admin:example_password@192.168.13.124/"
 
 web:
     field_map:
+        #optional indicates that a parameter will not be required to be present by the config validator
         commitHash: #optional
             environment: COMMIT_HASH #optional, get value from COMMIT_HASH environment variable
             default: 'No hash' #optional for environment variables
