@@ -359,6 +359,20 @@ WantedBy=multi-user.target
 - [ ] When ready, run PhytO-ARM for a cycle to confirm no errors
 
 
+## Development
+
+To develop in PhytO-ARM, it is recommended to use a development container with the provided development container configuration file. This can be done locally or on a remote machine (e.g. an IFCB).
+
+1. Install Visual Studio Code.
+2. After cloning the PhytO-ARM repository, open the directory in VS Code. If developing remotely, use Microsoft's _Remote SSH_ extension to open the folder on the remote device. 
+3. Open the `.devcontainer/devcontainer.json` configuration file. You may need to comment out any lines which depend on hardware (e.g., `/dev/ttyS3`) or folders (e.g. `/home/ifcb`) not present on your development machine.
+4. Install the _Dev Containers_ extension published by Microsoft.
+5. The extension should automatically detect the existing `devcontainer.json` configuration and prompt you to reopen the project as a development container.
+6. Wait for the container to open. The first time may be slow as it builds the development image, expect to wait 10 minutes or longer depending on your hardware and Internet connection.
+
+The development container allows you to develop and test from an environment identical to that used in production. If developing locally, launch arms with mocked hardware (see _Running_ section above).
+
+The `.git` repository folder is also mounted in the development container, making it possible to pull/commit/push as needed from within the container.
 
 ## Node Inventory
 
