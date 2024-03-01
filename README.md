@@ -197,7 +197,7 @@ and
 docker exec -it phyto-arm start mock_arm_chanos /configs/config.yaml
 ```
 
-# Unit tests
+### Unit tests
 
 To run unit tests, execute
 ```bash
@@ -359,7 +359,7 @@ WantedBy=multi-user.target
 - [ ] When ready, run PhytO-ARM for a cycle to confirm no errors
 
 
-## Development
+# Development
 
 To develop in PhytO-ARM, it is recommended to use a development container with the provided development container configuration file. This can be done locally or on a remote machine (e.g. an IFCB).
 
@@ -373,6 +373,119 @@ To develop in PhytO-ARM, it is recommended to use a development container with t
 The development container allows you to develop and test from an environment identical to that used in production. If developing locally, launch arms with mocked hardware (see _Running_ section above).
 
 The `.git` repository folder is also mounted in the development container, making it possible to pull/commit/push as needed from within the container.
+
+### Architecture
+
+PhytO-ARM has evolved to handle multiple mission types and deployment configurations. Deployments so far include single-winch on a stationary platform, winchless on an autonomous surface vehicle, and multi-winch on a stationary platform.
+
+PhytO-ARM has been modularized to support any configuration of winch and scientific payload. Scientific payloads are isolated into distinct "arms", each of which may have a winch providing movement for that arm. All arms should implement `ArmBase`, an interface class which handles winch movement logic and coordinates movement between arms by communicating with a central `lock_manager` node. 
+
+`lock_manager` is primarily to limit how many winches can move concurrently, as configured by the parameter `/lock_manager/max_moving_winches`. This is primarily to accommodate missions which may require inter-arm coordination, or to prevent overdraw of power on battery-powered setups.
+
+PhytO-ARM comes with two arm implementations included, see `arm_ifcb.py` and `arm_chanos.py` in the `phyto_arm` package. Any number of arms is supported however, as illustrated below. Each box represents a set of nodes with an independent launch file.
+
+```mermaid
+graph TD
+    subgraph PhytO-ARM
+        subgraph Main
+            cameras(Cameras)
+            lm(Lock Manager) 
+            gps(GPS)
+        end
+        subgraph Arm1
+            w1(Winch1)
+            subgraph Payload1
+                ifcb(IFCB)
+                c1(AML CTD)
+            end
+        end
+        subgraph Arm2
+            w2(Winch2)
+            subgraph Payload2
+                chanos(Chanos)
+                c2(RBR CTD)
+            end
+        end
+        subgraph ArmN
+            w3(WinchN)
+            subgraph PayloadN
+                unknown(?)
+                c4(? CTD)
+            end
+        end
+    end
+
+lm <--> w1
+lm <--> w2
+lm <--> w3
+```
+
+### Mission Tasks
+
+Each arm implementing `ArmBase` must override `get_next_task`, which is the basis of an event loop where all decisions are made on which task to perform next. `get_next_task` is passed the previous task as context, and should return a new task containing movement instructions and a callback that will be executed when the movement completes.
+
+```mermaid
+graph
+    subgraph Arm Execution Loop
+        subgraph Main
+            lm(Lock Manager)
+        end
+        subgraph ArmBase
+            loop
+            winch(send_winch_goal)
+            snt(start_next_task)
+            subgraph Arm Implementation
+                gnt(get_next_task)
+                cb(Task callback)
+            end
+        end
+    end
+
+loop -- Await clearance --> lm
+lm -- Get task --> gnt
+gnt -- Move to depth --> winch
+gnt -. Skip if no winch .-> cb
+winch -- Execute --> cb
+cb --> snt
+snt --> loop
+```
+
+### Hardware topology
+
+In all deployments thus far, we have used the IFCB as the primary host to run PhytO-ARM and coordinate movements and sampling. The hardware architecture diagram below illustrates this. 
+
+```mermaid
+graph
+    subgraph Platform
+        subgraph IFCB Arm
+            motor1(JVL motor)
+            aml(AML CTD)
+            subgraph IFCB
+                acquire{IFCB Acquire}
+                pa{PhytO-ARM}
+            end
+        end
+        subgraph Chanos Arm
+            pi(Rapsberry Pi)
+            motor2(JVL Motor)
+            chanos(Chanos)
+            rbr(RBR CTD)
+        end
+    end
+    subgraph Key
+        hw(Hardware)
+        sw{Software}
+    end
+
+pa -- Drive (TCP) --> motor1
+pa -- Drive (TCP) --> motor2
+aml -- Serial --> pa
+rbr -- Serial --> pi
+pi -- UDP --> pa
+chanos -- Timed sampling -->chanos
+pa -- Trigger (TCP) --> acquire
+```
+
 
 ## Node Inventory
 
@@ -526,6 +639,18 @@ These nodes provide functionality for recording data and connecting to other too
       - `/rosout_agg` with copies of all log messages
 
 
+
+## Style guide (beta)
+
+1. Place a blank newline before comment lines to make them easier to spot, e.g.
+```
+# First comment
+val1 = 'some value'
+
+# Second comment
+val2 = 'next value'
+```
+A style guide has not yet been rigorously defined, this section will expand as new policies are adopted.
 
 
 ## Observing with Foxglove Studio
