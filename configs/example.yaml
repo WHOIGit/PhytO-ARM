@@ -113,6 +113,7 @@ arm_ifcb:
         gear_ratio: 60
 
         max_speed:  0.02  # m/s
+
         # Distance from target at which we will reduce speed by half. This controls
         # the sharpness of our velocity function. A smaller number produces a more
         # abrupt stop.
