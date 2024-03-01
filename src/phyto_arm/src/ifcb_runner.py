@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-from dataclasses import dataclass
 import functools
 import math
-from queue import Queue
-from threading import Event, Condition
+
+from dataclasses import dataclass
+from threading import Condition, Event
 
 import actionlib
-import numpy as np
 import rospy
 
 from ifcbclient.protocol import parse_response as parse_ifcb_msg

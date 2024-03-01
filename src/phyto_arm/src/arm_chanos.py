@@ -16,18 +16,22 @@ class ArmChanos(ArmBase):
     #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
         assert rospy.get_param('winch/enabled'), 'Winch is not enabled'
+
         if last_task is None:
             return Task("upcast", self.start_next_task, rospy.get_param('winch/range/min'))
+
         if last_task.name == "upcast":
             downcast_depth = rospy.get_param('winch/range/max')
             downcast_speed = rospy.get_param('tasks/downcast/speed')
             return Task("downcast", self.start_next_task, downcast_depth, downcast_speed)
+
         if last_task.name in ["downcast", "upcast_stage"]:
             next_depth = stage_depth(self.stage_index)
             self.stage_index += 1
             if self.stage_index == len(rospy.get_param('tasks/upcast/stages')):
                 self.stage_index = 0
             return Task("upcast_stage", await_stage, next_depth)
+
         raise ValueError(f"Unhandled next-task state where last task={last_task.name}")
 
 # Global reference to arm state
@@ -38,7 +42,7 @@ def await_stage(move_result):
     duration = rospy.get_param('tasks/upcast/stage_duration')
     rospy.loginfo(f"Waiting {duration} seconds for DC sensor to complete.")
     rospy.sleep(duration)
-    rospy.loginfo(f'Done waiting for DC sensor to complete.')
+    rospy.loginfo('Done waiting for DC sensor to complete.')
     arm.start_next_task()
 
 
