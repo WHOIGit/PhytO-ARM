@@ -35,7 +35,7 @@ ifcb:
 arm_ifcb:
     # Configuration related to tasks
     tasks:
-        phy_peak:
+        profiler_peak:
             # Minimum level of the profiled sensor data to trigger a sample at depth
             threshold: 0.0
         scheduled_depth:
@@ -61,12 +61,12 @@ arm_ifcb:
             # For this number of minutes before the next time, no other tasks will be scheduled.
             # Allows any existing tasks to complete and gives the winch time to move into position.
             preparation_window: 15
-            # Use phycoerythrin peak to determine sample depth
-            use_phy_peak: true
-            # If use_phy_peak == true, then this is the offset from the peak to sample at.
-            # This is added directly to the phy_peak depth, so positive values add depth.
+            # Use profiler peak to determine sample depth
+            use_profiler_peak: true
+            # If use_profiler_peak == true, then this is the offset from the peak to sample at.
+            # This is added directly to the profiler peak depth, so positive values add depth.
             peak_offset: 0.5 # m
-            # Depth to sample at if phycoerythrin peak is not used, or if peak not found
+            # Depth to sample at if profiler peak is not used, or if peak not found
             # Ensure this value is within the winch range or PhytO-ARM will abort
             default_depth: 1.0
 
@@ -88,9 +88,11 @@ arm_ifcb:
             baud: 115200
             data_bits: 8
 
+
+    # Determines peak value sought by both scheduled depth and wiz probe
     profiler:
         resolution: 0.02  # m
-        data_topic: "/ctd/aml/port5/phycoerythrin"
+        data_topic: "ctd/aml/port4/phycoerythrin"
         data_field: "value"
 
     motor:
@@ -131,9 +133,19 @@ arm_ifcb:
 
 arm_chanos:
     tasks:
-        downcast:
+        profiler_peak:
+            # If true, will use the profiler to find the peak value
+            # Falls back on slowcast/staged cast behavior otherwise
+            enabled: false
+            # Minimum level of the profiled sensor data to trigger a sample at depth
+            threshold: 0.0
+            peak_expiration: 60  # seconds since last peak to consider it expired
+
+        slowcast:
+            # If false, will do an upcast instead
+            downcast: true
             speed: 0.005  # m/s
-        upcast:
+        staged_cast:
             stage_duration: 60 # seconds
             stages:
                 - 1.5 # meters

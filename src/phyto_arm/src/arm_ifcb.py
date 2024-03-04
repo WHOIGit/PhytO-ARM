@@ -21,8 +21,8 @@ class ArmIFCB(ArmBase):
     last_scheduled_time = None
     next_scheduled_index = 0
 
-    phy_peak_depth = None
-    phy_peak_value = None
+    profiler_peak_depth = None
+    profiler_peak_value = None
 
 
     # Primary method for determining the next task to execute
@@ -35,22 +35,25 @@ class ArmIFCB(ArmBase):
         if not rospy.get_param('winch/enabled'):
             return Task('no_winch', handle_nowinch)
 
+        # If close to scheduled wiz time, prioritize first
         if its_wiz_time():
-            wiz_depth = compute_wiz_depth(self.phy_peak_depth)
+            wiz_depth = compute_wiz_depth(self.profiler_peak_depth)
             return Task('wiz_probe', lambda _: await_wiz_probe(self.start_next_task, wiz_depth))
 
-        if last_task is None or last_task.name in ['scheduled_depth', 'peak_phy_depth', 'wiz_probe']:
+        # Othrwise, start off at min
+        if last_task is None or last_task.name in ['scheduled_depth', 'profiler_peak_depth', 'wiz_probe']:
             return Task('upcast', self.start_next_task, rospy.get_param('winch/range/min'))
-
+        
+        # Then perform a downcast to get a full profile
         if last_task.name == 'upcast':
             return Task('downcast', handle_downcast, rospy.get_param('winch/range/max'))
 
+        # Then go to peak depth, unless it's scheduled depth time
         if last_task.name == 'downcast':
-            if its_scheduled_depth_time(self.phy_peak_value):
+            if its_scheduled_depth_time(self.profiler_peak_value):
                 return Task('scheduled_depth', handle_target_depth, scheduled_depth())
-
-            if self.phy_peak_depth is not None:
-                return Task('peak_phy_depth', handle_target_depth, self.phy_peak_depth)
+            if self.profiler_peak_depth is not None:
+                return Task('profiler_peak_depth', handle_target_depth, self.profiler_peak_depth)
 
             # If we don't have a peak depth, we can't do anything, so just run scheduled depth
             return Task('scheduled_depth', handle_target_depth, scheduled_depth())
@@ -115,9 +118,9 @@ def its_wiz_time():
 
 
 def compute_wiz_depth(peak_depth):
-    if rospy.get_param('tasks/wiz_probe/use_phy_peak'):
+    if rospy.get_param('tasks/wiz_probe/use_profiler_peak'):
         if peak_depth is None:
-            rospy.logwarn('No phy peak depth available, using default wiz probe depth')
+            rospy.logwarn('No profiler peak depth available, using default wiz probe depth')
             return rospy.get_param('tasks/wiz_probe/default_depth')
 
         preferred_depth = peak_depth + rospy.get_param('tasks/wiz_probe/offset')
@@ -166,7 +169,7 @@ def its_scheduled_depth_time(peak_value):
         run_schedule = True
     elif rospy.Time.now() - arm.last_scheduled_time > scheduled_interval:
         run_schedule = True
-    elif peak_value is not None and peak_value < rospy.get_param('tasks/phy_peak/threshold'):
+    elif peak_value is not None and peak_value < rospy.get_param('tasks/profiler_peak/threshold'):
         run_schedule = True
     return run_schedule
 
@@ -202,17 +205,17 @@ def handle_downcast(move_result):
         # For short downcasts profiling will likely fail; switch to scheduled depth
         if not notified:
             rospy.logwarn('No profile data received')
-            arm.phy_peak_depth = None
-            arm.phy_peak_value = None
+            arm.profiler_peak_depth = None
+            arm.profiler_peak_value = None
             arm.start_next_task()
             return
 
     # Find the maximal value in the profile
     argmax = max(range(len(arm.latest_profile.values)), key=lambda i: arm.latest_profile.values[i])
-    arm.phy_peak_value = arm.latest_profile.values[argmax]
-    arm.phy_peak_depth = arm.latest_profile.depths[argmax]
+    arm.profiler_peak_value = arm.latest_profile.values[argmax]
+    arm.profiler_peak_depth = arm.latest_profile.depths[argmax]
 
-    rospy.loginfo(f'Profile peak is {arm.phy_peak_value:.2f} at {arm.phy_peak_depth:.2f} m')
+    rospy.loginfo(f'Profile peak is {arm.profiler_peak_value:.2f} at {arm.profiler_peak_depth:.2f} m')
     arm.start_next_task()
 
 
@@ -242,7 +245,7 @@ def main():
     arm = ArmIFCB(rospy.get_name(), winch_name)
 
     # Subscribe to profiler messages that follow each transit
-    rospy.Subscriber('/profiler', DepthProfile, on_profile_msg)
+    rospy.Subscriber('profiler', DepthProfile, on_profile_msg)
 
     # Setup action client for running IFCB
     ifcb_runner = actionlib.SimpleActionClient('ifcb_runner/sample', RunIFCBAction)
