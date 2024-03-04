@@ -38,7 +38,7 @@ class ArmIFCB(ArmBase):
         # If close to scheduled wiz time, prioritize first
         if its_wiz_time():
             wiz_depth = compute_wiz_depth(self.profiler_peak_depth)
-            return Task('wiz_probe', lambda _: await_wiz_probe(self.start_next_task, wiz_depth))
+            return Task('wiz_probe', lambda _: await_wiz_probe(self.start_next_task), wiz_depth)
 
         # Othrwise, start off at min
         if last_task is None or last_task.name in ['scheduled_depth', 'profiler_peak_depth', 'wiz_probe']:
