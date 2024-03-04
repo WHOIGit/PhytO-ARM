@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 PKG="phyto_arm"
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import sys
 import unittest
@@ -17,6 +17,55 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import arm_ifcb
 from lock_manager import NamedLockManager
 
+from arm_chanos import get_profiler_peak
+
+class TestGetProfilerPeak(unittest.TestCase):
+    @patch('arm_chanos.arm')
+    @patch('arm_chanos.rospy')
+    def test_no_profiler_peak_available(self, mock_rospy, mock_arm):
+        mock_arm.latest_profile = None
+        mock_rospy.logwarn = Mock()
+        result = get_profiler_peak()
+        self.assertIsNone(result)
+        mock_rospy.logwarn.assert_called_with('No profiler peak available')
+        
+    @patch('arm_chanos.arm')
+    @patch('arm_chanos.rospy')
+    def test_profiler_peak_below_threshold(self, mock_rospy, mock_arm):
+        mock_arm.latest_profile = Mock()
+        mock_arm.profiler_peak_value = 0.3
+        mock_rospy.logwarn = Mock()
+        mock_rospy.get_param.return_value = 0.5
+        result = get_profiler_peak()
+        self.assertIsNone(result)
+        mock_rospy.logwarn.assert_called_with('Profiler peak value 0.3 is below threshold')
+        
+    @patch('arm_chanos.arm')
+    @patch('arm_chanos.rospy')
+    def test_profiler_peak_expired(self, mock_rospy, mock_arm):
+        mock_arm.latest_profile = Mock()
+        mock_arm.latest_profile.header.stamp = datetime(2023, 1, 1, 11, 59, 55)
+        mock_arm.profiler_peak_value = 0.6
+        mock_rospy.logwarn = Mock()
+        mock_rospy.get_param.side_effect = [0.5, 5]
+        mock_rospy.Duration.return_value = timedelta(seconds=5)
+        mock_rospy.Time.now.return_value = datetime(2023, 1, 1, 12, 0, 1)
+        result = get_profiler_peak()
+        self.assertIsNone(result)
+        mock_rospy.logwarn.assert_called_with('Profiler peak expired at 2023-01-01 12:00:00')
+        
+    @patch('arm_chanos.arm')
+    @patch('arm_chanos.rospy')
+    def test_valid_profiler_peak(self, mock_rospy, mock_arm):
+        mock_arm.latest_profile = Mock()
+        mock_arm.latest_profile.header.stamp = datetime(2023, 1, 1, 11, 59, 0)
+        mock_arm.profiler_peak_value = 0.6
+        mock_arm.profiler_peak_depth = 0.8
+        mock_rospy.get_param.side_effect = [0.5, 5]
+        mock_rospy.Duration.return_value = timedelta(seconds=60)
+        mock_rospy.Time.now.return_value = datetime(2023, 1, 1, 12, 0, 0)
+        result = get_profiler_peak()
+        self.assertEqual(result, 0.8)
 
 class TestNamedLockManager(unittest.TestCase):
     def setUp(self):
@@ -140,23 +189,23 @@ class TestItsWizTime(unittest.TestCase):
 
 class TestComputeWizDepth(unittest.TestCase):
     @patch('arm_ifcb.rospy')
-    def test_use_phy_peak_disabled(self, mock_rospy):
-        mock_rospy.get_param.return_value = False  # Disable use_phy_peak
-        default_depth = 100  # Set a default depth for when phy_peak usage is disabled
+    def test_use_profiler_peak_disabled(self, mock_rospy):
+        mock_rospy.get_param.return_value = False  # Disable use_profiler_peak
+        default_depth = 100  # Set a default depth for when profiler_peak usage is disabled
         mock_rospy.get_param.return_value = default_depth
         result = arm_ifcb.compute_wiz_depth(50)  # The input value shouldn't matter in this case
-        self.assertEqual(result, default_depth, "Should return default depth when use_phy_peak is disabled.")
+        self.assertEqual(result, default_depth, "Should return default depth when use_profiler_peak is disabled.")
 
     @patch('arm_ifcb.rospy')
-    def test_no_phy_peak_depth_available(self, mock_rospy):
-        mock_rospy.get_param.side_effect = [True, 200, None]  # Enable use_phy_peak, set default depth to 200
+    def test_no_profiler_peak_depth_available(self, mock_rospy):
+        mock_rospy.get_param.side_effect = [True, 200, None]  # Enable use_profiler_peak, set default depth to 200
         result = arm_ifcb.compute_wiz_depth(None)  # No peak depth available
-        self.assertEqual(result, 200, "Should return default depth when no phy peak depth is available.")
+        self.assertEqual(result, 200, "Should return default depth when no profiler peak depth is available.")
 
     @patch('arm_ifcb.rospy')
     def test_preferred_depth_within_winch_range(self, mock_rospy):
         mock_rospy.get_param.side_effect = lambda param: {
-            'tasks/wiz_probe/use_phy_peak': True,
+            'tasks/wiz_probe/use_profiler_peak': True,
             'tasks/wiz_probe/offset': 10,
             'winch/range/max': 300,
             'winch/range/min': 100,
@@ -170,7 +219,7 @@ class TestComputeWizDepth(unittest.TestCase):
     @patch('arm_ifcb.rospy')
     def test_preferred_depth_exceeds_max_depth(self, mock_rospy):
         mock_rospy.get_param.side_effect = lambda param: {
-            'tasks/wiz_probe/use_phy_peak': True,
+            'tasks/wiz_probe/use_profiler_peak': True,
             'tasks/wiz_probe/offset': 50,
             'winch/range/max': 200,
             'winch/range/min': 50,
@@ -184,7 +233,7 @@ class TestComputeWizDepth(unittest.TestCase):
     @patch('arm_ifcb.rospy')
     def test_preferred_depth_below_min_depth(self, mock_rospy):
         mock_rospy.get_param.side_effect = lambda param: {
-            'tasks/wiz_probe/use_phy_peak': True,
+            'tasks/wiz_probe/use_profiler_peak': True,
             'tasks/wiz_probe/offset': -20,
             'winch/range/max': 250,
             'winch/range/min': 100,
