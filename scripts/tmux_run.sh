@@ -24,7 +24,8 @@ else
   
   # Select pane 1 and launch the main process in docker
   tmux select-pane -t 0
-  tmux send-keys "./scripts/docker_run.sh $CONFIG" C-m
+  tmux send-keys "./scripts/docker_run.sh -b $CONFIG" C-m
+  tmux send-keys "./phyto-arm start main mounted_config.yaml" C-m
   
   # Select pane 2 and launch the IFCB arm in the same container
   tmux select-pane -t 1
