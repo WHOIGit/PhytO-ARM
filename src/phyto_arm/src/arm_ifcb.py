@@ -237,7 +237,7 @@ def main():
     global set_state
     global ifcb_runner
 
-    rospy.init_node('arm', anonymous=True, log_level=rospy.DEBUG)
+    rospy.init_node('arm_ifcb', log_level=rospy.DEBUG)
 
     winch_name = None
     if rospy.get_param('winch/enabled') == True:
