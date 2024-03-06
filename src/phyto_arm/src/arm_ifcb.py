@@ -118,22 +118,23 @@ def its_wiz_time():
 
 
 def compute_wiz_depth(peak_depth):
+    wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
     if rospy.get_param('tasks/wiz_probe/use_profiler_peak'):
-        if peak_depth is None:
+        if peak_depth is not None:
+            wiz_depth = peak_depth + rospy.get_param('tasks/wiz_probe/peak_offset')
+        else:
             rospy.logwarn('No profiler peak depth available, using default wiz probe depth')
-            return rospy.get_param('tasks/wiz_probe/default_depth')
+            wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
 
-        preferred_depth = peak_depth + rospy.get_param('tasks/wiz_probe/offset')
-        if preferred_depth > rospy.get_param('winch/range/max'):
-            rospy.logwarn('Preferred wiz probe depth exceeds max depth, using max depth')
-            return rospy.get_param('winch/range/max')
-        if preferred_depth < rospy.get_param('winch/range/min'):
-            rospy.logwarn('Preferred wiz probe depth is less than min depth, using min depth')
-            return rospy.get_param('winch/range/min')
+    # Check that adjustments haven't caused us to exceed bounds. Go with bound if so
+    if wiz_depth > rospy.get_param('winch/range/max'):
+        rospy.logwarn('Preferred wiz probe depth exceeds max depth, using max depth')
+        wiz_depth = rospy.get_param('winch/range/max')
+    if wiz_depth < rospy.get_param('winch/range/min'):
+        rospy.logwarn('Preferred wiz probe depth is less than min depth, using min depth')
+        wiz_depth = rospy.get_param('winch/range/min')
 
-        return preferred_depth
-    else:
-        return rospy.get_param('tasks/wiz_probe/default_depth')
+    return wiz_depth
 
 
 def await_wiz_probe(callback):
@@ -225,11 +226,8 @@ def handle_target_depth(move_result):
 
 
 def handle_nowinch():
-    try:
-        send_ifcb_action()
-        arm.start_next_task()
-    except:
-        raise
+    send_ifcb_action()
+    arm.start_next_task()
 
 
 def main():
