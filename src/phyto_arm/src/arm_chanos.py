@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 import numpy as np
 import rospy
+from threading import Lock
 
 from arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile
 
+
 class ArmChanos(ArmBase):
-    stage_index = 0
+    step_index = 0
     latest_profile = None
     profiler_peak_value = None
     profiler_peak_depth = None
     profiler_peak_time = None
+
+    profiler_step_index = 0
+
 
     # Primary method for determining the next task to execute
     # Each Task object takes:
@@ -22,47 +27,54 @@ class ArmChanos(ArmBase):
         assert rospy.get_param('winch/enabled'), 'Winch is not enabled'
 
         # If the profiler peak task is enabled, prioritize first
-        if rospy.get_param('tasks/profiler_peak/enabled'):
-            profiler_peak_depth = get_profiler_peak()
-            if profiler_peak_depth is not None:
-                return Task('seek_profiler_peak', await_sensor, profiler_peak_depth)
+        if rospy.get_param('tasks/profiler_peak/enabled') and profiler_peak_ready():
+            if last_task is None or last_task.name == 'profile_step':
+                next_depth = next_profiler_depth(self.profiler_step_index)
+                self.profiler_step_index += 1
+                if self.step_index == len(rospy.get_param('tasks/profiler_peak/offset_steps')):
+                    self.step_index = 0
+                    return Task('profile_last_step', await_sensor, next_depth)
+                return Task('profile_step', await_sensor, next_depth)
 
-        # If the last task was the staged cast, move into position for a slowcast
-        if last_task is None or last_task.name in ['last_stage', 'seek_profiler_peak']:
-            if rospy.get_param('tasks/slowcast/downcast'):
-                goal_depth = rospy.get_param('winch/range/min')
-            else:
-                goal_depth = rospy.get_param('winch/range/max')
-            return Task('slowcast_position', self.start_next_task, goal_depth)
+        # For continuous profile, figure out the start and goal depths
+        direction = rospy.get_param('tasks/continuous_profile/direction')
+        if direction == 'up':
+            continuous_start = rospy.get_param('winch/range/max')
+            continuous_goal = rospy.get_param('winch/range/min')
+        elif direction == 'down':
+            continuous_start = rospy.get_param('winch/range/min')
+            continuous_goal = rospy.get_param('winch/range/max')
+        else:
+            raise ValueError(f'Unexpected continuous profile direction: {direction}')
 
-        # If in the slowcast position, execute the slowcast
-        if last_task.name == 'slowcast_position':
-            if rospy.get_param('tasks/slowcast/downcast'):
-                goal_depth = rospy.get_param('winch/range/max')
-            else:
-                goal_depth = rospy.get_param('winch/range/min')
-            speed = rospy.get_param('tasks/slowcast/speed')
-            return Task('slowcast', self.start_next_task, goal_depth, speed)
+        # If the last task was the step cast, move into position for a continuous cast
+        if last_task is None or last_task.name in ['last_step', 'seek_profiler_peak']:
+            return Task('continuous_position', self.start_next_task, continuous_start)
+
+        # If in the continuous position, execute the continuous profile
+        if last_task.name == 'continuous_position':
+            speed = rospy.get_param('tasks/continuous_profile/speed')
+            return Task('continuous_profile', self.start_next_task, continuous_goal, speed)
         
-        # After slowcast, execute every stage in staged cast
-        if last_task.name in ['slowcast', 'stage']:
-            next_depth = stage_depth(self.stage_index)
-            self.stage_index += 1
+        # After continuous, execute every step in stepped cast
+        if last_task.name in ['continuous_profile', 'step']:
+            next_depth = step_depth(self.step_index)
+            self.step_index += 1
 
-            # If at the last stage, reset counter and identify as last stage
-            if self.stage_index == len(rospy.get_param('tasks/staged_cast/stages')):
-                self.stage_index = 0
-                return Task('last_stage', await_sensor, next_depth)
+            # If at the last step, reset counter and identify as last step
+            if self.step_index == len(rospy.get_param('tasks/step_profile/steps')):
+                self.step_index = 0
+                return Task('last_step', await_sensor, next_depth)
             
-            # Otherwise, just move to the next stage
-            return Task('stage', await_sensor, next_depth)
+            # Otherwise, just move to the next step
+            return Task('step', await_sensor, next_depth)
         raise ValueError(f'Unhandled next-task state where last task={last_task.name}')
 
 # Global reference to arm state
 arm = None
 
 
-def get_profiler_peak():
+def profiler_peak_ready():
     if arm.latest_profile is None:
         rospy.logwarn('No profiler peak available')
         return None
@@ -70,7 +82,7 @@ def get_profiler_peak():
     if arm.profiler_peak_value < rospy.get_param('tasks/profiler_peak/threshold'):
         rospy.logwarn(f'Profiler peak value {arm.profiler_peak_value} is below threshold')
         return None
-    
+
     # Check that last peak hasn't passed expiration window
     expiration_window = rospy.Duration(rospy.get_param('tasks/profiler_peak/peak_expiration'))
     expiration_time = arm.latest_profile.header.stamp + expiration_window
@@ -78,7 +90,25 @@ def get_profiler_peak():
         rospy.logwarn(f'Profiler peak expired at {expiration_time}')
         return None
 
-    return arm.profiler_peak_depth
+
+
+def next_profiler_depth(index):
+    if arm.latest_profile is None:
+        raise ValueError('No profiler peak available')
+    
+    steps = rospy.get_param('tasks/profiler_peak/offset_steps')
+    offset = steps[index]
+
+    next_depth = arm.profiler_peak_depth + offset
+
+    if next_depth > rospy.get_param('winch/range/max'):
+        rospy.logwarn('Next peak profile depth exceeds max depth, using max depth')
+        next_depth = rospy.get_param('winch/range/max')
+    if next_depth < rospy.get_param('winch/range/min'):
+        rospy.logwarn('Next peak profile depth is less than min depth, using min depth')
+        next_depth = rospy.get_param('winch/range/min')
+
+    return next_depth
 
 
 def on_profile_msg(msg):
@@ -90,16 +120,16 @@ def on_profile_msg(msg):
 
 
 def await_sensor(move_result):
-    duration = rospy.get_param('tasks/staged_cast/stage_duration')
-    rospy.loginfo(f"Waiting {duration} seconds for DC sensor to complete.")
+    duration = rospy.get_param('tasks/dwell_time')
+    rospy.loginfo(f'Waiting {duration} seconds for DC sensor to complete.')
     rospy.sleep(duration)
     rospy.loginfo('Done waiting for DC sensor to complete.')
     arm.start_next_task()
 
 
-def stage_depth(index):
-    stages = rospy.get_param('tasks/staged_cast/stages')
-    return stages[index]
+def step_depth(index):
+    steps = rospy.get_param('tasks/step_profile/steps')
+    return steps[index]
 
 
 def main():
