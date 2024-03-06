@@ -7,10 +7,17 @@ CONFIG='./configs/config.yaml'
 COMMAND='./phyto-arm start main mounted_config.yaml'
 
 # Parse command-line options
-while getopts ":b" opt; do
+while getopts ":b:h" opt; do
     case ${opt} in
         b)
             COMMAND='bash'
+            ;;
+        h)
+            echo "Usage: ./scripts/docker_run.sh [-b] <config file path>"
+            echo "-h: Help message."
+            echo "-b: Open shell into container instead of launching phyto-arm."
+            echo "<config file path>: Defaults to ./configs/config.yaml if none provided."
+            exit 1
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
