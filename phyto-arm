@@ -136,16 +136,16 @@ def _start(args):
             proc.wait()
             print(f'{name} ({proc.pid}) eventually exited')
 
+    # Set up alerts for when we terminate
+    atexit.register(send_alerts, config.get('alerts', []))
+
+    # Allow the config to override where logs are stored
+    log_dir = config.get('launch_args', {}).get('log_dir')
+    if log_dir is not None:
+        env['ROS_LOG_DIR'] = log_dir
+
     # The following should only launch once, with the main PhytO-ARM processes
     if args.launch_name == "main":
-        # Set up alerts for when we terminate
-        atexit.register(send_alerts, config.get('alerts', []))
-
-        # Allow the config to override where logs are stored
-        log_dir = config.get('launch_args', {}).get('log_dir')
-        if log_dir is not None:
-            env['ROS_LOG_DIR'] = log_dir
-
         # Before we continue compress any older log files
         #print('Compressing older logs')
         #os.system(f'find {shlex.quote(log_dir)} -iname \*.log -exec gzip {{}} \;')
