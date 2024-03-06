@@ -7,7 +7,7 @@ CONFIG='./configs/config.yaml'
 COMMAND='./phyto-arm start main mounted_config.yaml'
 
 # Parse command-line options
-while getopts ":b:h" opt; do
+while getopts ":bh" opt; do
     case ${opt} in
         b)
             COMMAND='bash'
