@@ -41,13 +41,33 @@ The following devices are optional:
 
 ### Install with Docker (recommended)
 
-Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system.
+First ensure `docker` is installed:
+```bash
+docker -v
+```
 
-```docker pull whoi/phyto-arm:latest```
+If this does not print a version number, install with:
+```bash
+sudo apt-get update && sudo apt-get install docker-io
+```
 
-The container image can also be built with
+Running Docker will also require `sudo` unless you add your user to the `docker` group:
 
-    docker build --tag whoi-phyto-arm .
+```bash
+# Adds user 'ifcb' to 'docker' group
+sudo usermod -aG docker ifcb && newgrp docker
+```
+
+
+Finally, pull the `phyto-arm` image. Container images are built for `x86_64` and `aarch64` and published automatically on [Docker Hub][hub] by the continuous integration system.
+
+```bash
+docker pull whoi/phyto-arm:latest
+```
+
+Alternatively, the container image can be built with
+
+    docker build --tag whoi/phyto-arm .
 
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
 
@@ -172,11 +192,15 @@ To launch all three simultaneously as separate panes in a tmux session, run the 
 
 ### Running natively
 
-The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
+The `phyto-arm` tool starts the main ROS nodes and loads the provided configuration file.
 
-    $ ./phyto-arm start config/hades.yaml
+    $ ./phyto-arm start main config/config.yaml
     $ ./phyto-arm stop
 
+In seperate terminal sessions, launch one or more arms:
+
+    $ ./phyto-arm start arm_chanos config/config.yaml
+    $ ./phyto-arm start arm_ifcb config/config.yaml
 
 The ROS nodes will be run in the background (so that you can disconnect from the system, for example) within a `screen` session. This session can be attached with the convenience command
 
