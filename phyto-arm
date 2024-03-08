@@ -83,13 +83,13 @@ def prep_roslaunch(config, env, package, launchfile):
 
 
 # Send alerts when the program stops
-def send_alerts(alert_config):
+def send_alerts(alert_config, launch_name):
     for alert in alert_config:
         assert alert['type'] == 'slack' and alert['url']
         urllib.request.urlopen(
             alert['url'],
             json.dumps({
-                'text': 'PhytO-ARM stopped'
+                'text': f'PhytO-ARM {launch_name} stopped'
             }).encode()
         )
 
@@ -137,7 +137,7 @@ def _start(args):
             print(f'{name} ({proc.pid}) eventually exited')
 
     # Set up alerts for when we terminate
-    atexit.register(send_alerts, config.get('alerts', []))
+    atexit.register(send_alerts, config.get('alerts', []), args.launch_name)
 
     # Allow the config to override where logs are stored
     log_dir = config.get('launch_args', {}).get('log_dir')
