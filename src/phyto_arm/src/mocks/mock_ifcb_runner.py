@@ -43,7 +43,7 @@ class MockIFCBActionServer:
 
 def main():
     rospy.init_node('mock_ifcb_action_server')
-    server = MockIFCBActionServer('~run')
+    server = MockIFCBActionServer('~sample')
     rospy.spin()
 
 if __name__ == '__main__':

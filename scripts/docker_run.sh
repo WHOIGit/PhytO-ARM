@@ -42,5 +42,5 @@ docker run --rm -it \
     --volume /home/ifcb/IFCBacquire/Host/Routines:/routines:ro \
     --volume /mnt/data:/mnt/data \
     --device /dev/ttyS3 \
-    phyto-arm:latest \
+    whoi/phyto-arm:latest \
     $COMMAND
