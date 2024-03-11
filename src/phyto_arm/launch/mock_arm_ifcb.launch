@@ -2,7 +2,7 @@
     <!-- Most settings are in config.yaml, which is easier to edit -->
     <rosparam command="load" file="$(arg config_file)" />
 
-    <group ns="arm_ifcb" if="$(arg arm_ifcb)">
+    <group ns="arm_ifcb">
         <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
 
         <node name="ctd" pkg="phyto_arm" type="mock_ctd.py" />
