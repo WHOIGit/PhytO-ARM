@@ -2,7 +2,7 @@
     <!-- Most settings are in config.yaml, which is easier to edit -->
     <rosparam command="load" file="$(arg config_file)" />
 
-    <group ns="arm_chanos" if="$(arg arm_chanos)">
+    <group ns="arm_chanos">
         <node name="ctd" pkg="phyto_arm" type="mock_ctd.py" />
 
         <node name="arm" pkg="phyto_arm" type="arm_chanos.py" />
