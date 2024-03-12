@@ -91,6 +91,8 @@ def wiz_to_rostime(hhmm_time):
 
     # Create a rospy.Time object
     unix_timestamp = datetime.combine(wiz_date, wiz_time).timestamp()
+
+    # Create a rospy.Time object
     return rospy.Time.from_sec(unix_timestamp)
 
 

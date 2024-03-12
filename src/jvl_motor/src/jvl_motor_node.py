@@ -148,7 +148,7 @@ def main():
         msg.Motion,
         queue_size=1
     )
-    
+
     # Create services
     services = [
         rospy.Service(
