@@ -112,6 +112,7 @@ def compute_profiler_steps():
 
 def on_profile_msg(msg):
     arm.latest_profile = msg
+
     # Find the maximal value in the profile
     argmax = max(range(len(arm.latest_profile.values)), key=lambda i: arm.latest_profile.values[i])
     arm.profiler_peak_value = arm.latest_profile.values[argmax]

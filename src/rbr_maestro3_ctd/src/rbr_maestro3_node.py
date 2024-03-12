@@ -99,7 +99,7 @@ async def main():
         # Set covariance fields to -1, the standard "not valid" value
         ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
             ctd.salinity_covar = ctd.sound_speed_covar = -1
-        
+
         # Construct the DepthPressure message
         dp = DepthPressure()
         dp.depth = depth
