@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+from dataclasses import dataclass
 import functools
 import math
 from threading import Event, Condition

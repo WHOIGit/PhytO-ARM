@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-import numpy as np
+
 import rospy
-from threading import Lock
 
 from arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile
@@ -152,7 +151,7 @@ def main():
     rospy.init_node('arm_chanos', log_level=rospy.DEBUG)
 
     winch_name = None
-    if rospy.get_param('winch/enabled') == True:
+    if rospy.get_param('winch/enabled') is True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
     arm = ArmChanos(rospy.get_name(), winch_name)
 
