@@ -8,9 +8,8 @@ import actionlib
 import numpy as np
 import rospy
 
-from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
-
 from arm_base import ArmBase, Task
+from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
 
 
 class ArmIFCB(ArmBase):
@@ -24,6 +23,8 @@ class ArmIFCB(ArmBase):
     profiler_peak_depth = None
     profiler_peak_value = None
 
+    last_cart_debub_time = None
+    last_bead_time = None
 
     # Primary method for determining the next task to execute
     # Each Task object takes:
@@ -43,7 +44,7 @@ class ArmIFCB(ArmBase):
         # Othrwise, start off at min
         if last_task is None or last_task.name in ['scheduled_depth', 'profiler_peak_depth', 'wiz_probe']:
             return Task('upcast', self.start_next_task, rospy.get_param('winch/range/min'))
-        
+
         # Then perform a downcast to get a full profile
         if last_task.name == 'upcast':
             return Task('downcast', handle_downcast, rospy.get_param('winch/range/max'))
@@ -232,7 +233,6 @@ def handle_nowinch():
 
 def main():
     global arm
-    global set_state
     global ifcb_runner
 
     rospy.init_node('arm_ifcb', log_level=rospy.DEBUG)

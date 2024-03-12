@@ -46,7 +46,7 @@ class ArmChanos(ArmBase):
         if last_task.name == 'continuous_position':
             speed = rospy.get_param('tasks/continuous_profile/speed')
             return Task('continuous_profile', self.start_next_task, continuous_goal, speed)
-        
+
         # After continuous, execute every step in stepped cast
         if last_task.name in ['continuous_profile', 'absolute_step']:
 
@@ -70,7 +70,7 @@ def profiler_peak_ready():
     if arm.latest_profile is None:
         rospy.logwarn('No profiler peak available')
         return False
-    
+
     if arm.profiler_peak_value < rospy.get_param('tasks/profiler_peak/threshold'):
         rospy.logwarn(f'Profiler peak value {arm.profiler_peak_value} is below threshold')
         return False
@@ -88,7 +88,7 @@ def profiler_peak_ready():
 def compute_profiler_steps():
     if arm.latest_profile is None:
         raise ValueError('No profiler peak available')
-    
+
     depths = []
     offsets = rospy.get_param('tasks/profiler_peak/offset_steps')
 
@@ -134,13 +134,13 @@ def continuous_direction():
 def await_sensor(move_result):
     duration = rospy.get_param('tasks/dwell_time')
     rospy.loginfo(f'Waiting {duration} seconds for DC sensor to complete.')
-    
+
     def timer_callback(event):
         if rospy.is_shutdown():
             rospy.logwarn('Node shutdown detected. Aborting DC sensor wait.')
             return
 
-        rospy.loginfo(f'Done waiting for DC sensor to complete.')
+        rospy.loginfo('Done waiting for DC sensor to complete.')
         arm.start_next_task()
 
     arm.timer = rospy.Timer(rospy.Duration(duration), timer_callback, oneshot=True)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import rospy
 import random
+import rospy
+
 from std_msgs.msg import Float64
 from ds_sensor_msgs.msg import Ctd, DepthPressure
 

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+
+from threading import Lock, Semaphore
+
 import rospy
 from phyto_arm.srv import LockOperation, LockCheck, LockOperationResponse, LockCheckResponse
-from threading import Lock, Semaphore
 
 class NamedLockManager:
     def __init__(self, max_concurrent_locks):
@@ -37,7 +39,7 @@ class NamedLockManager:
 if __name__ == "__main__":
     rospy.init_node('lock_manager')
     lock_manager = NamedLockManager(rospy.get_param('~max_moving_winches'))
-    
+
     def handle_acquire(req):
         success = lock_manager.acquire_lock(req.arm_name)
         return LockOperationResponse(success=success)
@@ -53,5 +55,5 @@ if __name__ == "__main__":
     rospy.Service('~acquire', LockOperation, handle_acquire)
     rospy.Service('~release', LockOperation, handle_release)
     rospy.Service('~check', LockCheck, handle_check)
-    
+
     rospy.spin()
