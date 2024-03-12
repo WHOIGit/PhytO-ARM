@@ -39,10 +39,10 @@ def udp_to_ros_node():
 
     buffer = b""
     buffer_size = 32768  # 32KB buffer size
-    
+
     while not rospy.is_shutdown():
         try:
-            data, addr = sock.recvfrom(buffer_size)
+            data, _ = sock.recvfrom(buffer_size)
             buffer += data
 
             # Process all complete messages in the buffer

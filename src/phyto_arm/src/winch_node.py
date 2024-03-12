@@ -194,8 +194,7 @@ async def move_to_depth(server, goal):
     rpm_ratio = 60 * gear_ratio / spool_circumference
 
     # Create a function to convert distances to encoder counts
-    dist2encoder = \
-        lambda d: int(round(8192 * gear_ratio * d / spool_circumference))
+    dist2encoder = lambda d: int(round(8192 * gear_ratio * d / spool_circumference))
 
     # Set some position bounds on the motor itself
     rospy.logdebug(f'Current motor position is {motor.value.position:.2f}')
@@ -213,8 +212,7 @@ async def move_to_depth(server, goal):
         server.set_aborted(text='Encoder position could wrap -- reset offset')
         return
 
-    rospy.loginfo('Motor position envelope is ' + 
-                  f'({lower_bound:.2f}, {upper_bound:.2f})')
+    rospy.loginfo(f'Motor position envelope is ({lower_bound:.2f}, {upper_bound:.2f})')
 
     # Record the time that we start moving
     start_time = rospy.Time.now()
@@ -328,8 +326,7 @@ async def main():
 
     # Register signal handlers the same way rospy would
     for sig in [signal.SIGTERM, signal.SIGINT]:
-        loop.add_signal_handler(sig, rospy.signal_shutdown,
-                                f'signal-{sig.value}')
+        loop.add_signal_handler(sig, rospy.signal_shutdown, f'signal-{sig.value}')
     rospy.core.add_preshutdown_hook(lambda reason: loop.stop())
 
     # Wait for services to become available

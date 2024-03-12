@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 PKG="phyto_arm"
+
 from datetime import datetime, timedelta
 import os
+import rospy
 import sys
 import unittest
-from unittest.mock import patch, Mock, MagicMock
-
-import numpy as np
-import rospy
+from unittest.mock import patch, Mock
 
 
 # Hack for getting this to recognize local modules for import
@@ -28,7 +27,7 @@ class TestProfilerPeakReady(unittest.TestCase):
         result = profiler_peak_ready()
         self.assertFalse(result)
         mock_rospy.logwarn.assert_called_with('No profiler peak available')
-        
+
     @patch('arm_chanos.arm')
     @patch('arm_chanos.rospy')
     def test_profiler_peak_below_threshold(self, mock_rospy, mock_arm):
@@ -39,7 +38,7 @@ class TestProfilerPeakReady(unittest.TestCase):
         result = profiler_peak_ready()
         self.assertFalse(result)
         mock_rospy.logwarn.assert_called_with('Profiler peak value 0.3 is below threshold')
-        
+
     @patch('arm_chanos.arm')
     @patch('arm_chanos.rospy')
     def test_profiler_peak_expired(self, mock_rospy, mock_arm):
@@ -53,7 +52,7 @@ class TestProfilerPeakReady(unittest.TestCase):
         result = profiler_peak_ready()
         self.assertFalse(result)
         mock_rospy.logwarn.assert_called_with('Profiler peak expired at 2023-01-01 12:00:00')
-        
+
     @patch('arm_chanos.arm')
     @patch('arm_chanos.rospy')
     def test_profiler_peak_ready(self, mock_rospy, mock_arm):
@@ -75,7 +74,7 @@ class TestComputeProfilerSteps(unittest.TestCase):
         with self.assertRaises(ValueError) as exc:
             compute_profiler_steps()
         self.assertEqual(str(exc.exception), 'No profiler peak available')
-        
+
     @patch('arm_chanos.arm')
     @patch('arm_chanos.rospy')
     def test_compute_profiler_steps(self, mock_rospy, mock_arm):
@@ -84,7 +83,7 @@ class TestComputeProfilerSteps(unittest.TestCase):
         mock_rospy.get_param.side_effect = [[-1.0, 1.0, 2.0], 10.0, 0.0]
         result = compute_profiler_steps()
         self.assertEqual(result, [4.0, 6.0, 7.0])
-        
+
     @patch('arm_chanos.arm')
     @patch('arm_chanos.rospy')
     def test_compute_profiler_steps_exceeds_max(self, mock_rospy, mock_arm):
@@ -93,7 +92,7 @@ class TestComputeProfilerSteps(unittest.TestCase):
         mock_rospy.get_param.side_effect = [[1.0, 2.0], 10.0, 0.0]
         result = compute_profiler_steps()
         self.assertEqual(result, [10.0, 10.0])
-        
+
     @patch('arm_chanos.arm')
     @patch('arm_chanos.rospy')
     def test_compute_profiler_steps_less_than_min(self, mock_rospy, mock_arm):
@@ -155,15 +154,15 @@ class TestWizToRosTime(unittest.TestCase):
         # Mock datetime.now() to return a specific point in time in the evening
         mock_now = datetime(2024, 2, 16, 23, 0)  # Feb 16, 2024, 11:00 PM
         mock_datetime.now.return_value = mock_now
-        
+
         # Calculate the expected ROS time for the next day
         target_time = datetime(2024, 2, 17, 9, 0)  # Target time: Feb 17, 2024, 9:00 AM
         expected_secs_since_epoch = target_time.timestamp()
         expected_ros_time = rospy.Time.from_sec(expected_secs_since_epoch)
-        
+
         # Call the function under test and get the return value
         result_ros_time = arm_ifcb.wiz_to_rostime("09:00")
-        
+
         # Verify that the result matches the expected ROS time for the next day
         self.assertEqual(result_ros_time.secs, expected_ros_time.secs, "The returned ROS time does not match the expected time for the next day.")
 
@@ -173,15 +172,15 @@ class TestWizToRosTime(unittest.TestCase):
         # Mock datetime.now() to return a specific point in time
         mock_now = datetime(2024, 2, 16, 10, 30)  # Feb 16, 2024, 10:30 AM
         mock_datetime.now.return_value = mock_now
-        
+
         # Calculate the expected ROS time for the same day but later
         target_time = datetime(2024, 2, 16, 10, 0)  # Target time: 10:00 AM same day
         expected_secs_since_epoch = target_time.timestamp() + 86400  # Adding one day since 10:00 AM has already passed
         expected_ros_time = rospy.Time.from_sec(expected_secs_since_epoch)
-        
+
         # Call the function under test with a time before the current mock time to ensure it rolls over to the next day
         result_ros_time = arm_ifcb.wiz_to_rostime("10:00")
-        
+
         # Verify that the result matches the expected ROS time for the next day due to time rollover
         self.assertEqual(result_ros_time.secs, expected_ros_time.secs, "The returned ROS time should roll over to the next day when the target time is before the current time.")
 
@@ -362,5 +361,3 @@ class TestItsScheduledDepthTime(unittest.TestCase):
 #         with patch('arm_ifcb.rospy.Time.now', return_value=rospy.Time.from_sec(1000)):
 #             arm_ifcb.scheduled_depth()
 #             self.assertEqual(mock_arm.last_scheduled_time.secs, 1000, "The last scheduled time should be updated to the current time.")
-
-
