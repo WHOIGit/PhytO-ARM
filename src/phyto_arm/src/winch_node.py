@@ -134,6 +134,7 @@ async def move_to_depth(server, goal):
         asyncio.create_task(depth.wait()): "depth status",
         asyncio.create_task(motor.wait()): "motor status"
     }
+
     # Get an initial depth fix and motor status message
     _, pending = await asyncio.wait(tasks.keys(), timeout=2.0, return_when=asyncio.ALL_COMPLETED)
 
@@ -169,6 +170,7 @@ async def move_to_depth(server, goal):
     # Velocity function
     max_speed = rospy.get_param('~max_speed' )
     half_speed_dist = rospy.get_param('~half_speed_dist')
+
     # Assert both are not None
     assert max_speed is not None and half_speed_dist is not None, 'Winch speed config invalid'
     assert goal.velocity < max_speed, 'Goal velocity exceeds max speed'

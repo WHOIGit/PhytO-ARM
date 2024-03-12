@@ -65,6 +65,7 @@ def validate_config_recursive(user_data, default_data, annotations, key_path=[])
                 elif isinstance(default_value, dict):
                     if not validate_config_recursive(user_data[key], default_value, annotations, current_path):
                         all_valid = False
+
         # If a key from default config is not in the annotations, it's assumed required.
         elif key not in user_data:
             print(f"Key {'.'.join(current_path)} is required since not #optional but missing from the user YAML")

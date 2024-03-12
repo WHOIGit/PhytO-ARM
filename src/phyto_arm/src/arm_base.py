@@ -42,6 +42,7 @@ class ArmBase:
             release_move_clearance = rospy.ServiceProxy('/lock_manager/release', LockOperation)
             lock_op = LockOperationRequest(arm_name)
 
+
             # Bind lock operations to instance
             self.request_clearance = lambda: acquire_move_clearance(lock_op).success
             self.release_clearance = lambda: release_move_clearance(lock_op).success
@@ -79,23 +80,25 @@ class ArmBase:
         if rospy.get_param('winch/enabled') is not True:
             raise ValueError('Move aborted: winch is disabled in config')
 
+
         # Safety check: Do not exceed depth bounds
         if depth < rospy.get_param('winch/range/min'):
             raise ValueError(f'Move aborted: depth {depth} is below min {rospy.get_param("winch/range/max")}')
         elif depth > rospy.get_param('winch/range/max'):
             raise ValueError(f'Move aborted: depth {depth} is above max {rospy.get_param("winch/range/max")}')
 
+
         # Set max speed if not specified
         if speed is None:
             speed = rospy.get_param('winch/max_speed')
+
 
         # Safety check: Speed cannot exceed max speed
         elif speed > rospy.get_param('winch/max_speed'):
             raise ValueError(f'Move aborted: speed {speed} is above max {rospy.get_param("winch/max_speed")}')
         if self.winch_busy():
             raise RuntimeError('Move aborted: winch in unexpected busy state')
-
-        rospy.loginfo(f'All checks passed; Moving winch to {depth}')
+        rospy.loginfo(f"All checks passed; Moving winch to {depth}")
 
         # Intermediate callback for ensuring move was a success and to release lock
         # before calling the task's callback
@@ -103,6 +106,7 @@ class ArmBase:
             try:
                 # Ensure winch move was successful
                 assert state == actionlib.GoalStatus.SUCCEEDED
+
 
                 # Free up semaphore for another winch movement
                 assert self.release_clearance()
@@ -138,9 +142,11 @@ class ArmBase:
                     rospy.logwarn(f'No winch; running {task.name}')
                     task.callback()
 
+
                 # Otherwise, move winch
                 else:
                     rospy.logwarn('Arm waiting for clearance')
+
 
                     # TODO: Consider replacing this with a queueing mechanism.  Requires setting up
                     # callbacks via ROS service calls. Unnecessarily complex for a 2 winch system,
@@ -149,6 +155,7 @@ class ArmBase:
                     while not rospy.is_shutdown() and not self.request_clearance():
                         # Wait until central semaphore clears us to move
                         rospy.sleep(1)
+
 
                     # TODO: Optimize task evaluation. Currently we are blocking on the assumption that
                     # movement will be needed; this is not always the case. Not a problem for 1 or 2

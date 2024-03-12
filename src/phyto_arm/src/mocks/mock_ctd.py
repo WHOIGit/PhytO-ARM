@@ -9,11 +9,13 @@ last_depth = 0.5  # Default depth value
 
 def generate_mock_ctd():
     ctd = Ctd()
+
     # Generate random or fixed values for CTD parameters
     ctd.conductivity = random.uniform(0, 5)  # Example random value, in S/m
     ctd.temperature = random.uniform(-2, 30)  # Example random value, in Celsius
     ctd.pressure = random.uniform(0, 600)  # Example random value, in dbar
     ctd.sound_speed = random.uniform(1400, 1600)  # Example random value, in m/s
+
     # Set covariance fields to -1, indicating "not valid"
     ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
         ctd.salinity_covar = ctd.sound_speed_covar = -1
@@ -36,6 +38,7 @@ def main():
     global depth_pub
     rospy.init_node('mock_sensor_node')
     rospy.logwarn(f'Starting mock sensor node {rospy.get_name()}')
+
     # Subscribe to the mock depth topic from the 'mock_winch'
     rospy.Subscriber("mock_depth", Float64, depth_callback)
 
