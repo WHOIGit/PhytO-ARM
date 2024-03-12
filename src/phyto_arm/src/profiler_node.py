@@ -7,7 +7,8 @@ import threading
 
 import numpy as np
 import rospy
-import scipy.interpolate, scipy.signal
+import scipy.interpolate
+import scipy.signal
 
 from ds_sensor_msgs.msg import DepthPressure
 

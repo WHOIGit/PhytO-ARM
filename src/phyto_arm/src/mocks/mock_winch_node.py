@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import rospy
 import actionlib
-from phyto_arm.msg import MoveToDepthAction, MoveToDepthFeedback, MoveToDepthResult
+
 from std_msgs.msg import Float64  # Assuming depth is published as a simple float
+
+from phyto_arm.msg import MoveToDepthAction, MoveToDepthFeedback, MoveToDepthResult
 
 class MockActionServer:
     def __init__(self, name, action_spec):
@@ -43,7 +45,7 @@ class MockActionServer:
 def main():
     rospy.init_node('mock_winch')
     rospy.logdebug(f'Starting mock winch node {rospy.get_name()}')
-    server = MockActionServer('winch/move_to_depth', MoveToDepthAction)
+    MockActionServer('winch/move_to_depth', MoveToDepthAction)
     rospy.spin()
 
 if __name__ == '__main__':

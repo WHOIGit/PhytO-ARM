@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-import yaml
+
 import sys
+import yaml
+
 
 def extract_annotations(file_path):
     annotations = {}
