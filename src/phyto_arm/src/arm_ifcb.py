@@ -240,7 +240,7 @@ def main():
     rospy.init_node('arm_ifcb', log_level=rospy.DEBUG)
 
     winch_name = None
-    if rospy.get_param('winch/enabled') == True:
+    if rospy.get_param('winch/enabled') is True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
     arm = ArmIFCB(rospy.get_name(), winch_name)
 
