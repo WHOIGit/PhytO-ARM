@@ -1,0 +1,6 @@
+# LockCheck
+# Used for checking whether a given arm has a lock acquired
+
+string arm_name
+---
+bool has_lock

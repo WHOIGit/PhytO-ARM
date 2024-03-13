@@ -1,0 +1,44 @@
+<launch>
+    <!-- This is the launch file for PhytO-ARM's core processes.
+         See arm launch files for payload specific settings. -->
+
+    <!-- Most settings are in config.yaml, which is easier to edit. -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+        <arg name="use_compression" value="true" />
+    </include>
+
+    <node name="lock_manager" pkg="phyto_arm" type="lock_manager.py" />
+
+    <group if="$(arg classifier)">
+        <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />
+
+        <node name="image_transport" pkg="phyto_arm" type="image_transport_node.py" />
+    </group>
+
+    <node name="gps" pkg="gpsd_client" type="gpsd_client">
+        <remap from="/fix" to="~fix" />
+        <remap from="/extended_fix" to="~extended_fix" />
+    </node>
+
+    <node name="web" pkg="phyto_arm" type="web_node.py" />
+
+    <group ns="camera">
+        <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">
+            <remap from="~image" to="~image/do_not_use" />
+            <remap from="~image/do_not_use/compressed" to="~image/compressed" />
+        </node>
+
+        <!-- <node name="aft_camera" pkg="rtsp_camera" type="rtsp_camera_node">
+            <remap from="~image" to="~image/do_not_use" />
+            <remap from="~image/do_not_use/compressed" to="~image/compressed" />
+        </node> -->
+    </group>
+
+    <!--
+    disabled
+    <node name="instant_replay" pkg="phyto_arm" type="instant_replay_node.py"
+          launch-prefix="$(optenv LAUNCH_PREFIX)" />
+    -->
+</launch>

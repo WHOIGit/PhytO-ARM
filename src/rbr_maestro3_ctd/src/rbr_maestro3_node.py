@@ -61,23 +61,30 @@ async def main():
     rospy.Subscriber('~in', RawData, handler)
 
     # Process incoming messages in a loop
-    while True:
+    while not rospy.is_shutdown():
         msg = await ros_msg_q.get()
 
         # Crummy parser
         fields = [ x.strip() for x in msg.data.split(b',') ]
+        if len(fields) != 16:
+            rospy.logwarn(f'Discarding malformed RBR message - expected 16 fields but received {len(fields)}')
+            continue
 
-        # outputformat channelslist = [timestamp|]conductivity(mS/cm)|temperature(C)|pressure(dbar)|chlorophyll(ug/L)|phycoerythrin(cells/mL)|temperature(C)|O2_concentration(umol/L)|PAR(umol/m2/s)|turbidity(NTU)|pressure(dbar)|depth(m)|salinity(PSU)|speed_of_sound(m/s)|specific_conductivity(uS/cm)|O2_air_saturation(%)
-        conductivity, temperature, pressure, chlorophyll, phycoerythrin, \
-            temperature_again, o2_concentration, par, turbidity, \
-            pressure_again, depth, salinity, speed_of_sound, \
-            specific_conductivity, o2_air_saturation = \
-            [ float(x) for x in fields[1:] ]
+        try:
+            # outputformat channelslist = [timestamp|]conductivity(mS/cm)|temperature(C)|pressure(dbar)|chlorophyll(ug/L)|phycoerythrin(cells/mL)|temperature(C)|O2_concentration(umol/L)|PAR(umol/m2/s)|turbidity(NTU)|pressure(dbar)|depth(m)|salinity(PSU)|speed_of_sound(m/s)|specific_conductivity(uS/cm)|O2_air_saturation(%)
+            conductivity, temperature, pressure, chlorophyll, phycoerythrin, \
+                temperature_again, o2_concentration, par, turbidity, \
+                pressure_again, depth, salinity, speed_of_sound, \
+                specific_conductivity, o2_air_saturation = \
+                [ float(x) for x in fields[1:] ]
 
-        # Parse the timestamp as UTC
-        timestamp = datetime.datetime.strptime(fields[0].decode('utf-8'),
-                                               '%Y-%m-%d %H:%M:%S.%f')
-        timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
+            # Parse the timestamp as UTC
+            timestamp = datetime.datetime.strptime(fields[0].decode('utf-8'),
+                                                '%Y-%m-%d %H:%M:%S.%f')
+            timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
+        except ValueError as e:
+            rospy.logwarn(f'Discarding RBR message due to error during parsing: {e}')
+            continue
 
         # Construct the Ctd message
         ctd = Ctd()
@@ -92,10 +99,10 @@ async def main():
         # Set covariance fields to -1, the standard "not valid" value
         ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
             ctd.salinity_covar = ctd.sound_speed_covar = -1
-        
+
         # Construct the DepthPressure message
         dp = DepthPressure()
-        dp.depth = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.depth = depth
         dp.latitude = DepthPressure.DEPTH_PRESSURE_NO_DATA
         dp.tare = DepthPressure.DEPTH_PRESSURE_NO_DATA
         dp.pressure_raw = pressure
