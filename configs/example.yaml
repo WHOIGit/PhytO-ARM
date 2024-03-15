@@ -221,10 +221,10 @@ web:
         gpsLatitude: #optional
             topic: /gps/fix
             topic_field: latitude
-            default: -999999 # Replace with desired default lat
+            default: -999.999 # Replace with desired default lat
         gpsLongitude: #optional
             topic: /gps/fix
             topic_field: longitude
-            default: -999999 # Replace with desired default long
+            default: -999.999 # Replace with desired default long
         defaultOnlyExample: #optional
             default: 'static_value' # No topic, making this default value permanent
