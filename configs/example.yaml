@@ -203,9 +203,9 @@ classifier:
     classifier_model: "ifcb_iv3_onnx"
 
 camera:
-    fore_camera:
+    ifcb_camera:
         video_stream_url: "rtsp://admin:example_password@192.168.13.123/"
-    aft_camera:
+    chanos_camera:
         video_stream_url: "rtsp://admin:example_password@192.168.13.124/"
 
 web:
