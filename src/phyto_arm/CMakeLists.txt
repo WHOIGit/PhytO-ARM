@@ -14,6 +14,7 @@ add_action_files(
   DIRECTORY action
   FILES
   MoveToDepth.action
+  RunIFCB.action
 )
 
 add_message_files(
@@ -23,11 +24,19 @@ add_message_files(
   DepthProfile.msg
 )
 
+add_service_files(
+  FILES
+  LockOperation.srv
+  LockCheck.srv
+)
+
 generate_messages(
   DEPENDENCIES
   actionlib_msgs
   std_msgs
   ds_core_msgs
 )
+
+catkin_add_nosetests(src/tests.py)
 
 catkin_package()

@@ -7,7 +7,8 @@ import threading
 
 import numpy as np
 import rospy
-import scipy.interpolate, scipy.signal
+import scipy.interpolate
+import scipy.signal
 
 from ds_sensor_msgs.msg import DepthPressure
 
@@ -176,13 +177,13 @@ def main():
     }
 
     # Accumulate depth messages while recording
-    rospy.Subscriber('/ctd/depth', DepthPressure,
+    rospy.Subscriber(rospy.get_param('ctd_topic'), DepthPressure,
         functools.partial(record_data, depth_msgs))
 
     # Subscribe to the action start/stop messages
-    rospy.Subscriber('/winch/move_to_depth/goal', MoveToDepthActionGoal,
+    rospy.Subscriber('winch/move_to_depth/goal', MoveToDepthActionGoal,
         on_action_start)
-    rospy.Subscriber('/winch/move_to_depth/result', MoveToDepthActionResult,
+    rospy.Subscriber('winch/move_to_depth/result', MoveToDepthActionResult,
         functools.partial(on_action_stop, pub))
 
     rospy.spin()
