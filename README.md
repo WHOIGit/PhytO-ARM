@@ -169,6 +169,7 @@ Use `picocom` to to talk to the appropriate serial device. Press <kbd>Enter</kbd
     > set scan sal
     > set derive density y
     > set scan den
+    > set scan raw
     > mmonitor
     ...
 
