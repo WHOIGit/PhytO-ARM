@@ -13,7 +13,7 @@ from unittest.mock import patch, Mock
 # Have not found a ROS-recommended way to import modules being tested
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from arm_chanos import profiler_peak_ready, compute_profiler_steps
+from arm_chanos import profiler_peak_ready, compute_profiler_steps, clamp_steps
 import arm_ifcb
 from lock_manager import NamedLockManager
 
@@ -66,13 +66,31 @@ class TestProfilerPeakReady(unittest.TestCase):
         self.assertTrue(result)
 
 
+class TestClampStemps(unittest.TestCase):
+    @patch('arm_chanos.arm')
+    @patch('arm_chanos.rospy')
+    def test_exceed_max(self, mock_rospy, mock_arm):
+        mock_arm.latest_profile = Mock()
+        mock_rospy.get_param.side_effect = [10.0, 0.0]
+        result = clamp_steps([4.0, 6.0, 11.0])
+        self.assertEqual(result, [4.0, 6.0, 10.0])
+
+    @patch('arm_chanos.arm')
+    @patch('arm_chanos.rospy')
+    def test_exceed_min(self, mock_rospy, mock_arm):
+        mock_arm.latest_profile = Mock()
+        mock_rospy.get_param.side_effect = [10.0, 5.0]
+        result = clamp_steps([4.0, 6.0, 10.0])
+        self.assertEqual(result, [5.0, 6.0, 10.0])
+
+
 class TestComputeProfilerSteps(unittest.TestCase):
     @patch('arm_chanos.arm')
     @patch('arm_chanos.rospy')
     def test_no_profiler_peak_available(self, mock_rospy, mock_arm):
         mock_arm.latest_profile = None
         with self.assertRaises(ValueError) as exc:
-            compute_profiler_steps()
+            compute_profiler_steps(True)
         self.assertEqual(str(exc.exception), 'No profiler peak available')
 
     @patch('arm_chanos.arm')
@@ -81,8 +99,17 @@ class TestComputeProfilerSteps(unittest.TestCase):
         mock_arm.latest_profile = Mock()
         mock_arm.profiler_peak_depth = 5.0
         mock_rospy.get_param.side_effect = [[-1.0, 1.0, 2.0], 10.0, 0.0]
-        result = compute_profiler_steps()
+        result = compute_profiler_steps(True)
         self.assertEqual(result, [4.0, 6.0, 7.0])
+
+    @patch('arm_chanos.arm')
+    @patch('arm_chanos.rospy')
+    def test_compute_profiler_steps_upcast(self, mock_rospy, mock_arm):
+        mock_arm.latest_profile = Mock()
+        mock_arm.profiler_peak_depth = 5.0
+        mock_rospy.get_param.side_effect = [[-1.0, 1.0, 2.0], 10.0, 0.0]
+        result = compute_profiler_steps(False)
+        self.assertEqual(result, [7.0, 6.0, 4.0])
 
     @patch('arm_chanos.arm')
     @patch('arm_chanos.rospy')
@@ -90,7 +117,7 @@ class TestComputeProfilerSteps(unittest.TestCase):
         mock_arm.latest_profile = Mock()
         mock_arm.profiler_peak_depth = 9.0
         mock_rospy.get_param.side_effect = [[1.0, 2.0], 10.0, 0.0]
-        result = compute_profiler_steps()
+        result = compute_profiler_steps(True)
         self.assertEqual(result, [10.0, 10.0])
 
     @patch('arm_chanos.arm')
@@ -99,7 +126,7 @@ class TestComputeProfilerSteps(unittest.TestCase):
         mock_arm.latest_profile = Mock()
         mock_arm.profiler_peak_depth = 1.0
         mock_rospy.get_param.side_effect = [[-2.0, -1.0], 10.0, 0.0]
-        result = compute_profiler_steps()
+        result = compute_profiler_steps(True)
         self.assertEqual(result, [0.0, 0.0])
 
 class TestNamedLockManager(unittest.TestCase):
