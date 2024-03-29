@@ -133,6 +133,7 @@ arm_ifcb:
 
 arm_chanos:
     tasks:
+        dwell_time: 60 # seconds
         profiler_peak:
             # If true, will use the profiler to find the peak value
             # Falls back on default_movement values otherwise
@@ -147,7 +148,7 @@ arm_chanos:
                 - -0.25
                 - 0.0
                 - 0.25
-                - 0.5 
+                - 0.5
         default_movement:
             # Steps will be sorted in direction of movement.
             absolute_steps:
@@ -161,7 +162,7 @@ arm_chanos:
             continuous_speed: 0.005
             # must be "stepped" or "continuous"
             downcast_type: "stepped"
-            upcast_type: "continuous" 
+            upcast_type: "continuous"
 
     ctd_topic: '/arm_chanos/ctd/depth'
 
