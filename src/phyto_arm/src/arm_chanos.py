@@ -30,7 +30,7 @@ class ArmChanos(ArmBase):
         # Always upcast to start position first
         if last_task is None:
             self.is_downcasting = False
-            return Task('upcast_continuous', await_sensor, rospy.get_param('winch/range/min'))
+            return Task('upcast_continuous', self.start_next_task, rospy.get_param('winch/range/min'))
 
         # If in the middle of stepped movement, continue to next step
         if self.steps:
