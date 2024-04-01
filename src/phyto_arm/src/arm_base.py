@@ -83,7 +83,7 @@ class ArmBase:
 
         # Safety check: Do not exceed depth bounds
         if depth < rospy.get_param('winch/range/min'):
-            raise ValueError(f'Move aborted: depth {depth} is below min {rospy.get_param("winch/range/max")}')
+            raise ValueError(f'Move aborted: depth {depth} is below min {rospy.get_param("winch/range/min")}')
         elif depth > rospy.get_param('winch/range/max'):
             raise ValueError(f'Move aborted: depth {depth} is above max {rospy.get_param("winch/range/max")}')
 
