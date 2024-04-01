@@ -134,9 +134,14 @@ arm_ifcb:
 arm_chanos:
     tasks:
         dwell_time: 60 # seconds
+        # For continuous movements (no steps), a speed can be specified.
+        continuous_speed: 0.005
+        # must be "stepped" or "continuous"
+        downcast_type: "stepped"
+        upcast_type: "continuous"
         profiler_peak:
             # If true, will use the profiler to find the peak value
-            # Falls back on default_movement values otherwise
+            # Falls back on default_steps otherwise
             enabled: true
             # Minimum level of the profiled sensor data to trigger a sample at depth
             threshold: 0.0
@@ -144,25 +149,20 @@ arm_chanos:
             peak_expiration: 60
             # Stops to be made relative to profiler_peak
             offset_steps:
-                - -0.5
+                - -0.5 # meters
                 - -0.25
                 - 0.0
                 - 0.25
                 - 0.5
-        default_movement:
-            # Steps will be sorted in direction of movement.
-            absolute_steps:
-                - 0.5
-                - 2.0
-                - 3.0
-                - 4.0
-                - 5.0
-                - 6.5
-            # For continuous movements (no steps), a speed can be specified.
-            continuous_speed: 0.005
-            # must be "stepped" or "continuous"
-            downcast_type: "stepped"
-            upcast_type: "continuous"
+        # Absolute depths to use if profiler_peak not enabeld
+        # Steps will be sorted in direction of movement.
+        default_steps:
+            - 0.5 # meters
+            - 2.0
+            - 3.0
+            - 4.0
+            - 5.0
+            - 6.5
 
     ctd_topic: '/arm_chanos/ctd/depth'
 
