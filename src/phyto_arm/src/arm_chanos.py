@@ -53,30 +53,29 @@ class ArmChanos(ArmBase):
         else: 
             raise ValueError(f'Unexpected last task name: {last_task.name}')
 
-        # If profiler peak is enabled and ready, execute profiler peak
+        # Handle continuous movement cases
+        speed = rospy.get_param('tasks/continuous_speed')
+        if self.is_downcasting and rospy.get_param('tasks/downcast_type') == 'continuous':
+            return Task('downcast_continuous', self.start_next_task, rospy.get_param('winch/range/max'), speed)
+        elif not self.is_downcasting and rospy.get_param('tasks/upcast_type') == 'continuous':
+            return Task('upcast_continuous', self.start_next_task, rospy.get_param('winch/range/min'), speed)
+
+        # If profiler peak is enabled and ready, execute new set of profile steps
         if rospy.get_param('tasks/profiler_peak/enabled') and profiler_peak_ready():
             self.steps = compute_profiler_steps(self.is_downcasting)
             task_name = 'downcast_profile_step' if self.is_downcasting else 'upcast_profile_step'
             next_depth = self.steps.pop(0)
             return Task(task_name, await_sensor, next_depth)
-        
+
         # If no profiler peak, execute default profile
         if self.is_downcasting:
-            if rospy.get_param('tasks/default_movement/downcast_type') == 'continuous':
-                speed = rospy.get_param('tasks/default_movement/continuous_speed')
-                return Task('downcast_continuous', self.start_next_task, rospy.get_param('winch/range/max'), speed)
-            else:
-                self.steps = compute_absolute_steps(self.is_downcasting)
-                next_depth = self.steps.pop(0)
-                return Task('downcast_step', await_sensor, next_depth)
+            self.steps = compute_absolute_steps(self.is_downcasting)
+            next_depth = self.steps.pop(0)
+            return Task('downcast_step', await_sensor, next_depth)
         else:
-            if rospy.get_param('tasks/default_movement/upcast_type') == 'continuous':
-                speed = rospy.get_param('tasks/default_movement/continuous_speed')
-                return Task('upcast_continuous', self.start_next_task, rospy.get_param('winch/range/min'), speed)
-            else:
-                self.steps = compute_absolute_steps(self.is_downcasting)
-                next_depth = self.steps.pop(0)
-                return Task('upcast_step', await_sensor, next_depth)
+            self.steps = compute_absolute_steps(self.is_downcasting)
+            next_depth = self.steps.pop(0)
+            return Task('upcast_step', await_sensor, next_depth)
 
 
 # Global reference to arm state
@@ -119,7 +118,7 @@ def clamp_steps(steps):
 
 
 def compute_absolute_steps(is_downcast):
-    steps = rospy.get_param('tasks/default_movement/absolute_steps')
+    steps = rospy.get_param('tasks/default_steps')
     steps = clamp_steps(steps)
 
     # Sort according to direction.
