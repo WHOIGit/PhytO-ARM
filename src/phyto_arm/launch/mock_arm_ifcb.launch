@@ -9,7 +9,7 @@
 
         <node name="winch" pkg="phyto_arm" type="mock_winch_node.py" />
 
-        <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+        <node name="profiler" pkg="phyto_arm" type="mock_profiler_node.py" />
 
         <node name="ifcb_runner" pkg="phyto_arm" type="mock_ifcb_runner.py" />
     </group>
