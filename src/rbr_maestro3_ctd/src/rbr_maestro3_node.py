@@ -66,8 +66,8 @@ async def main():
 
         # Crummy parser
         fields = [ x.strip() for x in msg.data.split(b',') ]
-        if len(fields) != 15:
-            rospy.logwarn(f'Discarding malformed RBR message - expected 15 fields but received {len(fields)}')
+        if len(fields) != 16:
+            rospy.logwarn(f'Discarding malformed RBR message - expected 16 fields but received {len(fields)}')
             continue
 
         try:

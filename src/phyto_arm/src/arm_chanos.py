@@ -12,10 +12,11 @@ class ArmChanos(ArmBase):
     profiler_peak_depth = None
     profiler_peak_time = None
 
-    profiler_steps = []
-    absolute_steps = []
+    steps = []
 
     timer = None
+
+    is_downcasting = True
 
     # Primary method for determining the next task to execute
     # Each Task object takes:
@@ -26,40 +27,56 @@ class ArmChanos(ArmBase):
     def get_next_task(self, last_task):
         assert rospy.get_param('winch/enabled'), 'Winch is not enabled'
 
-        # If the profiler peak task is available, keep looping through profiler steps
-        if rospy.get_param('tasks/profiler_peak/enabled'):
-            if not self.profiler_steps and profiler_peak_ready():
-                self.profiler_steps = compute_profiler_steps()
-            if self.profiler_steps:
-                next_depth = self.profiler_steps.pop(0)
-                return Task('profiler_step', await_sensor, next_depth)
+        # Always upcast to start position first
+        if last_task is None:
+            self.is_downcasting = False
+            return Task('upcast_continuous', self.start_next_task, rospy.get_param('winch/range/min'))
 
-        # For continuous profile, figure out the start and goal depths
-        continuous_start, continuous_goal = continuous_direction()
+        # If in the middle of stepped movement, continue to next step
+        if self.steps:
+            next_depth = self.steps.pop(0)
+            return Task(last_task.name, await_sensor, next_depth)
 
-        # If the last task was the step cast, move into position for a continuous cast
-        if last_task is None or last_task.name in ['profiler_step', 'last_step']:
-            return Task('continuous_position', self.start_next_task, continuous_start)
+        # Finish out the upcast when upcast steps are used
+        if last_task.name in ['upcast_step', 'upcast_profile_step']:
+            return Task('upcast_continuous', self.start_next_task, rospy.get_param('winch/range/min'))
 
-        # If in the continuous position, execute the continuous profile
-        if last_task.name == 'continuous_position':
-            speed = rospy.get_param('tasks/continuous_profile/speed')
-            return Task('continuous_profile', self.start_next_task, continuous_goal, speed)
+        # Finish out the downcast when downcast steps are used
+        elif last_task.name in ['downcast_step', 'downcast_profile_step']:
+            return Task('downcast_continuous', self.start_next_task, rospy.get_param('winch/range/max'))
+    
+        # Finally if a cast has completed, switch direction and start the next cast
+        elif last_task.name in ['upcast_continuous', 'downcast_continuous']: 
+            self.is_downcasting = not self.is_downcasting
 
-        # After continuous, execute every step in stepped cast
-        if last_task.name in ['continuous_profile', 'absolute_step']:
+        # No other state should be possible
+        else: 
+            raise ValueError(f'Unexpected last task name: {last_task.name}')
 
-            # Steps are always regenerated after a continuous profile
-            if last_task.name == 'continuous_profile':
-                self.absolute_steps = rospy.get_param('tasks/step_profile/steps')
-            next_depth = self.absolute_steps.pop(0)
+        # Handle continuous movement cases
+        speed = rospy.get_param('tasks/continuous_speed')
+        if self.is_downcasting and rospy.get_param('tasks/downcast_type') == 'continuous':
+            return Task('downcast_continuous', self.start_next_task, rospy.get_param('winch/range/max'), speed)
+        elif not self.is_downcasting and rospy.get_param('tasks/upcast_type') == 'continuous':
+            return Task('upcast_continuous', self.start_next_task, rospy.get_param('winch/range/min'), speed)
 
-            # Detect the last step to end the loop
-            if not self.absolute_steps:
-                return Task('last_step', await_sensor, next_depth)
+        # If profiler peak is enabled and ready, execute new set of profile steps
+        if rospy.get_param('tasks/profiler_peak/enabled') and profiler_peak_ready():
+            self.steps = compute_profiler_steps(self.is_downcasting)
+            task_name = 'downcast_profile_step' if self.is_downcasting else 'upcast_profile_step'
+            next_depth = self.steps.pop(0)
+            return Task(task_name, await_sensor, next_depth)
 
-            return Task('absolute_step', await_sensor, next_depth)
-        raise ValueError(f'Unhandled next-task state where last task={last_task.name}')
+        # If no profiler peak, execute default profile
+        if self.is_downcasting:
+            self.steps = compute_absolute_steps(self.is_downcasting)
+            next_depth = self.steps.pop(0)
+            return Task('downcast_step', await_sensor, next_depth)
+        else:
+            self.steps = compute_absolute_steps(self.is_downcasting)
+            next_depth = self.steps.pop(0)
+            return Task('upcast_step', await_sensor, next_depth)
+
 
 # Global reference to arm state
 arm = None
@@ -84,27 +101,53 @@ def profiler_peak_ready():
     return True
 
 
-def compute_profiler_steps():
+def clamp_steps(steps):
+    DEPTH_MAX = rospy.get_param('winch/range/max')
+    DEPTH_MIN = rospy.get_param('winch/range/min')
+    clamped_steps = steps.copy()
+
+    for i in range(len(steps)):
+        if steps[i] > DEPTH_MAX:
+            rospy.logwarn(f'Step {steps[i]} exceeds max depth, clamping to {DEPTH_MAX}')
+            clamped_steps[i] = DEPTH_MAX
+        if steps[i] < DEPTH_MIN:
+            rospy.logwarn(f'Step {steps[i]} exceeds min depth, clamping to {DEPTH_MIN}')
+            clamped_steps[i] = DEPTH_MIN
+
+    return clamped_steps
+
+
+def compute_absolute_steps(is_downcast):
+    steps = rospy.get_param('tasks/default_steps')
+    steps = clamp_steps(steps)
+
+    # Sort according to direction.
+    # If downcasting, use default ascending order.
+    # Otherwise, reverse to get descending order.
+    # Remember that in this context "ascending order" means "increasing depth".
+    steps.sort(reverse=not is_downcast)
+    return steps
+
+
+def compute_profiler_steps(is_downcast):
     if arm.latest_profile is None:
         raise ValueError('No profiler peak available')
 
     depths = []
     offsets = rospy.get_param('tasks/profiler_peak/offset_steps')
 
-    DEPTH_MAX = rospy.get_param('winch/range/max')
-    DEPTH_MIN = rospy.get_param('winch/range/min')
-
+    # Add each offset to peak depth to get list of depths,
+    # then clamp within min/max range
     for offset in offsets:
         next_depth = arm.profiler_peak_depth + offset
-
-        # Ensure none of the steps exceeds max or min bounds
-        if next_depth > DEPTH_MAX:
-            rospy.logwarn('Profiler peak step exceeds max depth, clamping to max')
-            next_depth = DEPTH_MAX
-        if next_depth < DEPTH_MIN:
-            rospy.logwarn('Profiler peak step exceeds min depth, clamping to min')
-            next_depth = DEPTH_MIN
         depths.append(next_depth)
+    depths = clamp_steps(depths)
+
+    # Sort according to direction
+    if is_downcast:
+        depths.sort()
+    else:
+        depths.sort(reverse=True)
 
     return depths
 
@@ -116,19 +159,6 @@ def on_profile_msg(msg):
     argmax = max(range(len(arm.latest_profile.values)), key=lambda i: arm.latest_profile.values[i])
     arm.profiler_peak_value = arm.latest_profile.values[argmax]
     arm.profiler_peak_depth = arm.latest_profile.depths[argmax]
-
-
-def continuous_direction():
-    direction = rospy.get_param('tasks/continuous_profile/direction')
-    if direction == 'up':
-        continuous_start = rospy.get_param('winch/range/max')
-        continuous_goal = rospy.get_param('winch/range/min')
-    elif direction == 'down':
-        continuous_start = rospy.get_param('winch/range/min')
-        continuous_goal = rospy.get_param('winch/range/max')
-    else:
-        raise ValueError(f'Unexpected continuous profile direction: {direction}')
-    return continuous_start, continuous_goal
 
 
 def await_sensor(move_result):
