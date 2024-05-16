@@ -31,8 +31,9 @@ class ArmBase:
     def __init__(self, arm_name, winch_name=None):
         self.arm_name = arm_name
         self.task_lock = Lock()
+        self.winch_client = None
 
-        if rospy.get_param('winch/enabled'):
+        if rospy.get_param('winch_enabled'):
             if winch_name is None:
                 raise ValueError('Winch name must be provided if winch is enabled')
 
@@ -77,7 +78,7 @@ class ArmBase:
         rospy.loginfo(f'Sending winch move to {depth}')
 
         # Ensure winch is enabled
-        if rospy.get_param('winch/enabled') is not True:
+        if rospy.get_param('winch_enabled') is not True:
             raise ValueError('Move aborted: winch is disabled in config')
 
 
