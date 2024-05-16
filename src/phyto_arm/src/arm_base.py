@@ -108,13 +108,12 @@ class ArmBase:
                 # Ensure winch move was successful
                 assert state == actionlib.GoalStatus.SUCCEEDED
 
-
                 # Free up semaphore for another winch movement
                 assert self.release_clearance()
                 callback(move_result)
             except Exception as e:
-                rospy.logerr(f'Unexpected error: {e}')
-                rospy.signal_shutdown(f'Shutting down due to unexpected error: {e}')
+                rospy.logerr(f'Unexpected error during winch movement', exc_info=True)
+                rospy.signal_shutdown(f'Shutting down due to unexpected winch movement error')
                 raise e
 
         self.winch_client.send_goal(MoveToDepthGoal(depth=depth, velocity=speed), done_cb=winch_done)
