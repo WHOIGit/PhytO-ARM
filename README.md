@@ -124,19 +124,25 @@ These steps assume that ROS Noetic has been installed already.
 
 The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
 
-
-```bash
-phyto-arm start [-h] [--config_schema <schema file>] [--skip_validation] <launchfile name> <config file>
+```
+phyto-arm start [-h] [--config_schema <schema file>] [--skip_validation] \
+  <launchfile name> <config file>
 
 positional arguments:
-<launchfile name>                 Name of ROS launchfile to use in the phyto_arm package, excluding extension. Currently one of 'main', 'arm_ifcb' or 'arm_chanos'.
-<config file>                     Path to YAML config file.
+<launchfile name>
+  Name of ROS launchfile to use in the phyto_arm package, excluding extension.
+  Currently one of 'main', 'arm_ifcb' or 'arm_chanos'.
 
+<config file>
+  Path to YAML config file.
 
 options:
--h, --help                        Show help message.
---config_schema <schema file>     File to validate config against.
---skip_validation                 Skip validation check altogether.
+-h, --help
+  Show help message.
+--config_schema <schema file>
+  File to validate config against.
+--skip_validation
+  Skip validation check altogether.
 ```
 
 If running natively, you may also wish to attach to the screen process:
@@ -368,9 +374,9 @@ WantedBy=multi-user.target
 - [ ] GPS: `gpsd` installed and running
 - [ ] GPS: If used, GPS device plugged in and IP configured
 - [ ] IP camera: IP reserved and set correctly in config YAML
-- [ ] Motor(s): If used, plugged in
-- [ ] Motor: `arm_ifcb/winch/enabled` set to true if used, false otherwise
-- [ ] Motor: `arm_chanos/winch/enabled` set to true if used, false otherwise
+- [ ] Motor(s): If used, plugged in and outlets on
+- [ ] Motor: `launch_args/ifcb_winch` set to true if used, false otherwise
+- [ ] Motor: `launch_args/chanos_winch` set to true if used, false otherwise
 - [ ] Motor(s): IPs reserved
 - [ ] Motor(s): Ensure IP for each motor matches correct arm in YAML config
 - [ ] Foxglove: If using container, Foxglove bridge port is exposed
