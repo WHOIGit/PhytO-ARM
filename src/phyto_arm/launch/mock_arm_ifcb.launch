@@ -7,10 +7,16 @@
 
         <node name="ctd" pkg="phyto_arm" type="mock_ctd.py" />
 
-        <node name="winch" pkg="phyto_arm" type="mock_winch_node.py" />
-
         <node name="profiler" pkg="phyto_arm" type="mock_profiler_node.py" />
 
         <node name="ifcb_runner" pkg="phyto_arm" type="mock_ifcb_runner.py" />
+
+        <!-- Map launch arg to parameter for driving arm behavior -->
+        <param name="winch_enabled" value="$(arg ifcb_winch)" type="bool" />
+
+        <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
+        <group if="$(arg ifcb_winch)">
+            <node name="winch" pkg="phyto_arm" type="mock_winch_node.py" />
+        </group>
     </group>
 </launch>

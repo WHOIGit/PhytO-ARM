@@ -25,7 +25,7 @@ class ArmChanos(ArmBase):
     #  - depth: the depth to move to (optional, won't move if not provided)
     #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
-        assert rospy.get_param('winch/enabled'), 'Winch is not enabled'
+        assert rospy.get_param('winch_enabled'), 'Winch is not enabled'
 
         # Always upcast to start position first
         if last_task is None:
@@ -181,7 +181,7 @@ def main():
     rospy.init_node('arm_chanos', log_level=rospy.DEBUG)
 
     winch_name = None
-    if rospy.get_param('winch/enabled') is True:
+    if rospy.get_param('winch_enabled') is True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
     arm = ArmChanos(rospy.get_name(), winch_name)
 

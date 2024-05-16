@@ -5,6 +5,8 @@ launch_args:
     log_dir: /mnt/data/roslogs/
     rosbag_prefix: /mnt/data/rosbags/phyto-arm
     classifier: false
+    ifcb_winch: false
+    chanos_winch: false
 
 
 alerts:
@@ -34,7 +36,7 @@ ifcb:
 
 arm_ifcb:
     # Configuration related to tasks
-    tasks:
+    tasks: #optional
         profiler_peak:
             # Minimum level of the profiled sensor data to trigger a sample at depth
             threshold: 0.0
@@ -95,15 +97,13 @@ arm_ifcb:
         data_topic: "ctd/aml/port4/phycoerythrin"
         data_field: "value"
 
-    motor:
+    motor: #optional
         address: "192.168.13.3"
         port: 502
         refresh_rate: 1  # hz
         counts_per_turn: 8192  # defined in manual p.9
 
-    winch:
-        enabled: true
-
+    winch: #optional
         range:
             min:  0.7  # m
             max:  1.5  # m
@@ -131,7 +131,7 @@ arm_ifcb:
                 extra_sec: 10.0
 
 
-arm_chanos:
+arm_chanos: #optional
     tasks:
         dwell_time: 60 # seconds
         # For continuous movements (no steps), a speed can be specified.
@@ -166,15 +166,13 @@ arm_chanos:
 
     ctd_topic: '/arm_chanos/ctd/depth'
 
-    motor:
+    motor: #optional
         address: "192.168.13.4"
         port: 502
         refresh_rate: 1  # hz
         counts_per_turn: 8192  # defined in manual p.9
 
-    winch:
-        enabled: true
-
+    winch: #optional
         range:
                 min:  0.7  # m
                 max:  1.5  # m
@@ -202,16 +200,16 @@ arm_chanos:
 
 
 # If launch_args.classifier = true
-classifier:
+classifier: #optional
     # Topic to get images which are sent to classifier
     image_topic: "/ifcb/roi/image"
     triton_server_url: "172.17.0.1:9001/"
     classifier_model: "ifcb_iv3_onnx"
 
 camera:
-    fore_camera:
+    fore_camera: #optional
         video_stream_url: "rtsp://admin:example_password@192.168.13.123/"
-    aft_camera:
+    aft_camera: #optional
         video_stream_url: "rtsp://admin:example_password@192.168.13.124/"
 
 web:

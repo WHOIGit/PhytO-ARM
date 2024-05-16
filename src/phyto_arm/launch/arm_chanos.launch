@@ -15,8 +15,14 @@
 
         <node name="arm" pkg="phyto_arm" type="arm_chanos.py" />
 
-        <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+        <!-- Map launch arg to parameter for driving arm behavior -->
+        <param name="winch_enabled" value="$(arg chanos_winch)" type="bool" />
 
-        <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+        <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
+        <group if="$(arg chanos_winch)">
+            <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+
+            <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+        </group>
     </group>
 </launch>
