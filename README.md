@@ -145,11 +145,7 @@ options:
   Skip validation check altogether.
 ```
 
-If running natively, you may also wish to attach to the screen process:
-```bash
-phyto-arm attach
-```
-Or kill it:
+If running natively, you may kill the process with:
 ```bash
 phyto-arm stop
 ```
@@ -208,11 +204,7 @@ In seperate terminal sessions, launch one or more arms:
     $ ./phyto-arm start arm_chanos config/config.yaml
     $ ./phyto-arm start arm_ifcb config/config.yaml
 
-The ROS nodes will be run in the background (so that you can disconnect from the system, for example) within a `screen` session. This session can be attached with the convenience command
-
-    $ ./phyto-arm attach
-
-Standard `screen` key shortcuts apply, such as using <kbd>Ctrl-A</kbd>, <kbd>D</kbd> to detach again.
+The ROS nodes will be run in the background (so that you can disconnect from the system, for example).
 
 **Note:** All instruments must already be logging data. Some notes on configuring instruments are included below.
 
