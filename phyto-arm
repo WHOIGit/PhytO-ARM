@@ -145,7 +145,7 @@ def _start(args):
         env['ROS_LOG_DIR'] = log_dir
 
     # The following should only launch once, with the main PhytO-ARM processes
-    roscore = None
+    rosbag = roscore = None
     if args.launch_name == "main":
         # Before we continue compress any older log files
         #print('Compressing older logs')

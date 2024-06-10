@@ -94,7 +94,7 @@ async def main():
         try:
             parsed = amlxparser.parseAMLx(msg.data.decode())
         except:
-            rospy.logerr(f'Failed to parse: {msg.data.decode()}')
+            rospy.logerr(f'Failed to parse: {msg.data.decode()}', exc_info=True)
             continue
 
         # Create a lookup table of measurements
