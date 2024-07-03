@@ -75,7 +75,10 @@ arm_ifcb:
     ifcb_maintenance:
         # Interval at which we run a cartridge debubble, necessary when IFCB on its side
         cartridge_debubble_interval: 0 # minutes, 0 = never
-        # Interval at which we run a bead sample for maintenance
+        # Interval at which we run a biocide and bleach
+        clean_interval: 1440  # minutes, 0 = never
+        # Interval at which we run a debubble and bead sample. Make this a multiple of 
+        # the clean interval if you want a clean after each bead sample.
         bead_interval: 1440  # minutes, 0 = never
 
     ctd_topic: '/arm_ifcb/ctd/depth'
