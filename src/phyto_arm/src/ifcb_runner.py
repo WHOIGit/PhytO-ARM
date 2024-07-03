@@ -38,6 +38,7 @@ class IFCBState:
 
     last_cart_debub_time = None
     last_bead_time = None
+    last_clean_time = None
 
 state = IFCBState()
 
@@ -108,9 +109,16 @@ def run_sample_routines(goal):
         rospy.loginfo('Will run beads this round')
         playlist.append((ConductorStates.IFCB_DEBUBBLE, 'debubble'))
         playlist.append((ConductorStates.IFCB_BEADS,    'beads'))
+        state.last_bead_time = rospy.Time.now()
+
+    # Determine if it's time to run a clean
+    clean_interval = rospy.Duration(60*rospy.get_param('ifcb_maintenance/clean_interval'))
+    run_clean = not math.isclose(clean_interval.to_sec(), 0.0)  # disabled
+    if run_clean and rospy.Time.now() - state.last_clean_time > clean_interval:
+        rospy.loginfo('Will run biocide and bleach this round')
         playlist.append((ConductorStates.IFCB_BIOCIDE,  'biocide'))
         playlist.append((ConductorStates.IFCB_BLEACH,   'bleach'))
-        state.last_bead_time = rospy.Time.now()
+        state.last_clean_time = rospy.Time.now()
 
     # Always run a debubble and sample
     playlist.append((ConductorStates.IFCB_DEBUBBLE,  'debubble'))
@@ -164,6 +172,7 @@ def main():
     # we don't run it every startup and potentially waste time or bead supply.
     state.last_cart_debub_time = rospy.Time.now()
     state.last_bead_time = rospy.Time.now()
+    state.last_clean_time = rospy.Time.now()
 
     rospy.spin()
 
