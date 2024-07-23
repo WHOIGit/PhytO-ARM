@@ -140,6 +140,10 @@ arm_ifcb:
         resolution: 0.02  # m
         data_topic: "ctd/aml/port4/phycoerythrin"
         data_field: "value"
+        # Profile will only consider peaks that are at least this deep
+        peak_min_depth: 0.0 # optional, m
+        # Profile will only consider peaks that are at most this deep
+        peak_max_depth: 10.0 # optional, m
 
     motor: #optional
         address: "192.168.13.3"
