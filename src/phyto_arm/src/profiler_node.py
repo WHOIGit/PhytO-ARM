@@ -135,6 +135,17 @@ def on_action_stop(pub, action_msg):
             S.release()
         return
 
+    # Get min and max depth params
+    min_depth = rospy.get_param('~peak_min_depth')
+    max_depth = rospy.get_param('~peak_max_depth')
+
+    # Filter out data points outside the specified depth range
+    if min_depth is not None and max_depth is not None:
+        len_before = data.shape[0]
+        data = data[(data[:,0] >= min_depth) & (data[:,0] <= max_depth)]
+        rospy.loginfo(f'Profile depths filtered: {min_depth} to {max_depth} m. '
+                      f'{data.shape[0]}/{len_before} points remain')
+
     # Create a function that linearly interpolates between points
     f = scipy.interpolate.interp1d(data[:,0], data[:,1])
 
