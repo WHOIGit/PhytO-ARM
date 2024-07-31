@@ -4,6 +4,7 @@ from threading import Lock
 
 import actionlib
 import rospy
+from std_msgs.msg import String
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 from phyto_arm.srv import LockCheck, LockCheckRequest, LockOperation, LockOperationRequest
@@ -32,6 +33,9 @@ class ArmBase:
         self.arm_name = arm_name
         self.task_lock = Lock()
         self.winch_client = None
+
+        # Publish current task. Just publish name
+        self.task_pub = rospy.Publisher(f'{arm_name}/task', String, queue_size=5)
 
         if rospy.get_param('winch_enabled'):
             if winch_name is None:
@@ -121,7 +125,7 @@ class ArmBase:
 
     # Logic for determining arm tasks goes heres, all implementations should override this
     def get_next_task(self, last_task):
-        return None
+        raise NotImplementedError('get_next_task must be implemented by arm subclass')
 
 
     # Callback for when a task is complete. Unused result argument is required
@@ -139,6 +143,7 @@ class ArmBase:
                 # If no movement is required
                 if self.winch_client is None:
                     task = self.get_next_task(task)
+                    self.task_pub.publish(task.name)
                     rospy.logwarn(f'No winch; running {task.name}')
                     task.callback()
 
@@ -163,5 +168,6 @@ class ArmBase:
                     # max_moving_winches limit.
 
                     task = self.get_next_task(task)
+                    self.task_pub.publish(task.name)
                     rospy.logwarn(f'Goal depth {task.depth} for task {task.name}')
                     self.send_winch_goal(task.depth, task.speed, task.callback)
