@@ -83,6 +83,7 @@ arm_ifcb:
 
     ctd_topic: '/arm_ifcb/ctd/depth'
 
+
     #  Note these values are not read by PhytO-ARM, they are sought by
     #  the included ds_util_nodes package, which publishes CTD data reads.
     #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
@@ -168,6 +169,23 @@ arm_chanos: #optional
             - 6.5
 
     ctd_topic: '/arm_chanos/ctd/depth'
+    ctd:
+        channels:
+            - conductivity(mS/cm)
+            - temperature(C)
+            - pressure(dbar)
+            - chlorophyll(ug/L)
+            - phycoerythrin(cells/mL)
+            - temperature(C)
+            - O2_concentration(umol/L)
+            - PAR(umol/m2/s)
+            - turbidity(NTU)
+            - pressure(dbar)
+            - depth(m)
+            - salinity(PSU)
+            - speed_of_sound(m/s)
+            - specific_conductivity(uS/cm)
+            - O2_air_saturation(%)
 
     motor: #optional
         address: "192.168.13.4"
