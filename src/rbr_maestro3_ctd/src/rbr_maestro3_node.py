@@ -103,11 +103,11 @@ async def main():
     ctd_publisher = rospy.Publisher('~', Ctd, queue_size=5)
     if has_depth:
         depth_publisher = rospy.Publisher('~depth', DepthPressure, queue_size=5)
-    channel_publishers = [
-        rospy.Publisher(f'~{ros_safe(c)}', RbrMeasurement, queue_size=5)
-        for c, u in channels
-    ]
-
+    channel_publishers = []
+    for c, u in channels:
+        if c == 'depth':
+            continue
+        channel_publishers.append(rospy.Publisher(f'~{ros_safe(c)}', RbrMeasurement, queue_size=5))
 
     # Subscribe to incoming comms messages
     handler = lambda msg: asyncio.run_coroutine_threadsafe(ros_msg_q.put(msg),
@@ -143,9 +143,9 @@ async def main():
 
         # Construct the Ctd message
         ctd = Ctd()
-        ctd.conductivity = c.get('conductivity', math.nan)
-        ctd.temperature = c.get('temperature', math.nan)
-        ctd.pressure = c.get('pressure', math.nan)
+        ctd.conductivity = values.get('conductivity', math.nan)
+        ctd.temperature = values.get('temperature', math.nan)
+        ctd.pressure = values.get('pressure', math.nan)
 
         # Clear fields with no measurement
         ctd.salinity = math.nan
@@ -158,13 +158,12 @@ async def main():
 
         # Construct the DepthPressure message
         dp = DepthPressure()
-        dp.depth = c.get('depth', math.nan)
+        dp.depth = values.get('depth', math.nan)
         dp.latitude = DepthPressure.DEPTH_PRESSURE_NO_DATA
         dp.tare = DepthPressure.DEPTH_PRESSURE_NO_DATA
-        dp.pressure_raw = c.get('pressure', math.nan)
+        dp.pressure_raw = values.get('pressure', math.nan)
         dp.pressure_raw_unit = DepthPressure.UNIT_PRESSURE_DBAR
-        dp.pressure = c.get('pressure', math.nan)
-
+        dp.pressure = values.get('pressure', math.nan)
 
         # Construct the RbrMeasurement messages
         rbr_msgs = []
