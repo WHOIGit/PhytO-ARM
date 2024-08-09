@@ -1,4 +1,4 @@
-aiohttp==3.9.4
+aiohttp==3.10.2
 pyModbusTCP==0.1.8
 scipy==1.10
 
