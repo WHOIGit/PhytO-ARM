@@ -5,7 +5,7 @@ from threading import Lock
 import actionlib
 import rospy
 
-from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
+from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal, ArmTask
 from phyto_arm.srv import LockCheck, LockCheckRequest, LockOperation, LockOperationRequest
 
 
@@ -32,6 +32,7 @@ class ArmBase:
         self.arm_name = arm_name
         self.task_lock = Lock()
         self.winch_client = None
+        self.task_pub = rospy.Publisher(f'/phyto_arm/tasks{arm_name}', ArmTask, queue_size=5)
 
         if rospy.get_param('winch_enabled'):
             if winch_name is None:
@@ -129,6 +130,12 @@ class ArmBase:
     def start_next_task(self, move_result=None):
         self.task_lock.release()
 
+    def publish_task(self, task):
+        task_msg = ArmTask()
+        task_msg.name = task.name
+        task_msg.depth = task.depth
+        task_msg.speed = task.speed
+        self.task_pub.publish(task_msg)
 
     # Primary loop that should be the same for all arms, override should not be needed
     def loop(self):
@@ -140,6 +147,7 @@ class ArmBase:
                 if self.winch_client is None:
                     task = self.get_next_task(task)
                     rospy.logwarn(f'No winch; running {task.name}')
+                    self.publish_task(task)
                     task.callback()
 
 
@@ -164,4 +172,5 @@ class ArmBase:
 
                     task = self.get_next_task(task)
                     rospy.logwarn(f'Goal depth {task.depth} for task {task.name}')
+                    self.publish_task(task)
                     self.send_winch_goal(task.depth, task.speed, task.callback)
