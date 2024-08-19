@@ -103,11 +103,10 @@ async def main():
     ctd_publisher = rospy.Publisher('~', Ctd, queue_size=5)
     if has_depth:
         depth_publisher = rospy.Publisher('~depth', DepthPressure, queue_size=5)
-    channel_publishers = []
-    for c, u in channels:
-        if c == 'depth':
-            continue
-        channel_publishers.append(rospy.Publisher(f'~{ros_safe(c)}', RbrMeasurement, queue_size=5))
+    channel_publishers = [
+        rospy.Publisher(f'~rbr/{ros_safe(c)}', RbrMeasurement, queue_size=5)
+        for c, u in channels
+    ]
 
     # Subscribe to incoming comms messages
     handler = lambda msg: asyncio.run_coroutine_threadsafe(ros_msg_q.put(msg),
