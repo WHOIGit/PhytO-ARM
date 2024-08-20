@@ -33,11 +33,11 @@ else
   tmux send-keys "docker exec -it phyto-arm bash" C-m
   tmux send-keys "./phyto-arm start arm_ifcb ./mounted_config.yaml" C-m
 
-  # Select pane 3 and launch the Chanos arm in the same container
+  # Select pane 3 and launch the ESP arm in the same container
   tmux select-pane -t 2
   tmux send-keys "sleep 10" C-m
   tmux send-keys "docker exec -it phyto-arm bash" C-m
-  tmux send-keys "./phyto-arm start arm_chanos ./mounted_config.yaml" C-m
+  tmux send-keys "./phyto-arm start arm_esp ./mounted_config.yaml" C-m
 
   # Attach to the session
   tmux attach -t phyto-arm
