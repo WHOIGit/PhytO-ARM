@@ -1,0 +1,18 @@
+<launch>
+    <!-- Most settings are in config.yaml, which is easier to edit -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <group ns="arm_esp">
+        <node name="ctd" pkg="phyto_arm" type="mock_ctd.py" />
+
+        <node name="arm" pkg="phyto_arm" type="arm_esp.py" />
+
+        <!-- Map launch arg to parameter for driving arm behavior -->
+        <param name="winch_enabled" value="$(arg esp_winch)" type="bool" />
+
+        <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
+        <group if="$(arg esp_winch)">
+            <node name="winch" pkg="phyto_arm" type="mock_winch_node.py" />
+        </group>
+    </group>
+</launch>

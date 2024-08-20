@@ -7,6 +7,7 @@ launch_args:
     classifier: false
     ifcb_winch: false
     chanos_winch: false
+    esp_winch: false
     digital_logger: true
 
 
@@ -239,8 +240,73 @@ arm_chanos: #optional
 
     winch: #optional
         range:
-                min:  0.7  # m
-                max:  1.5  # m
+            min:  0.7  # m
+            max:  1.5  # m
+
+        # The spool circumference is needed for an initial estimate of speed
+        spool_circumference: 0.6604  # m
+
+        # Used for calculating rpm_ratio = 60 * gear_ratio / spool_circumference
+        gear_ratio: 60
+
+        max_speed:  0.02  # m/s
+        # Distance from target at which we will reduce speed by half. This controls
+        # the sharpness of our velocity function. A smaller number produces a more
+        # abrupt stop.
+        half_speed_dist: 0.05  # m
+
+        # Distance from the target at which we are close enough to stop.
+        epsilon: 0.01  # m
+
+        safety_envelopes:
+            position: 0.1  # meters
+            time: # Unused for now
+                extra_pct: 10.0
+                extra_sec: 10.0
+
+
+arm_esp: #optional
+    tasks:
+        default_depth: 5.0 # m
+        profiler_peak:
+            # If true, will use the profiler to find the peak value
+            # Falls back on default_steps otherwise
+            enabled: true
+            # Minimum level of the profiled sensor data to trigger a sample at depth
+            threshold: 0.0
+            # Check for new peak at this frequency
+            update_frequency: 60 # seconds
+
+
+    ctd_topic: '/arm_esp/ctd/depth'
+    ctd:
+        channels:
+            - conductivity(mS/cm)
+            - temperature(C)
+            - pressure(dbar)
+            - chlorophyll(ug/L)
+            - phycoerythrin(cells/mL)
+            - temperature(C)
+            - O2_concentration(umol/L)
+            - PAR(umol/m2/s)
+            - turbidity(NTU)
+            - pressure(dbar)
+            - depth(m)
+            - salinity(PSU)
+            - speed_of_sound(m/s)
+            - specific_conductivity(uS/cm)
+            - O2_air_saturation(%)
+
+    motor: #optional
+        address: "192.168.13.4"
+        port: 502
+        refresh_rate: 1  # hz
+        counts_per_turn: 8192  # defined in manual p.9
+
+    winch: #optional
+        range:
+            min:  1.5  # m
+            max:  10.0  # m
 
         # The spool circumference is needed for an initial estimate of speed
         spool_circumference: 0.6604  # m

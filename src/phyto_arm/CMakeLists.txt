@@ -23,6 +23,7 @@ add_message_files(
   ConductorStates.msg
   DepthProfile.msg
   OutletStatus.msg
+  ArmTask.msg
 )
 
 add_service_files(
