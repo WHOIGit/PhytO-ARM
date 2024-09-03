@@ -36,6 +36,8 @@
         </node>
     </group>
 
+    <node name="digital_logger" pkg="phyto_arm" type="digital_logger_node.py"/>
+
     <!--
     disabled
     <node name="instant_replay" pkg="phyto_arm" type="instant_replay_node.py"
