@@ -1,0 +1,1 @@
+OutletStatus[] statuses
