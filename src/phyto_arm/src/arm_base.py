@@ -130,11 +130,11 @@ class ArmBase:
     def start_next_task(self, move_result=None):
         self.task_lock.release()
 
-    def publish_task(self, task):
+    def publish_task(self, name, depth = 0, speed = 0):
         task_msg = ArmTask()
-        task_msg.name = task.name
-        task_msg.depth = task.depth
-        task_msg.speed = task.speed
+        task_msg.name = name
+        task_msg.depth = depth
+        task_msg.speed = speed
         self.task_pub.publish(task_msg)
 
     # Primary loop that should be the same for all arms, override should not be needed
@@ -147,7 +147,7 @@ class ArmBase:
                 if self.winch_client is None:
                     task = self.get_next_task(task)
                     rospy.logwarn(f'No winch; running {task.name}')
-                    self.publish_task(task)
+                    self.publish_task(task.name)
                     task.callback()
 
 
@@ -171,6 +171,8 @@ class ArmBase:
                     # max_moving_winches limit.
 
                     task = self.get_next_task(task)
-                    rospy.logwarn(f'Goal depth {task.depth} for task {task.name}')
-                    self.publish_task(task)
-                    self.send_winch_goal(task.depth, task.speed, task.callback)
+                    speed = task.speed or rospy.get_param('winch/max_speed')
+                    rospy.logwarn(f'Goal depth {task.depth}, speed {speed} for task {task.name}')
+
+                    self.publish_task(task.name, task.depth, speed)
+                    self.send_winch_goal(task.depth, speed, task.callback)
