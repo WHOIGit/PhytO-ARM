@@ -10,7 +10,6 @@ class ArmESP(ArmBase):
     latest_profile = None
     profiler_peak_value = None
     profiler_peak_depth = None
-    last_update_time = None
 
     steps = []
 
@@ -28,7 +27,8 @@ class ArmESP(ArmBase):
         # If profiler peak is enabled and ready, execute new set of profile steps
         if rospy.get_param('tasks/profiler_peak/enabled') and profiler_peak_ready():
             peak_depth = clamped_profiler_peak()
-            return Task("profiler_peak", wait_seconds(update_freq), peak_depth)
+            esp_update_freq = rospy.get_param('tasks/profiler_peak/update_frequency')
+            return Task("profiler_peak", wait_seconds(esp_update_freq), peak_depth)
 
         # By default hold and wait a second
         return Task('default_position_wait', wait_seconds(5), rospy.get_param('tasks/default_depth'))
@@ -44,14 +44,6 @@ def profiler_peak_ready():
 
     if arm.profiler_peak_value < rospy.get_param('tasks/profiler_peak/threshold'):
         rospy.logwarn(f'Profiler peak value {arm.profiler_peak_value} is below threshold')
-        return False
-
-    # Check that last peak hasn't passed expiration window
-    update_freq = rospy.Duration(rospy.get_param('tasks/profiler_peak/update_frequency'))
-    
-    if arm.last_update_time is None or arm.last_update_time + update_freq < rospy.Time.now():
-        rospy.logwarn(f'Profiler peak expired at {expiration_time}')
-        arm.last_update_time = rospy.Time.now()
         return False
 
     return True
@@ -82,7 +74,7 @@ def on_profile_msg(msg):
 
 
 def wait_seconds(duration):
-    def awaiter():
+    def awaiter(move_result):
         def timer_callback(event):
             if rospy.is_shutdown():
                 return
