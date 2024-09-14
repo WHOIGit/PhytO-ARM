@@ -42,6 +42,15 @@ class IFCBState:
 
 state = IFCBState()
 
+def is_finished_pre_3_0(marker):
+    return marker['routine'] == 'runsample' and \
+       marker['kind'] == 'before' and \
+       marker['value'].get('StepType') == 'ChangeSpeed' and \
+       marker['value'].get('Arguments', []) == ['{#SamplingSpeed}']
+
+def is_finished_post_3_0(msg):
+    return msg == ['reportevent', 'Finished: Run sample.\n']
+
 
 def on_ifcb_msg(msg):
     # Parse the message and see if it is a marker
@@ -67,12 +76,9 @@ def on_ifcb_msg(msg):
     if marker is None:
         return
 
-    # Detect when we can release our position hold
-    if marker['routine'] == 'runsample' and \
-       marker['kind'] == 'before' and \
-       marker['value'].get('StepType') == 'ChangeSpeed' and \
-       marker['value'].get('Arguments', []) == ['{#SamplingSpeed}']:
-
+    # Detect when we can release our position hold. 
+    # API changes with Acquire 3.0 so we check for either finish message type.
+    if is_finished_pre_3_0(marker) or is_finished_post_3_0(parsed):
         rospy.loginfo('Should release position hold now')
 
         with state.position_hold_condition:
