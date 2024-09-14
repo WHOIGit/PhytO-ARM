@@ -42,12 +42,16 @@ class IFCBState:
 
 state = IFCBState()
 
+# For detecting a finished sample on Acquire < 3.0
 def is_finished_pre_3_0(marker):
+    if marker is None:
+        return False
     return marker['routine'] == 'runsample' and \
        marker['kind'] == 'before' and \
        marker['value'].get('StepType') == 'ChangeSpeed' and \
        marker['value'].get('Arguments', []) == ['{#SamplingSpeed}']
 
+# For detecting a finished sample on Acquire >= 3.0
 def is_finished_post_3_0(msg):
     return msg == ['reportevent', 'Finished: Run sample.\n']
 
@@ -70,10 +74,6 @@ def on_ifcb_msg(msg):
     if parsed == ['valuechanged', 'interactive', 'stopped']:
         rospy.loginfo('IFCB routine not running')
         state.ifcb_is_idle.set()
-        return
-
-    # Remaining behaviors depend on having a parsed marker
-    if marker is None:
         return
 
     # Detect when we can release our position hold. 
