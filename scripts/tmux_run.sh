@@ -6,6 +6,8 @@ CONFIG='configs/config.yaml'
 # If an arg is passed in use that instead
 if [ -n "$1" ]; then
       CONFIG=$1
+else
+    echo "WARNING: No config file specified; using default: $CONFIG"
 fi
 
 

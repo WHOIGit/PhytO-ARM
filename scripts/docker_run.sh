@@ -30,7 +30,10 @@ shift $((OPTIND -1))
 # If an arg config is passed in use that instead
 if [ -n "$1" ]; then
     CONFIG=$1
+else
+    echo "WARNING: No config file specified; using default: $CONFIG"
 fi
+
 
 docker run --rm -it \
     --name phyto-arm \
@@ -40,6 +43,6 @@ docker run --rm -it \
     --volume "$(pwd)"/configs:/app/configs:ro \
     --volume $CONFIG:/app/mounted_config.yaml:ro \
     --volume /mnt/data:/mnt/data \
-    --device /dev/ttyS3 \
+    --device /dev/ttyS1 \
     whoi/phyto-arm:latest \
     $COMMAND
