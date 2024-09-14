@@ -31,7 +31,7 @@ class ArmESP(ArmBase):
             return Task("profiler_peak", wait_seconds(esp_update_freq), peak_depth)
 
         # By default hold and wait a second
-        return Task('default_position_wait', wait_seconds(5), rospy.get_param('tasks/default_depth'))
+        return Task('default_position_wait', wait_seconds(10), rospy.get_param('tasks/default_depth'))
 
 # Global reference to arm state
 arm = None
