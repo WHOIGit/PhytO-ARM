@@ -1,0 +1,78 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Biocide."
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "biocide",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          1.0
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#BiocideVolume}"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "needle",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Biocide."
+        ]
+      }
+    ]
+  }
+]

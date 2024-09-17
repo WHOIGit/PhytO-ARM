@@ -1,0 +1,160 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Debubble."
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "debubble",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.25
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#DebubbleConeVolume}"
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "needle",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#DebubbleNeedleVolume}"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          3000
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Condition",
+    "Parameters": [
+      "{#RefillAfterDebubbleON}"
+    ],
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Refill after debubble."
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "exhaust",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.5
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.75
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#DebubbleRefillVolume}"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "needle",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#DebubbleLeftVolume}"
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Debubble."
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,158 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Prime sample tube."
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.75
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#PrimeVolume}"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "exhaust",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.25
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.75
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#PrimeVolume}"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "needle",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.25
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          20.0
+        ]
+      },
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Prime sample tube."
+        ]
+      }
+    ]
+  }
+]

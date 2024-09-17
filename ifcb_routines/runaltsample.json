@@ -1,0 +1,139 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Run alt sample."
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.4
+        ]
+      },
+      {
+        "StepType": "GrabGPSData"
+      },
+      {
+        "StepType": "GetEnvironment"
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#AltSampleVolume}"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "needle",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          "{#SamplingSpeed}"
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Condition",
+    "Parameters": [
+      "{#RunSampleFastON}"
+    ],
+    "Steps": [
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          "{#SamplingFastSpeed}"
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "GrabFileName"
+      },
+      {
+        "StepType": "AssignDaqAlt"
+      },
+      {
+        "StepType": "SwitchTriggering",
+        "Arguments": [
+          true
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#SampleVolumeToSkip}"
+        ]
+      },
+      {
+        "StepType": "TriggerOnce"
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "SwitchTriggering",
+        "Arguments": [
+          false
+        ]
+      },
+      {
+        "StepType": "SaveFiles"
+      },
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Run alt sample."
+        ]
+      }
+    ]
+  }
+]

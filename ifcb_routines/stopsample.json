@@ -1,0 +1,37 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Stopping - Run sample."
+        ]
+      },
+      {
+        "StepType": "TriggerOnce"
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "SwitchTriggering",
+        "Arguments": [
+          false
+        ]
+      },
+      {
+        "StepType": "SaveFiles"
+      },
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Stopped - Run sample."
+        ]
+      }
+    ]
+  }
+]
