@@ -1,0 +1,155 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Bleach."
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "bleach",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          1.0
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#BleachVolume}"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Condition",
+    "Parameters": [
+      "{#BleachToExhaustON}"
+    ],
+    "Steps": [
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "exhaust",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          60000
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Iteration",
+    "Parameters": [
+      "{#BleachRinseCount}"
+    ],
+    "Steps": [
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#BleachRinseVolume}"
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "exhaust",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Bleach."
+        ]
+      }
+    ]
+  }
+]

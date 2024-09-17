@@ -1,0 +1,179 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Cartridge debubble."
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "StoreValue",
+        "Arguments": [
+          "Pump1State",
+          "{#Pump1ON}"
+        ]
+      },
+      {
+        "StepType": "StoreValue",
+        "Arguments": [
+          "Pump2State",
+          "{#Pump2ON}"
+        ]
+      },
+      {
+        "StepType": "SwitchPump1",
+        "Arguments": [
+          false
+        ]
+      },
+      {
+        "StepType": "SwitchPump2",
+        "Arguments": [
+          false
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "extra",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.25
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          4.5
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          3000
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Condition",
+    "Parameters": [
+      "{#RefillAfterDebubbleON}"
+    ],
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Refill after debubble."
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "exhaust",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.5
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.75
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          5.0
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "needle",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#DebubbleLeftVolume}"
+        ]
+      }
+    ]
+  },
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "SwitchPump1",
+        "Arguments": [
+          "{#Pump1State}"
+        ]
+      },
+      {
+        "StepType": "SwitchPump2",
+        "Arguments": [
+          "{#Pump2State}"
+        ]
+      },
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Cartridge debubble."
+        ]
+      }
+    ]
+  }
+]

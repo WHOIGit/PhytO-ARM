@@ -1,0 +1,10 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Initialize"
+      }
+    ]
+  }
+]

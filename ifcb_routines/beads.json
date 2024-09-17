@@ -1,0 +1,182 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Beads."
+        ]
+      },
+      {
+        "StepType": "SwitchStirrer",
+        "Arguments": [
+          true
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          1.0
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "debubble",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          1.0
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "beads",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      },
+      {
+        "StepType": "DriveSyringeRelative",
+        "Arguments": [
+          "{#BeadsVolume}"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "debubble",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      },
+      {
+        "StepType": "DriveSyringeRelative",
+        "Arguments": [
+          1.0
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "SwitchStirrer",
+        "Arguments": [
+          false
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "needle",
+          "CCW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          "{#SamplingSpeed}"
+        ]
+      },
+      {
+        "StepType": "GrabFileName"
+      },
+      {
+        "StepType": "AssignDaqNormal"
+      },
+      {
+        "StepType": "SwitchTriggering",
+        "Arguments": [
+          true
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "TriggerOnce"
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          1000
+        ]
+      },
+      {
+        "StepType": "SwitchTriggering",
+        "Arguments": [
+          false
+        ]
+      },
+      {
+        "StepType": "SaveFiles"
+      },
+      {
+        "StepType": "SwitchBeads",
+        "Arguments": [
+          false
+        ]
+      },
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Beads."
+        ]
+      }
+    ]
+  }
+]
