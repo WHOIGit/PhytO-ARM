@@ -1,0 +1,78 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Flush sample tube."
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.75
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "needle",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#FlushVolume}"
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          2000
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          20.0
+        ]
+      },
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Flush sample tube."
+        ]
+      }
+    ]
+  }
+]
