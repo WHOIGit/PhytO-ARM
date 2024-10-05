@@ -20,6 +20,7 @@ alerts:
 
 gps:
     host: "172.17.0.1"
+    check_fix_by_variance: false #optional
 
 lock_manager:
     # Use this to control how many motors can be in motion at once.
