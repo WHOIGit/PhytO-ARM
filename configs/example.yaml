@@ -228,7 +228,7 @@ classifier: #optional
     triton_server_url: "172.17.0.1:9001/"
     classifier_model: "ifcb_iv3_onnx"
 
-camera:
+camera: #optional
     fore_camera: #optional
         video_stream_url: "rtsp://admin:example_password@192.168.13.123/"
     aft_camera: #optional
