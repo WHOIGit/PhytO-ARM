@@ -5,7 +5,7 @@
     <!-- RBR winch namespace. Important for separating similar nodes on different arms -->
     <group ns="arm_chanos">
         <!-- proxy for publishing RBR's UDP stream as ROS topic -->
-        <node name="rbr_udp" pkg="rbr_maestro3_ctd" type="udp_to_ros.py">
+        <node name="rbr_udp" pkg="phyto_arm" type="udp_to_ros.py">
             <param name="port" type="int" value="12345" />
         </node>
 
