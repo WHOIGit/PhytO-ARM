@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import rospy
 import json
+
 import requests
-from requests.auth import HTTPDigestAuth
+import rospy
 
 from phyto_arm.msg import OutletStatus
 
@@ -22,7 +22,7 @@ def control_outlet(msg):
 
     status = msg.status == 'on'
 
-    response = requests.put(f'http://{address}/restapi/relay/outlets/{outlet_num}/state/', auth=HTTPDigestAuth(username, password), data={'value': str(status).lower()}, headers={"X-CSRF": "x", "Accept": "application/json"})
+    response = requests.put(f'http://{address}/restapi/relay/outlets/{outlet_num}/state/', auth=requests.auth.HTTPDigestAuth(username, password), data={'value': str(status).lower()}, headers={"X-CSRF": "x", "Accept": "application/json"})
     rospy.loginfo(f'sent: http://{address}/restapi/relay/outlets/{outlet_num}/state/, auth={username},{password} status={str(status).lower()}, received: code {response.status_code} : {response.text}')
 
 
