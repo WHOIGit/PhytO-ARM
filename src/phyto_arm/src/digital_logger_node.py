@@ -47,7 +47,8 @@ def main():
     rate = rospy.Rate(1)
 
     while not rospy.is_shutdown():
-        response = requests.get(f'http://{username}:{password}@{address}/restapi/relay/outlets/=0,1,2,3,4,5,6,7/state/')
+        outlet_list = ",".join(map(str, range(num_outlets)))
+        response = requests.get(f'http://{username}:{password}@{address}/restapi/relay/outlets/={outlet_list}/state/')
 
         result = json.loads(response.text)
 
