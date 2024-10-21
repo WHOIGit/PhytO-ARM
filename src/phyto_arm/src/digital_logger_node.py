@@ -10,10 +10,10 @@ def control_outlet(msg):
     """
     Send the given msg to the digital logger as an HTTP request.
     """
-    username = rospy.get_param('/digital_logger/username')
-    password = rospy.get_param('/digital_logger/password')
-    address = rospy.get_param('/digital_logger/address')
-    outlets = rospy.get_param('/digital_logger/outlets')
+    username = rospy.get_param('~username')
+    password = rospy.get_param('~password')
+    address = rospy.get_param('~address')
+    outlets = rospy.get_param('~outlets')
 
     for outlet in outlets:
         if outlet['name'] == msg.name:
@@ -27,15 +27,15 @@ def control_outlet(msg):
 
 
 def main():
-    rospy.init_node('digital_logger_node')
+    rospy.init_node('digital_logger')
 
     # subscribe to the digital logger control topic
     subscriber = rospy.Subscriber('/digital_logger/control', OutletStatus, control_outlet)
 
-    username = rospy.get_param('/digital_logger/username')
-    password = rospy.get_param('/digital_logger/password')
-    address = rospy.get_param('/digital_logger/address')
-    outlets = rospy.get_param('/digital_logger/outlets')
+    username = rospy.get_param('~username')
+    password = rospy.get_param('~password')
+    address = rospy.get_param('~address')
+    outlets = rospy.get_param('~outlets')
     num_outlets = len(outlets)
 
     # create an independent publisher for each outlet
