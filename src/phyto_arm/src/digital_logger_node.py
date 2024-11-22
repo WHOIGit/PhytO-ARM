@@ -44,9 +44,9 @@ def run_digital_logger():
     num_outlets = len(outlets)
 
     # create an independent publisher for each outlet
-    outlet_publishers = {}
+    outlet_publishers = []
     for outlet_num in range(num_outlets):
-        outlet_publishers[f'outlet_{outlet_num}'] = rospy.Publisher(f'/digital_logger/outlet/{outlet_num}/status/', OutletStatus, queue_size=10)
+        outlet_publishers.append(rospy.Publisher(f'/digital_logger/outlet/{outlet_num}/status/', OutletStatus, queue_size=10))
 
     # Monitor outlets at 1Hz
     rate = rospy.Rate(1)
@@ -60,8 +60,8 @@ def run_digital_logger():
         assert len(result) == num_outlets
 
         # publish the status of each outlet to its specific topic
-        for outlet_index in range(len(result)):
-            if result[outlet_index]:
+        for outlet_index, outlet_result in enumerate(result):
+            if outlet_result:
                 status = 'on'
             else:
                 status = 'off'
@@ -70,7 +70,7 @@ def run_digital_logger():
             outlet_status.name = outlets[outlet_index]['name']
             outlet_status.status = status
 
-            outlet_publishers[f'outlet_{outlet_index}'].publish(outlet_status)
+            outlet_publishers[outlet_index].publish(outlet_status)
 
         rate.sleep()
 
