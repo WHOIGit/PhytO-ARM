@@ -7,7 +7,7 @@ launch_args:
     classifier: false
     ifcb_winch: false
     chanos_winch: false
-    digital_logger: false
+    digital_logger: true
 
 
 alerts:
@@ -266,18 +266,18 @@ digital_logger: #optional
     address: "192.168.1.2"
     outlets:
         - name: "ifcb"
-          outlet: 1
+          outlet: 0
         - name: "arm_ifcb"
-          outlet: 2
+          outlet: 1
         - name: "arm_chanos"
-          outlet: 3
+          outlet: 2
         - name: "camera"
-          outlet: 4
+          outlet: 3
         - name: "gps"
-          outlet: 5
+          outlet: 4
         - name: "ctd"
-          outlet: 6
+          outlet: 5
         - name: "winch"
-          outlet: 7
+          outlet: 6
         - name: "starlink"
-          outlet: 8
+          outlet: 7
