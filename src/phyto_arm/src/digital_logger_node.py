@@ -35,7 +35,7 @@ def run_digital_logger():
     rospy.init_node('digital_logger')
 
     # subscribe to the digital logger control topic
-    subscriber = rospy.Subscriber('/digital_logger/control', OutletStatus, control_outlet)
+    rospy.Subscriber('/digital_logger/control', OutletStatus, control_outlet)
 
     username = rospy.get_param('~username')
     password = rospy.get_param('~password')
