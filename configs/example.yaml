@@ -260,7 +260,7 @@ web:
 # D/L message: {"name": "camera", "status": "on"}
 # Control service: /digital_logger/control
 # C/L message: {"name": "camera", "status": "off"}
-digital_logger:
+digital_logger: #optional
     username: "admin"
     password: "1234"
     address: "192.168.1.2"
