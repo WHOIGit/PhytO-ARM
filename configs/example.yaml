@@ -7,6 +7,7 @@ launch_args:
     classifier: false
     ifcb_winch: false
     chanos_winch: false
+    digital_logger: false
 
 
 alerts:
@@ -262,7 +263,7 @@ web:
 digital_logger:
     username: "admin"
     password: "1234"
-    address: "192.168.1.5"
+    address: "192.168.1.2"
     outlets:
         - name: "ifcb"
           outlet: 1
