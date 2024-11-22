@@ -17,8 +17,7 @@ def control_outlet(msg):
 
     for outlet in outlets:
         if outlet['name'] == msg.name:
-            # outlet numbers in the config yaml start from 1 whereas outlet numbers in the API start from 0
-            outlet_num = int(outlet['outlet']) - 1
+            outlet_num = int(outlet['outlet'])
 
     status = msg.status == 'on'
 
