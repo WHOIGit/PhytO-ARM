@@ -36,7 +36,7 @@
         </node>
     </group>
 
-    <node name="digital_logger" pkg="phyto_arm" type="digital_logger_node.py"/>
+    <node if="$(arg digital_logger)" name="digital_logger" pkg="phyto_arm" type="digital_logger_node.py"/>
 
     <!--
     disabled

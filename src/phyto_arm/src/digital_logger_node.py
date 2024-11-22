@@ -26,7 +26,12 @@ def control_outlet(msg):
     rospy.loginfo(f'sent: http://{address}/restapi/relay/outlets/{outlet_num}/state/, auth={username},{password} status={str(status).lower()}, received: code {response.status_code} : {response.text}')
 
 
-def main():
+def run_digital_logger():
+    """
+    Run the digital logger node. Publishes outlet statuses at 
+    /digital_logger/outlets/{outlet num}/status. The outlets can be controlled by publishing a 
+    OutletStatus message to /digital_logger/control. 
+    """
     rospy.init_node('digital_logger')
 
     # subscribe to the digital logger control topic
@@ -72,6 +77,6 @@ def main():
 
 if __name__ == '__main__':
     try:
-        main()
+        run_digital_logger()
     except rospy.ROSInterruptException:
         pass
