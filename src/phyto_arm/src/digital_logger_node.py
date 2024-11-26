@@ -1,82 +1,115 @@
 #!/usr/bin/env python3
-import json
+import base64
+import http.client
 
-import requests
 import rospy
 
 from phyto_arm.msg import OutletStatus
 
-def control_outlet(msg):
-    """
-    Send the given msg to the digital logger as an HTTP request.
-    """
-    username = rospy.get_param('~username')
-    password = rospy.get_param('~password')
-    address = rospy.get_param('~address')
-    outlets = rospy.get_param('~outlets')
 
-    for outlet in outlets:
-        if outlet['name'] == msg.name:
-            outlet_num = int(outlet['outlet'])
+class DigitalLogger:
+    def __init__(self):
+        rospy.init_node('digital_logger')
 
-    status = msg.status == 'on'
+        # subscribe to the digital logger control topic
+        rospy.Subscriber('/digital_logger/control', OutletStatus, self.control_outlet)
 
-    outlet_endpoint = f'http://{address}/restapi/relay/outlets/{outlet_num}/state/'
-    response = requests.put(outlet_endpoint, auth=requests.auth.HTTPDigestAuth(username, password), data={'value': str(status).lower()}, headers={"X-CSRF": "x", "Accept": "application/json"})
-    rospy.loginfo(f'sent: {outlet_endpoint}, status={str(status).lower()}, received: code {response.status_code} : {response.text}')
+        self.username = rospy.get_param('~username')
+        self.password = rospy.get_param('~password')
+        self.address = rospy.get_param('~address')
+        self.outlets = rospy.get_param('~outlets')
+        self.outlet_names = {outlet['name']: int(outlet['outlet']) for outlet in self.outlets}
 
+        # use separate connections to prevent processes from accessing the same connection simultaneously
+        self.get_conn = http.client.HTTPConnection(self.address)
+        self.put_conn = http.client.HTTPConnection(self.address)
+        auth_string = f"{self.username}:{self.password}"
+        auth_bytes = auth_string.encode('utf-8')
+        encoded_auth = base64.b64encode(auth_bytes).decode('utf-8')
+        self.auth = f"Basic {encoded_auth}"
 
-def run_digital_logger():
-    """
-    Run the digital logger node. Publishes outlet statuses at 
-    /digital_logger/outlets/{outlet num}/status. The outlets can be controlled by publishing a 
-    OutletStatus message to /digital_logger/control. 
-    """
-    rospy.init_node('digital_logger')
+        self.outlet_publishers = []
+        for outlet_num, _ in enumerate(self.outlets):
+            self.outlet_publishers.append(rospy.Publisher(f'/digital_logger/outlet/{outlet_num}/status/', OutletStatus, queue_size=10))
 
-    # subscribe to the digital logger control topic
-    rospy.Subscriber('/digital_logger/control', OutletStatus, control_outlet)
+        # Monitor outlets at 1Hz
+        self.rate = rospy.Rate(1)
 
-    username = rospy.get_param('~username')
-    password = rospy.get_param('~password')
-    address = rospy.get_param('~address')
-    outlets = rospy.get_param('~outlets')
-    num_outlets = len(outlets)
+    def run(self):
+        """
+        Run the digital logger node. Publishes outlet statuses at 
+        /digital_logger/outlets/{outlet num}/status. The outlets can be controlled by publishing a 
+        OutletStatus message to /digital_logger/control. 
+        """
+        while not rospy.is_shutdown():
+            header = {
+                'Content-Type': 'application/json',
+                'Authorization': self.auth,
+            }
 
-    # create an independent publisher for each outlet
-    outlet_publishers = []
-    for outlet_num in range(num_outlets):
-        outlet_publishers.append(rospy.Publisher(f'/digital_logger/outlet/{outlet_num}/status/', OutletStatus, queue_size=10))
+            # send a status request for each available outlet
+            for outlet_index, _ in enumerate(self.outlets):
+                path = f'/restapi/relay/outlets/{outlet_index}/state/'
 
-    # Monitor outlets at 1Hz
-    rate = rospy.Rate(1)
+                self.get_conn.request('GET', path, headers=header)
+                response = self.get_conn.getresponse()
 
-    while not rospy.is_shutdown():
-        outlet_list = ",".join(map(str, range(num_outlets)))
-        response = requests.get(f'http://{username}:{password}@{address}/restapi/relay/outlets/={outlet_list}/state/')
+                # Check if the request was successful
+                if response.status != 200:
+                    raise RuntimeError(f'Failed to get outlet status from digital logger. Response: {response.status} {response.reason}')
 
-        result = json.loads(response.text)
+                outlet_result = response.read().decode('utf-8')
 
-        assert len(result) == num_outlets
+                # DL API uses 'true' and 'false' to denote outlet status, which need to be converted to Python bools
+                if outlet_result == 'true':
+                    status = 'on'
+                else:
+                    status = 'off'
 
-        # publish the status of each outlet to its specific topic
-        for outlet_index, outlet_result in enumerate(result):
-            if outlet_result:
-                status = 'on'
-            else:
-                status = 'off'
+                # publish the status of each outlet to its specific topic
+                outlet_status = OutletStatus()
+                outlet_status.name = self.outlets[outlet_index]['name']
+                outlet_status.status = status
 
-            outlet_status = OutletStatus()
-            outlet_status.name = outlets[outlet_index]['name']
-            outlet_status.status = status
+                self.outlet_publishers[outlet_index].publish(outlet_status)
 
-            outlet_publishers[outlet_index].publish(outlet_status)
+            self.rate.sleep()
 
-        rate.sleep()
+    def control_outlet(self, msg):
+        """
+        Send the given msg to the digital logger as an HTTP request.
+        """
+
+        outlet_num = self.outlet_names.get(msg.name)
+
+        status = msg.status == 'on'
+
+        # Define header
+        header = {
+                'X-CSRF': 'x',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+                'Authorization': self.auth,
+        }
+
+        data = f'value={str(status).lower()}'
+        path = f'/restapi/relay/outlets/{outlet_num}/state/'
+
+        self.put_conn.request('PUT', path, data.encode(), header)
+        response = self.put_conn.getresponse()
+
+        # Check if the request was successful
+        if response.status != 204:
+            raise RuntimeError(f'Failed to set outlet status of digital logger. Response: {response.status} {response.reason}')
+
+        result = response.read().decode('utf-8')
+
+        rospy.loginfo(f'sent status={str(status).lower()} to {self.address}:{path}, received: code {response.status} : {result}')
 
 
 if __name__ == '__main__':
     try:
-        run_digital_logger()
+        digital_logger = DigitalLogger()
+        digital_logger.run()
     except rospy.ROSInterruptException:
         pass
