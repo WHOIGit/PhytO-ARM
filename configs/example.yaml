@@ -7,6 +7,7 @@ launch_args:
     classifier: false
     ifcb_winch: false
     chanos_winch: false
+    digital_logger: true
 
 
 alerts:
@@ -253,3 +254,30 @@ web:
             default: -999.999 # Replace with desired default long
         defaultOnlyExample: #optional
             default: 'static_value' # No topic, making this default value permanent
+
+# Configure digital logger control
+# Status topic: /digital_logger/outlets/{outlet num}/status
+# D/L message: {"name": "camera", "status": "on"}
+# Control service: /digital_logger/control
+# C/L message: {"name": "camera", "status": "off"}
+digital_logger: #optional
+    username: "admin"
+    password: "1234"
+    address: "192.168.1.2"
+    outlets:
+        - name: "ifcb"
+          outlet: 0
+        - name: "arm_ifcb"
+          outlet: 1
+        - name: "arm_chanos"
+          outlet: 2
+        - name: "camera"
+          outlet: 3
+        - name: "gps"
+          outlet: 4
+        - name: "ctd"
+          outlet: 5
+        - name: "winch"
+          outlet: 6
+        - name: "starlink"
+          outlet: 7
