@@ -1,0 +1,72 @@
+[
+  {
+    "Type": "Sequence",
+    "Steps": [
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Starting - Sample to cone."
+        ]
+      },
+      {
+        "StepType": "Initialize"
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "intake",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      },
+      {
+        "StepType": "ChangeSpeed",
+        "Arguments": [
+          0.25
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          "{#SampleVolume}"
+        ]
+      },
+      {
+        "StepType": "MoveValve",
+        "Arguments": [
+          "debubble",
+          "CW"
+        ]
+      },
+      {
+        "StepType": "Wait",
+        "Arguments": [
+          5000
+        ]
+      },
+      {
+        "StepType": "DriveSyringe",
+        "Arguments": [
+          0.0
+        ]
+      },
+      {
+        "StepType": "Report",
+        "Arguments": [
+          "Finished - Sample to cone."
+        ]
+      }
+    ]
+  }
+]
