@@ -2,7 +2,10 @@
     <!-- Most settings are in config.yaml, which is easier to edit. -->
     <rosparam command="load" file="$(arg config_file)" />
 
-    <node name="ifcb" pkg="ifcb" type="ifcb" />
+    <node name="ifcb" pkg="ifcb" type="ifcb">
+        <param name="routines_dir" value="$(arg routines_dir)" />
+        <param name="data_dir" value="$(arg data_dir)" />
+    </node>
 
     <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
 

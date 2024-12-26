@@ -1,12 +1,36 @@
 name: Example
 
+docker_image: whoi/phyto-arm:latest
 
-launch_args:
-    log_dir: /mnt/data/roslogs/
-    rosbag_prefix: /mnt/data/rosbags/phyto-arm
-    classifier: false
-    ifcb_winch: false
-    chanos_winch: false
+processes:
+    main:
+        enabled: true
+        volumes:
+            log_dir: /mnt/data/roslogs/
+            rosbag_dir: /mnt/data/rosbags/
+        launch_args:
+            rosbag_prefix: phyto-arm
+            classifier: false
+        tcp_ports:
+            bridge_node: 9090
+            web_node: 8098
+    arm_ifcb:
+        enabled: true
+        launch_args:
+            ifcb_winch: false
+        devices:
+            ctd_path: /dev/ttyS1
+        volumes:
+            routines_dir: /home/ifcb/IFCBacquire/Host/Routines
+            data_dir: /mnt/data/ifcbdata
+    arm_chanos:
+        enabled: false
+        launch_args:
+            chanos_winch: false
+        devices:
+            ctd_path: /dev/ttyS2
+        udp_ports:
+            rbr_port: 12345
 
 
 alerts:
@@ -28,10 +52,8 @@ ifcb:
     address: "172.17.0.1"
     port: 8092
     serial: "111-111-111"
-    routines_dir: "/routines"
     # This path is interpreted by IFCBacquire, which may be in another
     # container or namespace.
-    data_dir: "/mnt/data/ifcbdata"
 
 
 arm_ifcb:

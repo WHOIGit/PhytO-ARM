@@ -8,10 +8,12 @@ In the future, we might process inactive rosbags to, for example, correct
 timestamps, or generate reports. See http://wiki.ros.org/rosbag/Cookbook
 -->
 <launch>
-    <arg name="rosbag_prefix" default="/home/hablab/PhytO-ARM/ros/rosbags/phyto-arm" />
+    <arg name="rosbag_dir" default="/data/rosbags/" />
+    <arg name="rosbag_prefix" default="phyto-arm" />
     <arg name="rosbag_size" default="1024" />
     <arg name="rosbag_duration" default="60m" />
 
     <node name="rosbag_record" pkg="rosbag" type="record"
-        args="$(eval 'record --all --exclude /camera/.*|/ifcb/image|/ifcb/in|/ifcb/roi/.*|/rosout_agg --output-prefix ' + arg('rosbag_prefix') + (' --split --size ' + str(arg('rosbag_size')) if arg('rosbag_size') else '') + (' --split --duration ' + str(arg('rosbag_duration')) if arg('rosbag_duration') else '') + ' --publish --lz4')" />
+        args="$(eval 'record --all --exclude /camera/.*|/ifcb/image|/ifcb/in|/ifcb/roi/.*|/rosout_agg --output-prefix ' +  arg('rosbag_dir') + arg('rosbag_prefix') + (' --split --size ' + str(arg('rosbag_size')) if arg('rosbag_size') else '') + (' --split --duration ' + str(arg('rosbag_duration')) if arg('rosbag_duration') else '') + ' --publish --lz4')" />
 </launch>
+
