@@ -65,18 +65,18 @@ def start_container(client, image_name, network_name, config_path: str, name: st
         launch_args.append(f"{device_name}:={host_path}")
 
     # And add udp ports
-    ports = []
+    ports = {}
     for port_name, port_value in process_config.get('udp_ports', {}).items():
         if port_name in launch_args:
             raise ValueError(f"UDP port name cannot be the same as a launch arg: {port_name}")
-        ports.append(f"{port_name}:{port_value}/udp")
+        ports[f'{port_value}/udp'] = port_value
         launch_args.append(f"{port_name}:={port_value}")
 
     # Add tcp ports
     for port_name, port_value in process_config.get('tcp_ports', {}).items():
         if port_name in launch_args:
             raise ValueError(f"TCP port name cannot be the same as a launch arg: {port_name}")
-        ports.append(f"{port_name}:{port_value}/tcp")
+        ports[f'{port_value}/tcp'] = port_value
         launch_args.append(f"{port_name}:={port_value}")
 
     # Build the roslaunch command based on container type
@@ -156,8 +156,9 @@ def start(args):
         print(f'Validating config file {args.config} against {args.config_schema}...')
         if not validate_config(args.config, args.config_schema):
             sys.exit(1)
+        print('Config is valid')
     
-    image_name = config['docker']['image']
+    image_name = config.get('docker_image') or config.get('docker', {}).get('image')
     containers = {}
     
     def cleanup():
