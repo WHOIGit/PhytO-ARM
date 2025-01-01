@@ -28,16 +28,41 @@ def get_running_containers(client: docker.DockerClient) -> Dict[str, Container]:
     containers = client.containers.list(filters={"name": "phyto-arm-"})
     return {c.name.replace('phyto-arm-', ''): c for c in containers}
 
+# This is here to wire up arguments to volume mounts to ROS launch parameters.
+# The alternative is to generate a mount automatically and pass the paths as
+# arguments to their respective launch files.
+def handle_special_volumes_by_process(process_name: str, process_config: dict) -> dict:
+    volumes = {}
+    if process_name == "main":
+        volumes[process_config['launch_args']['rosbag_dir']] = {
+            "bind": "/app/volumes/rosbags", # Must match launch file
+            "mode": "rw"
+        }
+    if process_name == "arm_ifcb":
+        volumes[process_config['launch_args']['routines_dir']] = {
+            "bind": "/app/volumes/routines", # Must match launch file
+            "mode": "ro"
+        }
+        volumes[process_config['launch_args']['data_dir']] = {
+            "bind": "/app/volumes/ifcbdata", # Must match launch file
+            "mode": "rw"
+        }
+    return volumes
+
 def start_container(
     client: docker.DockerClient,
     network: docker.models.networks.Network,
     config_path: Path,
     process_name: str,
-    process_config: dict,
-    image_name: str
+    config: dict
 ) -> Container:
     """Start a single PhytO-ARM container"""
+
+    process_config = config['processes'][process_name]
+    image_name = config['docker_image']
     container_name = f"phyto-arm-{process_name}"
+    log_dir = config['log_dir']
+    log_mount = "/app/volumes/roslogs"
 
     # Base volumes that all containers need
     volumes = {
@@ -48,16 +73,16 @@ def start_container(
         str(config_path.parent.absolute()): {
             "bind": "/app/configs",
             "mode": "ro"
+        },
+        log_dir: {
+            "bind": log_mount,
+            "mode": "rw"
         }
     }
 
     # Add process-specific volumes
-    for vol_name, host_path in process_config.get('volumes', {}).items():
-        Path(host_path).mkdir(parents=True, exist_ok=True)
-        volumes[host_path] = {
-            "bind": f"/app/volumes/{vol_name}",
-            "mode": "rw"
-        }
+    special_volumes = handle_special_volumes_by_process(process_name, process_config)
+    volumes.update(special_volumes)
 
     # Handle devices
     devices = [
@@ -85,7 +110,8 @@ def start_container(
         "ports": ports,
         "environment": {
             "DONT_SCREEN": "1", # screen is not needed within containers
-            "ROS_MASTER_URI": "http://phyto-arm-main:11311"
+            "ROS_MASTER_URI": "http://phyto-arm-main:11311",
+            "ROS_LOG_DIR": log_mount
         }
     }
 
@@ -143,8 +169,7 @@ def start_processes(config_path: Path, process_names: Optional[list[str]] = None
     # Always start main first if it's in the list
     if 'main' in processes:
         start_container(
-            client, network, config_path, 'main',
-            processes['main'], config['docker_image']
+            client, network, config_path, 'main', config
         )
 
         # Wait for ROS master to start
@@ -157,8 +182,7 @@ def start_processes(config_path: Path, process_names: Optional[list[str]] = None
     for name, process_config in processes.items():
         if process_config.get('enabled', True):
             start_container(
-                client, network, config_path, name,
-                process_config, config['docker_image']
+                client, network, config_path, name, config
             )
 
         # If process is not enabled in the config, but was requested, print a warning

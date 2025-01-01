@@ -65,13 +65,18 @@ def prep_roslaunch(config, env, package, launchfile):
     ]
     rl_args.append(f'config_file:={os.path.abspath(args.config)}')
 
-    for launch_arg, value in config.get('launch_args', {}).items():
+    # Get process-specific launch args if they exist
+    process_config = config.get('processes', {}).get(args.launch_name, {})
+    launch_args = process_config.get('launch_args', {})
+    
+    # Add any process-specific launch args
+    for launch_arg, value in launch_args.items():
         rl_args.append(f'{launch_arg}:={value}')
 
     # Allow the config to set a launch prefix (like gdb) for nodes. We have to
     # use an environment variable for this because roslaunch will error if an
     # argument is unset, while an environment variable is option.
-    launch_prefix = config.get('launch_args', {}).get('launch_prefix')
+    launch_prefix = launch_args.get('launch_prefix')
     if launch_prefix is not None:
         env = dict(env)  # copy first
         env['LAUNCH_PREFIX'] = launch_prefix

@@ -1,14 +1,13 @@
 name: Example
 
 docker_image: whoi/phyto-arm:latest
+log_dir: /data/roslogs/
 
 processes:
     main:
         enabled: true
-        volumes:
-            log_dir: /data/roslogs/
-            rosbag_dir: /data/rosbags/
         launch_args:
+            rosbag_dir: /data/rosbags/
             rosbag_prefix: phyto-arm
             classifier: false
         tcp_ports:
@@ -18,11 +17,10 @@ processes:
         enabled: true
         launch_args:
             ifcb_winch: false
-        devices:
-            ctd_path: /dev/ttyS1
-        volumes:
             routines_dir: /home/ifcb/IFCBacquire/Host/Routines
             data_dir: /data/ifcbdata
+        devices:
+            ctd_path: /dev/ttyS1
     arm_chanos:
         enabled: false
         launch_args:
