@@ -7,6 +7,7 @@
 
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
         <arg name="use_compression" value="true" />
+        <arg name="port" value="$(arg bridge_node)" />
     </include>
 
     <node name="lock_manager" pkg="phyto_arm" type="lock_manager.py" />
@@ -22,7 +23,9 @@
         <remap from="/extended_fix" to="~extended_fix" />
     </node>
 
-    <node name="web" pkg="phyto_arm" type="web_node.py" />
+    <node name="web" pkg="phyto_arm" type="web_node.py">
+        <param name="port" value="$(arg web_node)" />
+    </node>
 
     <group ns="camera">
         <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">

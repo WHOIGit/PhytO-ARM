@@ -66,7 +66,7 @@ def main():
                                 functools.partial(capture_field_value, name, config['topic_field']))
         else:
             rospy.logerr(f'Config {name} invalid, must have "default" or "environment" set')
-    web.run_app(app, port=8098)
+    web.run_app(app, port=rospy.get_param('~port'))
 
 
 if __name__ == '__main__':

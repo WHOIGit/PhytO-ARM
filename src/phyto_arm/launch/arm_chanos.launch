@@ -6,7 +6,7 @@
     <group ns="arm_chanos">
         <!-- proxy for publishing RBR's UDP stream as ROS topic -->
         <node name="rbr_udp" pkg="rbr_maestro3_ctd" type="udp_to_ros.py">
-            <param name="port" type="int" value="12345" />
+            <param name="port" type="int" value="$(arg rbr_port)" />
         </node>
 
         <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
