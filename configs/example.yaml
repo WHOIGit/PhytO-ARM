@@ -6,8 +6,8 @@ processes:
     main:
         enabled: true
         volumes:
-            log_dir: /mnt/data/roslogs/
-            rosbag_dir: /mnt/data/rosbags/
+            log_dir: /data/roslogs/
+            rosbag_dir: /data/rosbags/
         launch_args:
             rosbag_prefix: phyto-arm
             classifier: false
@@ -22,7 +22,7 @@ processes:
             ctd_path: /dev/ttyS1
         volumes:
             routines_dir: /home/ifcb/IFCBacquire/Host/Routines
-            data_dir: /mnt/data/ifcbdata
+            data_dir: /data/ifcbdata
     arm_chanos:
         enabled: false
         launch_args:
