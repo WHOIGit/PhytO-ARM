@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+"""
+PhytO-ARM Container CLI (pa)
+
+This script manages Docker containers for PhytO-ARM processes, using the original
+phyto-arm script within each container to manage ROS nodes.
+"""
+import argparse
+import os
+import sys
+import time
+from pathlib import Path
+from typing import Dict, Optional
+
+import docker
+import yaml
+from docker.models.containers import Container
+
+def create_network(client: docker.DockerClient) -> docker.models.networks.Network:
+    """Create or get the Docker network for PhytO-ARM containers"""
+    try:
+        return client.networks.get("phyto-arm-net")
+    except docker.errors.NotFound:
+        return client.networks.create("phyto-arm-net", driver="bridge")
+
+def get_running_containers(client: docker.DockerClient) -> Dict[str, Container]:
+    """Get all running PhytO-ARM containers"""
+    containers = client.containers.list(filters={"name": "phyto-arm-"})
+    return {c.name.replace('phyto-arm-', ''): c for c in containers}
+
+def start_container(
+    client: docker.DockerClient,
+    network: docker.models.networks.Network,
+    config_path: Path,
+    process_name: str,
+    process_config: dict,
+    image_name: str
+) -> Container:
+    """Start a single PhytO-ARM container"""
+    container_name = f"phyto-arm-{process_name}"
+
+    # Base volumes that all containers need
+    volumes = {
+        str(config_path.absolute()): {
+            "bind": "/app/config.yaml",
+            "mode": "ro"
+        },
+        str(config_path.parent.absolute()): {
+            "bind": "/app/configs",
+            "mode": "ro"
+        }
+    }
+
+    # Add process-specific volumes
+    for vol_name, host_path in process_config.get('volumes', {}).items():
+        Path(host_path).mkdir(parents=True, exist_ok=True)
+        volumes[host_path] = {
+            "bind": f"/app/volumes/{vol_name}",
+            "mode": "rw"
+        }
+
+    # Handle devices
+    devices = [
+        f"{path}:{path}"
+        for path in process_config.get('devices', {}).values()
+    ]
+
+    # Handle ports
+    ports = {}
+    for port in process_config.get('tcp_ports', {}).values():
+        ports[f'{port}/tcp'] = port
+    for port in process_config.get('udp_ports', {}).values():
+        ports[f'{port}/udp'] = port
+
+    # Container configuration
+    container_config = {
+        "image": image_name,
+        "name": container_name,
+        "command": f"phyto-arm start {process_name} /app/config.yaml",
+        "detach": True,
+        "remove": True,
+        "volumes": volumes,
+        "network": network.name,
+        "devices": devices,
+        "ports": ports,
+        "environment": {
+            "DONT_SCREEN": "1", # screen is not needed within containers
+            "ROS_MASTER_URI": "http://phyto-arm-main:11311"
+        }
+    }
+
+    if process_name == "main":
+        container_config["environment"].pop("ROS_MASTER_URI")
+
+    try:
+        container = client.containers.run(**container_config)
+        print(f"Started container {container_name}")
+        return container
+    except docker.errors.APIError as e:
+        print(f"Failed to start container {container_name}: {e}")
+        raise
+
+def start_processes(config_path: Path, process_names: Optional[list[str]] = None) -> None:
+    """Start PhytO-ARM containers based on config"""
+    client = docker.DockerClient.from_env()
+
+    # Check if any containers are already running
+    running = get_running_containers(client)
+    if running and process_names:
+
+        # Check for conflicts with requested processes
+        conflicts = set(process_names) & set(running.keys())
+        if conflicts:
+            print("Some requested processes are already running:")
+            for name in conflicts:
+                print(f"  - {name}")
+            sys.exit(1)
+    elif running:
+        print("Some PhytO-ARM containers are already running:")
+        for name in running:
+            print(f"  - {name}")
+        print("Specify process names to start additional containers")
+        sys.exit(1)
+
+    # Load config
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    # Create network
+    network = create_network(client)
+
+    # Determine which processes to start
+    processes = config['processes']
+    if process_names:
+        # Validate requested processes exist
+        invalid = set(process_names) - set(processes.keys())
+        if invalid:
+            print(f"Processes not found in config: {', '.join(invalid)}")
+            sys.exit(1)
+        # Filter to only requested processes
+        processes = {k: v for k, v in processes.items() if k in process_names}
+
+    # Always start main first if it's in the list
+    if 'main' in processes:
+        start_container(
+            client, network, config_path, 'main',
+            processes['main'], config['docker_image']
+        )
+
+        # Wait for ROS master to start
+        time.sleep(10)
+
+        # Remove main so we don't start it again
+        processes.pop('main')
+
+    # Start remaining processes
+    for name, process_config in processes.items():
+        if process_config.get('enabled', True):
+            start_container(
+                client, network, config_path, name,
+                process_config, config['docker_image']
+            )
+
+        # If process is not enabled in the config, but was requested, print a warning
+        elif process_names:
+            print(f"Process {name} is not enabled in the config; skipping")
+
+def stop_processes(process_names: Optional[list[str]] = None) -> None:
+    """Stop PhytO-ARM containers"""
+    client = docker.DockerClient.from_env()
+    stoppable = get_running_containers(client)
+
+    if not stoppable:
+        print("No PhytO-ARM containers are running")
+        return
+
+    if process_names:
+
+        # Validate requested processes exist
+        invalid = set(process_names) - set(stoppable.keys())
+        if invalid:
+            print(f"Processes not running: {', '.join(invalid)}")
+            sys.exit(1)
+
+        # Filter to only requested processes
+        stoppable = {k: v for k, v in stoppable.items() if k in process_names}
+
+    for name, container in stoppable.items():
+        try:
+            container.stop()
+            print(f"Stopped {name}")
+        except docker.errors.APIError as e:
+            print(f"Failed to stop {name}: {e}")
+
+def list_processes() -> None:
+    """List running PhytO-ARM containers"""
+    client = docker.DockerClient.from_env()
+    running = get_running_containers(client)
+
+    if not running:
+        print("No PhytO-ARM containers are running")
+        return
+
+    print("Running processes:")
+    for name in running:
+        print(f"  - {name}")
+
+def attach_process(process_name: str) -> None:
+    """Attach to a running PhytO-ARM container"""
+    client = docker.DockerClient.from_env()
+    running = get_running_containers(client)
+
+    if not running:
+        print("No PhytO-ARM containers are running")
+        return
+
+    if process_name not in running:
+        print(f"Process '{process_name}' is not running")
+        print("Running processes:", ", ".join(running.keys()))
+        return
+
+    os.system(f"docker attach phyto-arm-{process_name}")
+
+def cleanup() -> None:
+    """Remove PhytO-ARM network and any stopped containers"""
+    client = docker.DockerClient.from_env()
+
+    # Remove network
+    try:
+        network = client.networks.get("phyto-arm-net")
+        network.remove()
+        print("Removed PhytO-ARM network")
+    except docker.errors.NotFound:
+        pass
+
+    # Remove any stopped containers
+    containers = client.containers.list(
+        all=True,
+        filters={"name": "phyto-arm-"}
+    )
+    for container in containers:
+        try:
+            container.remove()
+            print(f"Removed container {container.name}")
+        except docker.errors.APIError:
+            pass
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest='command', required=True)
+
+    # Start command
+    start_parser = subparsers.add_parser('start')
+    start_parser.add_argument('config', type=Path)
+    start_parser.add_argument('processes', nargs='*',
+                            help='Specific processes to start (default: all enabled)')
+
+    # Stop command
+    stop_parser = subparsers.add_parser('stop')
+    stop_parser.add_argument('processes', nargs='*',
+                          help='Specific processes to stop (default: all)')
+
+    # List command
+    subparsers.add_parser('list')
+
+    # Attach command
+    attach_parser = subparsers.add_parser('attach')
+    attach_parser.add_argument('process')
+
+    # Cleanup command
+    subparsers.add_parser('cleanup')
+
+    args = parser.parse_args()
+
+    try:
+        if args.command == 'start':
+            start_processes(args.config, args.processes)
+        elif args.command == 'stop':
+            stop_processes(args.processes)
+        elif args.command == 'list':
+            list_processes()
+        elif args.command == 'attach':
+            attach_process(args.process)
+        elif args.command == 'cleanup':
+            cleanup()
+    except docker.errors.APIError as e:
+        print(f"Docker error: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\nOperation interrupted")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
