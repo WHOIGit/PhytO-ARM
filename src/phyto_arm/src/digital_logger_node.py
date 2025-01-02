@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import base64
-import http.client
+import urllib.request
 
 import rospy
 
@@ -20,13 +20,7 @@ class DigitalLogger:
         self.outlets = rospy.get_param('~outlets')
         self.outlet_names = {outlet['name']: int(outlet['outlet']) for outlet in self.outlets}
 
-        # use separate connections to prevent processes from accessing the same connection simultaneously
-        self.get_conn = http.client.HTTPConnection(self.address)
-        self.put_conn = http.client.HTTPConnection(self.address)
-        auth_string = f"{self.username}:{self.password}"
-        auth_bytes = auth_string.encode('utf-8')
-        encoded_auth = base64.b64encode(auth_bytes).decode('utf-8')
-        self.auth = f"Basic {encoded_auth}"
+        self.auth = f'Basic {base64.b64encode(f"{self.username}:{self.password}".encode()).decode()}'
 
         self.outlet_publishers = []
         for outlet_num, _ in enumerate(self.outlets):
@@ -42,26 +36,25 @@ class DigitalLogger:
         OutletStatus message to /digital_logger/control. 
         """
         while not rospy.is_shutdown():
-            header = {
-                'Content-Type': 'application/json',
-                'Authorization': self.auth,
-            }
-
             # send a status request for each available outlet
             for outlet_index, _ in enumerate(self.outlets):
-                path = f'/restapi/relay/outlets/{outlet_index}/state/'
+                # Construct request
+                url = f'http://{self.address}/restapi/relay/outlets/{outlet_index}/state/'
+                request = urllib.request.Request(url)
+                request.add_header("Authorization", self.auth)
 
-                self.get_conn.request('GET', path, headers=header)
-                response = self.get_conn.getresponse()
-
-                # Check if the request was successful
-                if response.status != 200:
-                    raise RuntimeError(f'Failed to get outlet status from digital logger. Response: {response.status} {response.reason}')
-
-                outlet_result = response.read().decode('utf-8')
+                try:
+                    # Send the GET request
+                    with urllib.request.urlopen(request) as response:
+                        # Read and decode the response
+                        response_data = response.read().decode('utf-8')
+                except urllib.error.HTTPError as http_err:
+                    raise ValueError(f"HTTP Error: {http_err.code} : {http_err.reason}") from http_err
+                except urllib.error.URLError as url_err:
+                    raise ValueError(f"URL Error: {url_err.reason}") from url_err
 
                 # DL API uses 'true' and 'false' to denote outlet status, which need to be converted to Python bools
-                if outlet_result == 'true':
+                if response_data == 'true':
                     status = 'on'
                 else:
                     status = 'off'
@@ -84,27 +77,25 @@ class DigitalLogger:
 
         status = msg.status == 'on'
 
-        # Define header
-        header = {
-                'X-CSRF': 'x',
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json',
-                'Authorization': self.auth,
-        }
-
         data = f'value={str(status).lower()}'
-        path = f'/restapi/relay/outlets/{outlet_num}/state/'
+        url = f'http://{self.address}/restapi/relay/outlets/{outlet_num}/state/'
 
-        self.put_conn.request('PUT', path, data.encode(), header)
-        response = self.put_conn.getresponse()
+        # Create a PUT request
+        req = urllib.request.Request(url, data=data.encode("utf-8"), method="PUT")
+        req.add_header("Authorization", self.auth)
+        req.add_header("X-CSRF", 'x')
 
-        # Check if the request was successful
-        if response.status != 204:
-            raise RuntimeError(f'Failed to set outlet status of digital logger. Response: {response.status} {response.reason}')
+        try:
+            # Send the PUT request
+            response = urllib.request.urlopen(req)
+        except urllib.error.HTTPError as http_err:
+            raise ValueError(f"HTTP Error: {http_err.code} : {http_err.reason}") from http_err
+        except urllib.error.URLError as url_err:
+            raise ValueError(f"URL Error: {url_err.reason}") from url_err
 
         result = response.read().decode('utf-8')
 
-        rospy.loginfo(f'sent status={str(status).lower()} to {self.address}:{path}, received: code {response.status} : {result}')
+        rospy.loginfo(f'sent status={str(status).lower()} to {self.address}:{url}, received: code {response.status} : {result}')
 
 
 if __name__ == '__main__':
