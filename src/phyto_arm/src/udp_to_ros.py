@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import socket
-import rospy
 import json
+import re
+
 from ds_core_msgs.msg import RawData
-from std_msgs.msg import Float32, String, Int32, Float32MultiArray, Int32MultiArray
+import rospy
+from std_msgs.msg import Float64, String, Int64, Float64MultiArray, Int64MultiArray, Bool, Int8MultiArray
 
 publishers = {}
 raw_pub = None
@@ -14,20 +16,31 @@ decoder = json.JSONDecoder()
 
 def get_ros_msg_type(value):
     if isinstance(value, float):
-        return Float32
+        return Float64
     elif isinstance(value, int):
-        return Int32
+        return Int64
     elif isinstance(value, str):
         return String
+    elif isinstance(value, bool):
+        return Bool
     elif isinstance(value, list):
         if all(isinstance(x, float) for x in value):
-            return Float32MultiArray
+            return Float64MultiArray
         elif all(isinstance(x, int) for x in value):
-            return Int32MultiArray
+            return Int64MultiArray
+        elif all(isinstance(x, bool) for x in value):
+            return Int8MultiArray
     return String
 
-def publish_message(json_data, base_topic):
-    for key, value in json_data.items():
+
+def validate_topic_name(topic_name: str) -> bool:
+    return re.match(r'^[a-zA-Z0-9_]+$', topic_name) is not None
+
+def publish_dict_to_subtopics(json_dict: dict, base_topic: str):
+    for key, value in json_dict.items():
+        if not validate_topic_name(key):
+            rospy.logerr(f"JSON key is invalid topic name. Skipping: {key}")
+            continue
         if key not in publishers:
             msg_type = get_ros_msg_type(value)
             publishers[key] = {
@@ -37,9 +50,11 @@ def publish_message(json_data, base_topic):
 
         if isinstance(value, list):
             if all(isinstance(x, float) for x in value):
-                msg = Float32MultiArray(data=value)
+                msg = Float64MultiArray(data=value)
             elif all(isinstance(x, int) for x in value):
-                msg = Int32MultiArray(data=value)
+                msg = Int64MultiArray(data=value)
+            elif all(isinstance(x, bool) for x in value):
+                msg = Int8MultiArray(data=[1 if x else 0 for x in value])
             else:
                 msg = String(data=str(value))
         else:
@@ -60,16 +75,16 @@ def main():
     global raw_pub, sock, buffer
     rospy.init_node('udp_to_ros_node', anonymous=True)
 
-    parse_json = rospy.get_param('~parse_json', False)
+    dict_to_subtopics = rospy.get_param('~json_dict_to_subtopics', False)
     base_topic = rospy.get_param('~topic', 'udp_stream')
     UDP_IP = "0.0.0.0"
     UDP_PORT = rospy.get_param('~port')
 
     rospy.loginfo(f"Listening for UDP data on {UDP_IP}:{UDP_PORT}...")
     rospy.loginfo(f"Base topic: {base_topic}")
-    rospy.loginfo(f"JSON parsing: {'enabled' if parse_json else 'disabled'}")
+    rospy.loginfo(f"JSON dict to ROS subtopics: {'enabled' if dict_to_subtopics else 'disabled'}")
 
-    if not parse_json:
+    if not dict_to_subtopics:
         raw_pub = rospy.Publisher(base_topic, RawData, queue_size=10)
 
     try:
@@ -84,7 +99,7 @@ def main():
             data, _ = sock.recvfrom(65536)
             buffer += data
 
-            if parse_json:
+            if dict_to_subtopics:
                 while buffer:
                     try:
                         _, index = decoder.raw_decode(buffer.decode('utf-8'))
@@ -92,7 +107,12 @@ def main():
                         buffer = buffer[index:]
 
                         json_data = json.loads(message)
-                        publish_message(json_data, base_topic)
+
+                        if not isinstance(json_data, dict):
+                            rospy.logerr(f"Cannot convert non-dict to ROS subtopics: {json_data}")
+                            continue
+
+                        publish_dict_to_subtopics(json_data, base_topic)
                     except json.JSONDecodeError:
                         break
             else:
