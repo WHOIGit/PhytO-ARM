@@ -53,16 +53,11 @@ class DigitalLogger:
                 except urllib.error.URLError as url_err:
                     raise ValueError(f"URL Error: {url_err.reason}") from url_err
 
-                # DL API uses 'true' and 'false' to denote outlet status, which need to be converted to Python bools
-                if response_data == 'true':
-                    status = 'on'
-                else:
-                    status = 'off'
-
                 # publish the status of each outlet to its specific topic
                 outlet_status = OutletStatus()
                 outlet_status.name = self.outlets[outlet_index]['name']
-                outlet_status.status = status
+                # DL API uses 'true' and 'false' to denote outlet status, which need to be converted to Python bools
+                outlet_status.is_active = response_data == 'true'
 
                 self.outlet_publishers[outlet_index].publish(outlet_status)
 
@@ -75,9 +70,7 @@ class DigitalLogger:
 
         outlet_num = self.outlet_names.get(msg.name)
 
-        status = msg.status == 'on'
-
-        data = f'value={str(status).lower()}'
+        data = f'value={str(msg.is_active).lower()}'
         url = f'http://{self.address}/restapi/relay/outlets/{outlet_num}/state/'
 
         # Create a PUT request
@@ -95,7 +88,7 @@ class DigitalLogger:
 
         result = response.read().decode('utf-8')
 
-        rospy.loginfo(f'sent status={str(status).lower()} to {self.address}:{url}, received: code {response.status} : {result}')
+        rospy.loginfo(f'sent status={str(msg.is_active).lower()} to {self.address}:{url}, received: code {response.status} : {result}')
 
 
 if __name__ == '__main__':
