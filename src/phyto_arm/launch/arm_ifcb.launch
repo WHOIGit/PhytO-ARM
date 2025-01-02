@@ -16,13 +16,13 @@
             <remap from="~in" to="ctd_comms/in" />
         </node>
 
-        <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
-
         <!-- Map launch arg to parameter for driving arm behavior -->
         <param name="winch_enabled" value="$(arg ifcb_winch)" type="bool" />
 
         <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
         <group if="$(arg ifcb_winch)">
+            <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+
             <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
 
             <node name="winch" pkg="phyto_arm" type="winch_node.py" />
