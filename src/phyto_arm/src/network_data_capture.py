@@ -144,20 +144,14 @@ def convert_to_ros_msg(value: Any, type_hint: str) -> Tuple[Any, str]:
         elif type_hint == "str":
             if not isinstance(value, str):
                 return None, f"Expected str for type {type_hint}, got {type(value)}"
+        elif type_hint.endswith("[]") and not isinstance(value, (list, tuple)):
+            return None, f"Expected list for type {type_hint}, got {type(value)}"
 
-        # Handle array types
-        if type_hint.endswith("[]"):
-            if not isinstance(value, (list, tuple)):
-                return None, f"Expected list for type {type_hint}, got {type(value)}"
-
-            # Create appropriate array message
-            if type_hint == "bool[]":
-                # Convert boolean array to int8 array
-                msg = msg_type(data=[1 if x else 0 for x in value])
-            else:
-                msg = msg_type(data=value)
+        # Create appropriate array message
+        if type_hint == "bool[]":
+            # Convert boolean array to int8 array
+            msg = msg_type(data=[int(x) for x in value])
         else:
-            # Single value types
             msg = msg_type(data=value)
 
         return msg, ""
