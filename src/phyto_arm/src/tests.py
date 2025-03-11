@@ -473,29 +473,61 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
         self.assertFalse(is_valid)
         self.assertIn("Delimiter required", error)
 
-    def test_validate_subtopic_config_valid(self):
-        subtopic_config = {
-            "field_id": "data",
-            "type": "float"
+    def test_validate_topic_config_delimited_with_array_type(self):
+        topic_config = {
+            "connection_type": "udp",
+            "port": 8080,
+            "parsing_strategy": "delimited",
+            "delimiter": ",",
+            "subtopics": {
+                "values": {
+                    "field_id": 0,
+                    "type": "float[]"
+                }
+            }
         }
-        is_valid, error = validate_subtopic_config("test_subtopic", subtopic_config)
+        is_valid, error = validate_topic_config("test_topic", topic_config)
+        self.assertFalse(is_valid)
+        self.assertIn("Arrays are not a supported field type for delimited string parsing", error)
+
+    def test_validate_subtopic_config_valid(self):
+        topic_config = {
+            "parsing_strategy": "json_dict",
+            "subtopics": {
+                "test_subtopic": {
+                    "field_id": "data",
+                    "type": "float"
+                }
+            }
+        }
+        is_valid, error = validate_subtopic_config(topic_config, "test_subtopic")
         self.assertTrue(is_valid)
         self.assertEqual(error, "")
 
     def test_validate_subtopic_config_missing_field(self):
-        subtopic_config = {
-            "field_id": "data"
+        topic_config = {
+            "parsing_strategy": "json_dict",
+            "subtopics": {
+                "test_subtopic": {
+                    "field_id": "data"
+                }
+            }
         }
-        is_valid, error = validate_subtopic_config("test_subtopic", subtopic_config)
+        is_valid, error = validate_subtopic_config(topic_config, "test_subtopic")
         self.assertFalse(is_valid)
         self.assertIn("Missing required field 'type'", error)
 
     def test_validate_subtopic_config_invalid_type(self):
-        subtopic_config = {
-            "field_id": "data",
-            "type": "invalid_type"
+        topic_config = {
+            "parsing_strategy": "json_dict",
+            "subtopics": {
+                "test_subtopic": {
+                    "field_id": "data",
+                    "type": "invalid_type"
+                }
+            }
         }
-        is_valid, error = validate_subtopic_config("test_subtopic", subtopic_config)
+        is_valid, error = validate_subtopic_config(topic_config, "test_subtopic")
         self.assertFalse(is_valid)
         self.assertIn("Invalid type", error)
 

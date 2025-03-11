@@ -44,6 +44,16 @@ network_data_capture: #optional
                 depth: #optional. Will publish to "/rbr_udp_stream/depth"
                     field_id: "depth" # Example of a JSON dict key. 
                     type: "float"
+        delimited_stream_example: #optional. Example for a delimited stream
+            connection_type: "udp"
+            port: 5678
+            parsing_strategy: "delimited"
+            delimiter: ","
+            subtopics: #optional
+                temperature: #optional. Will publish to "/delimited_stream_example/temperature"
+                    field_id: 0
+                    type: "float" # Note delimited fields cannot be arrays
+
 
 gps:
     host: "172.17.0.1"

@@ -85,14 +85,14 @@ def validate_topic_config(topic_name: str, topic_config: dict) -> Tuple[bool, st
         if not isinstance(topic_config["subtopics"], dict):
             return False, "Subtopics must be a dictionary"
 
-        for subtopic_name, subtopic_config in topic_config["subtopics"].items():
-            is_valid, error = validate_subtopic_config(subtopic_name, subtopic_config)
+        for subtopic_name, _ in topic_config["subtopics"].items():
+            is_valid, error = validate_subtopic_config(topic_config, subtopic_name)
             if not is_valid:
                 return False, f"Invalid subtopic '{subtopic_name}': {error}"
 
     return True, ""
 
-def validate_subtopic_config(subtopic_name: str, subtopic_config: dict) -> Tuple[bool, str]:
+def validate_subtopic_config(topic_config: dict, subtopic_name: str) -> Tuple[bool, str]:
     """Validate single subtopic configuration including field_id and type
 
     Args:
@@ -102,10 +102,15 @@ def validate_subtopic_config(subtopic_name: str, subtopic_config: dict) -> Tuple
     Returns:
         tuple[bool, str]: (is_valid, error_message)
     """
+    subtopic_config = topic_config["subtopics"][subtopic_name]
     required_fields = ["field_id", "type"]
     for field in required_fields:
         if field not in subtopic_config:
             return False, f"Missing required field '{field}'"
+
+    if topic_config["parsing_strategy"] == "delimited":
+        if  subtopic_config["type"].endswith('[]'):
+            return False, "Arrays are not a supported field type for delimited string parsing"
 
     if not isinstance(subtopic_config["field_id"], (int, str)):
         return False, "field_id must be an integer or string"
@@ -319,6 +324,26 @@ def parse_message(message: bytes, strategy: str, config: dict) -> Tuple[dict, st
 
     return {}, f"Unknown parsing strategy: {strategy}"
 
+def is_valid_value(value: Any, type_hint: str) -> Tuple[bool, str]:
+    """Validate value type against type hint and return error message if not valid
+
+    Args:
+        value: The value to validate
+        type_hint: String from config like "float", "str", "int", "bool", etc.
+    """
+    # Validate type
+    if type_hint.endswith("[]"):
+        if not isinstance(value, (list, tuple)):
+            return False, f"Field should be an array"
+    elif type_hint == "float" and not isinstance(value, (int, float)):
+        return False, f"Field should be a number"
+    elif type_hint == "int" and not isinstance(value, int):
+        return False, f"Field should be an integer"
+    elif type_hint == "bool" and not isinstance(value, bool):
+        return False, f"Field should be a boolean"
+
+    return True, ""
+
 def parse_delimited_message(message: bytes, config: dict) -> Tuple[dict, str]:
     """Parse delimited message into fields
 
@@ -349,14 +374,16 @@ def parse_delimited_message(message: bytes, config: dict) -> Tuple[dict, str]:
 
             # Convert according to type
             try:
-                if subtopic_config["type"].startswith("float"):
+                if subtopic_config["type"] == "float":
                     value = float(raw_value)
-                elif subtopic_config["type"].startswith("int"):
+                elif subtopic_config["type"] == "int":
                     value = int(raw_value)
-                elif subtopic_config["type"].startswith("bool"):
+                elif subtopic_config["type"] == "bool":
                     value = raw_value.lower() in ("true", "1", "t", "yes")
-                else:  # str type
-                    value = raw_value
+                elif subtopic_config["type"] == "str":
+                    value = str(raw_value)
+                else:
+                    return {}, f"Unsupported delimited field type: {subtopic_config['type']}"
 
                 result[subtopic_name] = value
 
@@ -398,16 +425,9 @@ def parse_json_dict_message(message: bytes, config: dict) -> Tuple[dict, str]:
             # Get the raw value
             raw_value = data[field_id]
 
-            # Validate type
-            if subtopic_config["type"].endswith("[]"):
-                if not isinstance(raw_value, (list, tuple)):
-                    return {}, f"Field '{field_id}' should be an array"
-            elif subtopic_config["type"] == "float" and not isinstance(raw_value, (int, float)):
-                return {}, f"Field '{field_id}' should be a number"
-            elif subtopic_config["type"] == "int" and not isinstance(raw_value, int):
-                return {}, f"Field '{field_id}' should be an integer"
-            elif subtopic_config["type"] == "bool" and not isinstance(raw_value, bool):
-                return {}, f"Field '{field_id}' should be a boolean"
+            is_valid, error = is_valid_value(raw_value, subtopic_config["type"])
+            if not is_valid:
+                return {}, f"Field '{field_id}' is not a valid {subtopic_config['type']}: {error}"
 
             result[subtopic_name] = raw_value
 
@@ -449,15 +469,9 @@ def parse_json_array_message(message: bytes, config: dict) -> Tuple[dict, str]:
             raw_value = data[field_id]
 
             # Validate type
-            if subtopic_config["type"].endswith("[]"):
-                if not isinstance(raw_value, (list, tuple)):
-                    return {}, f"Field {field_id} should be an array"
-            elif subtopic_config["type"] == "float" and not isinstance(raw_value, (int, float)):
-                return {}, f"Field {field_id} should be a number"
-            elif subtopic_config["type"] == "int" and not isinstance(raw_value, int):
-                return {}, f"Field {field_id} should be an integer"
-            elif subtopic_config["type"] == "bool" and not isinstance(raw_value, bool):
-                return {}, f"Field {field_id} should be a boolean"
+            is_valid, error = is_valid_value(raw_value, subtopic_config["type"])
+            if not is_valid:
+                return {}, f"Field '{field_id}' is not a valid {subtopic_config['type']}: {error}"
 
             result[subtopic_name] = raw_value
 
