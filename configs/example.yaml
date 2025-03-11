@@ -34,7 +34,15 @@ network_data_capture: #optional
                     field_id: 0 # Index of the field. Used if parsing_strategy is "json_array" or "delimited"
                     type: "str" # Can be "str", "int", "float", "bool", "float[]", "int[]", or "bool[]"
                 second_example: #optional. Another subtopic, would have path "/ship_udp_example/second_example"
-                    field_id: "temp" # Example of a key. Only used if parsing_strategy is "json_dict"
+                    field_id: 1
+                    type: "float"
+        rbr_udp_stream: #optional. Example for an RBR CTD stream proxied over UDP
+            connection_type: "udp"
+            port: 12345
+            parsing_strategy: "json_dict"
+            subtopics: #optional
+                depth: #optional. Will publish to "/rbr_udp_stream/depth"
+                    field_id: "depth" # Example of a JSON dict key. 
                     type: "float"
 
 gps:
@@ -188,7 +196,7 @@ arm_chanos: #optional
             - 5.0
             - 6.5
 
-    ctd_topic: '/arm_chanos/ctd/depth'
+    ctd_topic: '/rbr_udp_stream/depth'
     ctd:
         channels:
             - conductivity(mS/cm)
