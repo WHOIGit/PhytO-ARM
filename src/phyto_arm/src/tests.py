@@ -7,6 +7,8 @@ import rospy
 import sys
 import unittest
 from unittest.mock import patch, Mock
+import socket
+import time
 
 
 # Hack for getting this to recognize local modules for import
@@ -16,6 +18,12 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from arm_chanos import profiler_peak_ready, compute_profiler_steps, clamp_steps
 import arm_ifcb
 from lock_manager import NamedLockManager
+import network_data_capture
+from network_data_capture import (
+    validate_config, validate_topic_config, validate_subtopic_config,
+    convert_to_ros_msg, parse_delimited_message, parse_json_dict_message,
+    parse_json_array_message, extract_messages, append_to_buffer
+)
 
 
 class TestProfilerPeakReady(unittest.TestCase):
@@ -388,3 +396,330 @@ class TestItsScheduledDepthTime(unittest.TestCase):
 #         with patch('arm_ifcb.rospy.Time.now', return_value=rospy.Time.from_sec(1000)):
 #             arm_ifcb.scheduled_depth()
 #             self.assertEqual(mock_arm.last_scheduled_time.secs, 1000, "The last scheduled time should be updated to the current time.")
+
+
+class TestNetworkDataCaptureValidation(unittest.TestCase):
+    def test_validate_config_valid(self):
+        config = {
+            "topics": {
+                "test_topic": {
+                    "connection_type": "udp",
+                    "port": 8080,
+                    "parsing_strategy": "json_dict",
+                    "subtopics": {
+                        "value": {
+                            "field_id": "data",
+                            "type": "float"
+                        }
+                    }
+                }
+            }
+        }
+        is_valid, error = validate_config(config)
+        self.assertTrue(is_valid)
+        self.assertEqual(error, "")
+
+    def test_validate_config_missing_topics(self):
+        config = {}
+        is_valid, error = validate_config(config)
+        self.assertFalse(is_valid)
+        self.assertIn("must contain 'topics'", error)
+
+    def test_validate_topic_config_valid(self):
+        topic_config = {
+            "connection_type": "udp",
+            "port": 8080,
+            "parsing_strategy": "json_dict",
+            "subtopics": {
+                "value": {
+                    "field_id": "data",
+                    "type": "float"
+                }
+            }
+        }
+        is_valid, error = validate_topic_config("test_topic", topic_config)
+        self.assertTrue(is_valid)
+        self.assertEqual(error, "")
+
+    def test_validate_topic_config_missing_field(self):
+        topic_config = {
+            "connection_type": "udp",
+            "parsing_strategy": "json_dict",
+            "subtopics": {}
+        }
+        is_valid, error = validate_topic_config("test_topic", topic_config)
+        self.assertFalse(is_valid)
+        self.assertIn("Missing required field 'port'", error)
+
+    def test_validate_topic_config_invalid_connection_type(self):
+        topic_config = {
+            "connection_type": "invalid",
+            "port": 8080,
+            "parsing_strategy": "json_dict",
+            "subtopics": {}
+        }
+        is_valid, error = validate_topic_config("test_topic", topic_config)
+        self.assertFalse(is_valid)
+        self.assertIn("Invalid connection_type", error)
+
+    def test_validate_topic_config_missing_delimiter(self):
+        topic_config = {
+            "connection_type": "udp",
+            "port": 8080,
+            "parsing_strategy": "delimited",
+            "subtopics": {}
+        }
+        is_valid, error = validate_topic_config("test_topic", topic_config)
+        self.assertFalse(is_valid)
+        self.assertIn("Delimiter required", error)
+
+    def test_validate_subtopic_config_valid(self):
+        subtopic_config = {
+            "field_id": "data",
+            "type": "float"
+        }
+        is_valid, error = validate_subtopic_config("test_subtopic", subtopic_config)
+        self.assertTrue(is_valid)
+        self.assertEqual(error, "")
+
+    def test_validate_subtopic_config_missing_field(self):
+        subtopic_config = {
+            "field_id": "data"
+        }
+        is_valid, error = validate_subtopic_config("test_subtopic", subtopic_config)
+        self.assertFalse(is_valid)
+        self.assertIn("Missing required field 'type'", error)
+
+    def test_validate_subtopic_config_invalid_type(self):
+        subtopic_config = {
+            "field_id": "data",
+            "type": "invalid_type"
+        }
+        is_valid, error = validate_subtopic_config("test_subtopic", subtopic_config)
+        self.assertFalse(is_valid)
+        self.assertIn("Invalid type", error)
+
+
+class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
+    def test_convert_to_ros_msg_float(self):
+        msg, error = convert_to_ros_msg(42.5, "float")
+        self.assertEqual(error, "")
+        self.assertEqual(msg.data, 42.5)
+
+    def test_convert_to_ros_msg_string(self):
+        msg, error = convert_to_ros_msg("test", "str")
+        self.assertEqual(error, "")
+        self.assertEqual(msg.data, "test")
+
+    def test_convert_to_ros_msg_int(self):
+        msg, error = convert_to_ros_msg(42, "int")
+        self.assertEqual(error, "")
+        self.assertEqual(msg.data, 42)
+
+    def test_convert_to_ros_msg_bool(self):
+        msg, error = convert_to_ros_msg(True, "bool")
+        self.assertEqual(error, "")
+        self.assertEqual(msg.data, True)
+
+    def test_convert_to_ros_msg_float_array(self):
+        msg, error = convert_to_ros_msg([1.0, 2.0, 3.0], "float[]")
+        self.assertEqual(error, "")
+        self.assertEqual(list(msg.data), [1.0, 2.0, 3.0])
+
+    def test_convert_to_ros_msg_int_array(self):
+        msg, error = convert_to_ros_msg([1, 2, 3], "int[]")
+        self.assertEqual(error, "")
+        self.assertEqual(list(msg.data), [1, 2, 3])
+
+    def test_convert_to_ros_msg_bool_array(self):
+        msg, error = convert_to_ros_msg([True, False, True], "bool[]")
+        self.assertEqual(error, "")
+        self.assertEqual(list(msg.data), [1, 0, 1])
+
+    def test_convert_to_ros_msg_type_mismatch(self):
+        msg, error = convert_to_ros_msg("not_a_number", "float")
+        self.assertIsNone(msg)
+        self.assertIsNotNone(error)
+
+    def test_append_to_buffer(self):
+        buffer, error = append_to_buffer(b"hello", b" world")
+        self.assertEqual(error, "")
+        self.assertEqual(buffer, b"hello world")
+
+    def test_append_to_buffer_overflow(self):
+        buffer, error = append_to_buffer(b"hello", b" world", max_size=10)
+        self.assertIn("Buffer overflow", error)
+        self.assertEqual(buffer, b"hello")
+
+    def test_extract_messages_raw(self):
+        buffer = b"line1\nline2\nline3"
+        messages, remaining, error = extract_messages(buffer, "raw", {})
+        self.assertEqual(error, "")
+        self.assertEqual(messages, [b"line1", b"line2"])
+
+        # Remaining because raw only splits on newlines
+        self.assertEqual(remaining, b"line3")
+
+    def test_extract_messages_delimited(self):
+        buffer = b"a,b,c\nd,e,f\ng,h"
+        config = {"delimiter": ","}
+        messages, remaining, error = extract_messages(buffer, "delimited", config)
+        self.assertEqual(error, "")
+        self.assertEqual(messages, [b"a,b,c", b"d,e,f"])
+        self.assertEqual(remaining, b"g,h")
+
+    def test_extract_messages_json_dict(self):
+        buffer = b'{"a":1}\n{"b":2}\n{"c":'
+        messages, remaining, error = extract_messages(buffer, "json_dict", {})
+        self.assertEqual(error, "")
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(remaining, b'{"c":')
+
+    def test_parse_delimited_message(self):
+        message = b"42.5,test,1"
+        config = {
+            "delimiter": ",",
+            "subtopics": {
+                "value": {"field_id": 0, "type": "float"},
+                "name": {"field_id": 1, "type": "str"},
+                "flag": {"field_id": 2, "type": "bool"}
+            }
+        }
+        result, error = parse_delimited_message(message, config)
+        self.assertEqual(error, "")
+        self.assertEqual(result["value"], 42.5)
+        self.assertEqual(result["name"], "test")
+        self.assertEqual(result["flag"], True)
+
+    def test_parse_delimited_message_field_out_of_range(self):
+        message = b"42.5,test"
+        config = {
+            "delimiter": ",",
+            "subtopics": {
+                "value": {"field_id": 0, "type": "float"},
+                "name": {"field_id": 1, "type": "str"},
+                "flag": {"field_id": 2, "type": "bool"}
+            }
+        }
+        result, error = parse_delimited_message(message, config)
+        self.assertIn("Field index 2 out of range", error)
+
+    def test_parse_json_dict_message(self):
+        message = b'{"value": 42.5, "name": "test", "flag": true}'
+        config = {
+            "subtopics": {
+                "value": {"field_id": "value", "type": "float"},
+                "name": {"field_id": "name", "type": "str"},
+                "flag": {"field_id": "flag", "type": "bool"}
+            }
+        }
+        result, error = parse_json_dict_message(message, config)
+        self.assertEqual(error, "")
+        self.assertEqual(result["value"], 42.5)
+        self.assertEqual(result["name"], "test")
+        self.assertEqual(result["flag"], True)
+
+    def test_parse_json_dict_message_missing_field(self):
+        message = b'{"value": 42.5, "flag": true}'
+        config = {
+            "subtopics": {
+                "value": {"field_id": "value", "type": "float"},
+                "name": {"field_id": "name", "type": "str"},
+                "flag": {"field_id": "flag", "type": "bool"}
+            }
+        }
+        result, error = parse_json_dict_message(message, config)
+        self.assertIn("Field 'name' not found", error)
+
+    def test_parse_json_array_message(self):
+        message = b'[42.5, "test", true]'
+        config = {
+            "subtopics": {
+                "value": {"field_id": 0, "type": "float"},
+                "name": {"field_id": 1, "type": "str"},
+                "flag": {"field_id": 2, "type": "bool"}
+            }
+        }
+        result, error = parse_json_array_message(message, config)
+        self.assertEqual(error, "")
+        self.assertEqual(result["value"], 42.5)
+        self.assertEqual(result["name"], "test")
+        self.assertEqual(result["flag"], True)
+
+    def test_parse_json_array_message_index_out_of_range(self):
+        message = b'[42.5, "test"]'
+        config = {
+            "subtopics": {
+                "value": {"field_id": 0, "type": "float"},
+                "name": {"field_id": 1, "type": "str"},
+                "flag": {"field_id": 2, "type": "bool"}
+            }
+        }
+        result, error = parse_json_array_message(message, config)
+        self.assertIn("Field index 2 out of range", error)
+
+    @patch('socket.socket')
+    def test_create_socket_udp(self, mock_socket):
+        mock_socket_instance = Mock()
+        mock_socket.return_value = mock_socket_instance
+
+        sock, error = network_data_capture.create_socket("udp", 8080)
+
+        self.assertEqual(error, "")
+        mock_socket.assert_called_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket_instance.bind.assert_called_with(("0.0.0.0", 8080))
+
+    @patch('socket.socket')
+    def test_create_socket_tcp(self, mock_socket):
+        mock_socket_instance = Mock()
+        mock_socket.return_value = mock_socket_instance
+
+        sock, error = network_data_capture.create_socket("tcp", 8080)
+
+        self.assertEqual(error, "")
+        mock_socket.assert_called_with(socket.AF_INET, socket.SOCK_STREAM)
+        mock_socket_instance.bind.assert_called_with(("0.0.0.0", 8080))
+        mock_socket_instance.listen.assert_called_with(1)
+
+    @patch('socket.socket')
+    def test_create_socket_error(self, mock_socket):
+        mock_socket.side_effect = socket.error("Test socket error")
+
+        sock, error = network_data_capture.create_socket("udp", 8080)
+
+        self.assertIsNone(sock)
+        self.assertIn("Socket error", error)
+
+class TestTopicStats(unittest.TestCase):
+    def test_update_rates(self):
+        stats = network_data_capture.TopicStats()
+
+        # Add some message times
+        current_time = time.time()
+        stats.message_times = [
+            current_time - 9,
+            current_time - 7,
+            current_time - 5,
+            current_time - 3,
+            current_time - 1
+        ]
+
+        # Add some error times
+        stats.error_times = [
+            current_time - 8,
+            current_time - 4
+        ]
+
+        # Update rates
+        stats.update_rates(current_time)
+
+        # Check rates
+        self.assertEqual(stats.message_rate, 0.5)  # 5 messages / 10 seconds
+        self.assertEqual(stats.error_rate, 0.2)    # 2 errors / 10 seconds
+
+        # Add an old message that should be removed
+        stats.message_times.append(current_time - 15)
+        stats.update_rates(current_time)
+
+        # The old message should be removed
+        self.assertEqual(stats.message_rate, 0.5)  # Still 5 messages / 10 seconds
