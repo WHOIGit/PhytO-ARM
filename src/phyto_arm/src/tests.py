@@ -415,15 +415,14 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
-        is_valid, error = validate_config(config)
-        self.assertTrue(is_valid)
-        self.assertEqual(error, "")
+        # No exception should be raised
+        validate_config(config)
 
     def test_validate_config_missing_topics(self):
         config = {}
-        is_valid, error = validate_config(config)
-        self.assertFalse(is_valid)
-        self.assertIn("must contain 'topics'", error)
+        with self.assertRaises(network_data_capture.ConfigurationError) as context:
+            validate_config(config)
+        self.assertIn("must contain 'topics'", str(context.exception))
 
     def test_validate_topic_config_valid(self):
         topic_config = {
@@ -437,9 +436,8 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
-        is_valid, error = validate_topic_config("test_topic", topic_config)
-        self.assertTrue(is_valid)
-        self.assertEqual(error, "")
+        # No exception should be raised
+        validate_topic_config("test_topic", topic_config)
 
     def test_validate_topic_config_missing_field(self):
         topic_config = {
@@ -447,9 +445,9 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
             "parsing_strategy": "json_dict",
             "subtopics": {}
         }
-        is_valid, error = validate_topic_config("test_topic", topic_config)
-        self.assertFalse(is_valid)
-        self.assertIn("Missing required field 'port'", error)
+        with self.assertRaises(network_data_capture.ConfigurationError) as context:
+            validate_topic_config("test_topic", topic_config)
+        self.assertIn("Missing required field 'port'", str(context.exception))
 
     def test_validate_topic_config_invalid_connection_type(self):
         topic_config = {
@@ -458,9 +456,9 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
             "parsing_strategy": "json_dict",
             "subtopics": {}
         }
-        is_valid, error = validate_topic_config("test_topic", topic_config)
-        self.assertFalse(is_valid)
-        self.assertIn("Invalid connection_type", error)
+        with self.assertRaises(network_data_capture.ConfigurationError) as context:
+            validate_topic_config("test_topic", topic_config)
+        self.assertIn("Invalid connection_type", str(context.exception))
 
     def test_validate_topic_config_missing_delimiter(self):
         topic_config = {
@@ -469,9 +467,9 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
             "parsing_strategy": "delimited",
             "subtopics": {}
         }
-        is_valid, error = validate_topic_config("test_topic", topic_config)
-        self.assertFalse(is_valid)
-        self.assertIn("Delimiter required", error)
+        with self.assertRaises(network_data_capture.ConfigurationError) as context:
+            validate_topic_config("test_topic", topic_config)
+        self.assertIn("Delimiter required", str(context.exception))
 
     def test_validate_topic_config_delimited_with_array_type(self):
         topic_config = {
@@ -486,9 +484,9 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
-        is_valid, error = validate_topic_config("test_topic", topic_config)
-        self.assertFalse(is_valid)
-        self.assertIn("Arrays are not a supported field type for delimited string parsing", error)
+        with self.assertRaises(network_data_capture.ConfigurationError) as context:
+            validate_topic_config("test_topic", topic_config)
+        self.assertIn("Arrays are not a supported field type for delimited string parsing", str(context.exception))
 
     def test_validate_subtopic_config_valid(self):
         topic_config = {
@@ -500,9 +498,8 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
-        is_valid, error = validate_subtopic_config(topic_config, "test_subtopic")
-        self.assertTrue(is_valid)
-        self.assertEqual(error, "")
+        # No exception should be raised
+        validate_subtopic_config(topic_config, "test_subtopic", "test_topic")
 
     def test_validate_subtopic_config_missing_field(self):
         topic_config = {
@@ -513,9 +510,9 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
-        is_valid, error = validate_subtopic_config(topic_config, "test_subtopic")
-        self.assertFalse(is_valid)
-        self.assertIn("Missing required field 'type'", error)
+        with self.assertRaises(network_data_capture.ConfigurationError) as context:
+            validate_subtopic_config(topic_config, "test_subtopic", "test_topic")
+        self.assertIn("Missing required field 'type'", str(context.exception))
 
     def test_validate_subtopic_config_invalid_type(self):
         topic_config = {
@@ -527,66 +524,55 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
-        is_valid, error = validate_subtopic_config(topic_config, "test_subtopic")
-        self.assertFalse(is_valid)
-        self.assertIn("Invalid type", error)
+        with self.assertRaises(network_data_capture.ConfigurationError) as context:
+            validate_subtopic_config(topic_config, "test_subtopic", "test_topic")
+        self.assertIn("Invalid type", str(context.exception))
 
 
 class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
     def test_convert_to_ros_msg_float(self):
-        msg, error = convert_to_ros_msg(42.5, "float")
-        self.assertEqual(error, "")
+        msg = convert_to_ros_msg(42.5, "float")
         self.assertEqual(msg.data, 42.5)
 
     def test_convert_to_ros_msg_string(self):
-        msg, error = convert_to_ros_msg("test", "str")
-        self.assertEqual(error, "")
+        msg = convert_to_ros_msg("test", "str")
         self.assertEqual(msg.data, "test")
 
     def test_convert_to_ros_msg_int(self):
-        msg, error = convert_to_ros_msg(42, "int")
-        self.assertEqual(error, "")
+        msg = convert_to_ros_msg(42, "int")
         self.assertEqual(msg.data, 42)
 
     def test_convert_to_ros_msg_bool(self):
-        msg, error = convert_to_ros_msg(True, "bool")
-        self.assertEqual(error, "")
+        msg = convert_to_ros_msg(True, "bool")
         self.assertEqual(msg.data, True)
 
     def test_convert_to_ros_msg_float_array(self):
-        msg, error = convert_to_ros_msg([1.0, 2.0, 3.0], "float[]")
-        self.assertEqual(error, "")
+        msg = convert_to_ros_msg([1.0, 2.0, 3.0], "float[]")
         self.assertEqual(list(msg.data), [1.0, 2.0, 3.0])
 
     def test_convert_to_ros_msg_int_array(self):
-        msg, error = convert_to_ros_msg([1, 2, 3], "int[]")
-        self.assertEqual(error, "")
+        msg = convert_to_ros_msg([1, 2, 3], "int[]")
         self.assertEqual(list(msg.data), [1, 2, 3])
 
     def test_convert_to_ros_msg_bool_array(self):
-        msg, error = convert_to_ros_msg([True, False, True], "bool[]")
-        self.assertEqual(error, "")
+        msg = convert_to_ros_msg([True, False, True], "bool[]")
         self.assertEqual(list(msg.data), [1, 0, 1])
 
     def test_convert_to_ros_msg_type_mismatch(self):
-        msg, error = convert_to_ros_msg("not_a_number", "float")
-        self.assertIsNone(msg)
-        self.assertIsNotNone(error)
+        with self.assertRaises(network_data_capture.ConversionError):
+            convert_to_ros_msg("not_a_number", "float")
 
     def test_append_to_buffer(self):
-        buffer, error = append_to_buffer(b"hello", b" world")
-        self.assertEqual(error, "")
+        buffer = append_to_buffer(b"hello", b" world")
         self.assertEqual(buffer, b"hello world")
 
     def test_append_to_buffer_overflow(self):
-        buffer, error = append_to_buffer(b"hello", b" world", max_size=10)
-        self.assertIn("Buffer overflow", error)
-        self.assertEqual(buffer, b"hello")
+        with self.assertRaises(BufferError):
+            append_to_buffer(b"hello", b" world", max_size=10)
 
     def test_extract_messages_raw(self):
         buffer = b"line1\nline2\nline3"
-        messages, remaining, error = extract_messages(buffer, "raw", {})
-        self.assertEqual(error, "")
+        messages, remaining = extract_messages(buffer, "raw", {})
         self.assertEqual(messages, [b"line1", b"line2"])
 
         # Remaining because raw only splits on newlines
@@ -595,17 +581,20 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
     def test_extract_messages_delimited(self):
         buffer = b"a,b,c\nd,e,f\ng,h"
         config = {"delimiter": ","}
-        messages, remaining, error = extract_messages(buffer, "delimited", config)
-        self.assertEqual(error, "")
+        messages, remaining = extract_messages(buffer, "delimited", config)
         self.assertEqual(messages, [b"a,b,c", b"d,e,f"])
         self.assertEqual(remaining, b"g,h")
 
     def test_extract_messages_json_dict(self):
         buffer = b'{"a":1}\n{"b":2}\n{"c":'
-        messages, remaining, error = extract_messages(buffer, "json_dict", {})
-        self.assertEqual(error, "")
+        messages, remaining = extract_messages(buffer, "json_dict", {})
         self.assertEqual(len(messages), 2)
         self.assertEqual(remaining, b'{"c":')
+
+    def test_extract_messages_invalid_strategy(self):
+        buffer = b"some data"
+        with self.assertRaises(network_data_capture.ParsingError):
+            extract_messages(buffer, "invalid_strategy", {})
 
     def test_parse_delimited_message(self):
         message = b"42.5,test,1"
@@ -617,8 +606,7 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
                 "flag": {"field_id": 2, "type": "bool"}
             }
         }
-        result, error = parse_delimited_message(message, config)
-        self.assertEqual(error, "")
+        result = parse_delimited_message(message, config)
         self.assertEqual(result["value"], 42.5)
         self.assertEqual(result["name"], "test")
         self.assertEqual(result["flag"], True)
@@ -633,8 +621,9 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
                 "flag": {"field_id": 2, "type": "bool"}
             }
         }
-        result, error = parse_delimited_message(message, config)
-        self.assertIn("Field index 2 out of range", error)
+
+        with self.assertRaises(network_data_capture.ParsingError):
+            parse_delimited_message(message, config)
 
     def test_parse_json_dict_message(self):
         message = b'{"value": 42.5, "name": "test", "flag": true}'
@@ -645,8 +634,7 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
                 "flag": {"field_id": "flag", "type": "bool"}
             }
         }
-        result, error = parse_json_dict_message(message, config)
-        self.assertEqual(error, "")
+        result = parse_json_dict_message(message, config)
         self.assertEqual(result["value"], 42.5)
         self.assertEqual(result["name"], "test")
         self.assertEqual(result["flag"], True)
@@ -660,8 +648,8 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
                 "flag": {"field_id": "flag", "type": "bool"}
             }
         }
-        result, error = parse_json_dict_message(message, config)
-        self.assertIn("Field 'name' not found", error)
+        with self.assertRaises(network_data_capture.ParsingError):
+            parse_json_dict_message(message, config)
 
     def test_parse_json_array_message(self):
         message = b'[42.5, "test", true]'
@@ -672,8 +660,7 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
                 "flag": {"field_id": 2, "type": "bool"}
             }
         }
-        result, error = parse_json_array_message(message, config)
-        self.assertEqual(error, "")
+        result = parse_json_array_message(message, config)
         self.assertEqual(result["value"], 42.5)
         self.assertEqual(result["name"], "test")
         self.assertEqual(result["flag"], True)
@@ -687,17 +674,16 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
                 "flag": {"field_id": 2, "type": "bool"}
             }
         }
-        result, error = parse_json_array_message(message, config)
-        self.assertIn("Field index 2 out of range", error)
+        with self.assertRaises(network_data_capture.ParsingError):
+            parse_json_array_message(message, config)
 
     @patch('socket.socket')
     def test_create_socket_udp(self, mock_socket):
         mock_socket_instance = Mock()
         mock_socket.return_value = mock_socket_instance
 
-        sock, error = network_data_capture.create_socket("udp", 8080)
+        network_data_capture.create_socket("udp", 8080)
 
-        self.assertEqual(error, "")
         mock_socket.assert_called_with(socket.AF_INET, socket.SOCK_DGRAM)
         mock_socket_instance.bind.assert_called_with(("0.0.0.0", 8080))
 
@@ -706,9 +692,8 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
         mock_socket_instance = Mock()
         mock_socket.return_value = mock_socket_instance
 
-        sock, error = network_data_capture.create_socket("tcp", 8080)
+        network_data_capture.create_socket("tcp", 8080)
 
-        self.assertEqual(error, "")
         mock_socket.assert_called_with(socket.AF_INET, socket.SOCK_STREAM)
         mock_socket_instance.bind.assert_called_with(("0.0.0.0", 8080))
         mock_socket_instance.listen.assert_called_with(1)
@@ -717,10 +702,9 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
     def test_create_socket_error(self, mock_socket):
         mock_socket.side_effect = socket.error("Test socket error")
 
-        sock, error = network_data_capture.create_socket("udp", 8080)
+        with self.assertRaises(network_data_capture.SocketError):
+            network_data_capture.create_socket("udp", 8080)
 
-        self.assertIsNone(sock)
-        self.assertIn("Socket error", error)
 
 class TestTopicStats(unittest.TestCase):
     def test_update_rates(self):

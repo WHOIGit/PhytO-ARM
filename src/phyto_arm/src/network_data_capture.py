@@ -11,6 +11,26 @@ from std_msgs.msg import Float64, String, Int64, Bool, Float64MultiArray, Int64M
 from ds_core_msgs.msg import RawData
 
 
+class ConfigurationError(Exception):
+    """Exception raised for config validation errors."""
+    pass
+
+
+class ParsingError(Exception):
+    """Exception raised for errors during message parsing."""
+    pass
+
+
+class SocketError(Exception):
+    """Exception raised for socket-related errors."""
+    pass
+
+
+class ConversionError(Exception):
+    """Exception raised for errors during data type conversion."""
+    pass
+
+
 # Type mapping for ROS message types
 ROS_TYPE_MAP = {
     "float": Float64,
@@ -25,105 +45,96 @@ ROS_TYPE_MAP = {
 VALID_CONNECTION_TYPES = ["udp", "tcp"]
 VALID_PARSING_STRATEGIES = ["json_dict", "json_array", "raw", "delimited"]
 
-def validate_config(config: dict) -> Tuple[bool, str]:
+def validate_config(config: dict) -> None:
     """Validate complete network_data_capture configuration
 
     Args:
         config: Dict containing complete node configuration
 
-    Returns:
-        tuple[bool, str]: (is_valid, error_message)
+    Raises:
+        ConfigurationError: If configuration is invalid
     """
     if "topics" not in config:
-        return False, "network_data_capture config must contain 'topics' dictionary"
+        raise ConfigurationError("network_data_capture config must contain 'topics' dictionary")
 
     if not isinstance(config["topics"], dict):
-        return False, "network_data_capture topics are incorrectly, see example.yaml"
+        raise ConfigurationError("network_data_capture topics are incorrectly, see example.yaml")
 
     for topic_name, topic_config in config["topics"].items():
-        is_valid, error = validate_topic_config(topic_name, topic_config)
-        if not is_valid:
-            return False, f"Invalid topic '{topic_name}': {error}"
+        validate_topic_config(topic_name, topic_config)
 
-    return True, ""
-
-def validate_topic_config(topic_name: str, topic_config: dict) -> Tuple[bool, str]:
+def validate_topic_config(topic_name: str, topic_config: dict) -> None:
     """Validate single topic configuration including connection, parsing strategy, and subtopics
 
     Args:
         topic_name: Name of the topic
         topic_config: Dict containing topic configuration
 
-    Returns:
-        tuple[bool, str]: (is_valid, error_message)
+    Raises:
+        ConfigurationError: If topic configuration is invalid
     """
     required_fields = ["connection_type", "port", "parsing_strategy"]
     for field in required_fields:
         if field not in topic_config:
-            return False, f"Missing required field '{field}'"
+            raise ConfigurationError(f"Topic '{topic_name}': Missing required field '{field}'")
 
     if topic_config["connection_type"] not in VALID_CONNECTION_TYPES:
-        return False, f"Invalid connection_type. Must be one of {VALID_CONNECTION_TYPES}"
+        raise ConfigurationError(f"Topic '{topic_name}': Invalid connection_type. Must be one of {VALID_CONNECTION_TYPES}")
 
     if not isinstance(topic_config["port"], int):
-        return False, "Port must be an integer"
+        raise ConfigurationError(f"Topic '{topic_name}': Port must be an integer")
 
     if topic_config["parsing_strategy"] not in VALID_PARSING_STRATEGIES:
-        return False, f"Invalid parsing_strategy. Must be one of {VALID_PARSING_STRATEGIES}"
+        raise ConfigurationError(f"Topic '{topic_name}': Invalid parsing_strategy. Must be one of {VALID_PARSING_STRATEGIES}")
 
     # Validate delimiter if delimited strategy
     if topic_config["parsing_strategy"] == "delimited":
         if "delimiter" not in topic_config:
-            return False, "Delimiter required for delimited parsing strategy"
+            raise ConfigurationError(f"Topic '{topic_name}': Delimiter required for delimited parsing strategy")
         if not isinstance(topic_config["delimiter"], str):
-            return False, "Delimiter must be a string"
+            raise ConfigurationError(f"Topic '{topic_name}': Delimiter must be a string")
 
     # Validate subtopics if not raw
     if topic_config["parsing_strategy"] != "raw":
         if "subtopics" not in topic_config:
-            return False, f"Subtopics required for {topic_config['parsing_strategy']} parsing strategy"
+            raise ConfigurationError(f"Topic '{topic_name}': Subtopics required for {topic_config['parsing_strategy']} parsing strategy")
         if not isinstance(topic_config["subtopics"], dict):
-            return False, "Subtopics must be a dictionary"
+            raise ConfigurationError(f"Topic '{topic_name}': Subtopics must be a dictionary")
 
         for subtopic_name, _ in topic_config["subtopics"].items():
-            is_valid, error = validate_subtopic_config(topic_config, subtopic_name)
-            if not is_valid:
-                return False, f"Invalid subtopic '{subtopic_name}': {error}"
+            validate_subtopic_config(topic_config, subtopic_name, topic_name)
 
-    return True, ""
-
-def validate_subtopic_config(topic_config: dict, subtopic_name: str) -> Tuple[bool, str]:
+def validate_subtopic_config(topic_config: dict, subtopic_name: str, topic_name: str) -> None:
     """Validate single subtopic configuration including field_id and type
 
     Args:
+        topic_config: Dict containing topic configuration
         subtopic_name: Name of the subtopic
-        subtopic_config: Dict containing subtopic configuration
+        topic_name: Name of the parent topic
 
-    Returns:
-        tuple[bool, str]: (is_valid, error_message)
+    Raises:
+        ConfigurationError: If subtopic configuration is invalid
     """
     subtopic_config = topic_config["subtopics"][subtopic_name]
     required_fields = ["field_id", "type"]
     for field in required_fields:
         if field not in subtopic_config:
-            return False, f"Missing required field '{field}'"
+            raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': Missing required field '{field}'")
 
     if topic_config["parsing_strategy"] == "delimited":
-        if  subtopic_config["type"].endswith('[]'):
-            return False, "Arrays are not a supported field type for delimited string parsing"
+        if subtopic_config["type"].endswith('[]'):
+            raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': Arrays are not a supported field type for delimited string parsing")
 
     if not isinstance(subtopic_config["field_id"], (int, str)):
-        return False, "field_id must be an integer or string"
+        raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': field_id must be an integer or string")
 
     if not isinstance(subtopic_config["type"], str):
-        return False, "type must be a string"
+        raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': type must be a string")
 
     if subtopic_config["type"] not in ROS_TYPE_MAP:
-        return False, f"Invalid type. Must be one of {list(ROS_TYPE_MAP.keys())}"
+        raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': Invalid type. Must be one of {list(ROS_TYPE_MAP.keys())}")
 
-    return True, ""
-
-def convert_to_ros_msg(value: Any, type_hint: str) -> Tuple[Any, str]:
+def convert_to_ros_msg(value: Any, type_hint: str) -> Any:
     """Convert value to appropriate ROS message type based on config type_hint
 
     Args:
@@ -131,7 +142,10 @@ def convert_to_ros_msg(value: Any, type_hint: str) -> Tuple[Any, str]:
         type_hint: String from config like "float", "str", "int", "bool", etc.
 
     Returns:
-        tuple[Any, str]: (ros_message, error_message)
+        Any: The ROS message
+
+    Raises:
+        ConversionError: If value cannot be converted to the specified type
     """
     try:
         msg_type = ROS_TYPE_MAP[type_hint]
@@ -139,32 +153,34 @@ def convert_to_ros_msg(value: Any, type_hint: str) -> Tuple[Any, str]:
         # Try to manually validate the type since ROS messages don't always raise errors
         if type_hint == "float":
             if not isinstance(value, (int, float)):
-                return None, f"Expected float for type {type_hint}, got {type(value)}"
+                raise ConversionError(f"Expected float for type {type_hint}, got {type(value)}")
         elif type_hint == "int":
             if not isinstance(value, int):
-                return None, f"Expected int for type {type_hint}, got {type(value)}"
+                raise ConversionError(f"Expected int for type {type_hint}, got {type(value)}")
         elif type_hint == "bool":
             if not isinstance(value, bool):
-                return None, f"Expected bool for type {type_hint}, got {type(value)}"
+                raise ConversionError(f"Expected bool for type {type_hint}, got {type(value)}")
         elif type_hint == "str":
             if not isinstance(value, str):
-                return None, f"Expected str for type {type_hint}, got {type(value)}"
+                raise ConversionError(f"Expected str for type {type_hint}, got {type(value)}")
         elif type_hint.endswith("[]") and not isinstance(value, (list, tuple)):
-            return None, f"Expected list for type {type_hint}, got {type(value)}"
+            raise ConversionError(f"Expected list for type {type_hint}, got {type(value)}")
 
         # Create appropriate array message
         if type_hint == "bool[]":
             # Convert boolean array to int8 array
             msg = msg_type(data=[int(x) for x in value])
+        elif type_hint.endswith("[]"):
+            msg = msg_type(data=value)
         else:
             msg = msg_type(data=value)
 
-        return msg, ""
+        return msg
 
     except (ValueError, TypeError) as e:
-        return None, f"Error converting value to {type_hint}: {str(e)}"
+        raise ConversionError(f"Error converting value to {type_hint}: {str(e)}") from e
 
-def create_socket(conn_type: str, port: int) -> Tuple[socket.socket, str]:
+def create_socket(conn_type: str, port: int) -> socket.socket:
     """Create and bind either UDP or TCP socket
 
     Args:
@@ -172,7 +188,10 @@ def create_socket(conn_type: str, port: int) -> Tuple[socket.socket, str]:
         port: Port number to bind to
 
     Returns:
-        tuple[socket.socket, str]: (socket, error_message)
+        socket.socket: The created socket
+
+    Raises:
+        SocketError: If socket creation fails
     """
     try:
         if conn_type == "udp":
@@ -186,43 +205,39 @@ def create_socket(conn_type: str, port: int) -> Tuple[socket.socket, str]:
         if conn_type == "tcp":
             sock.listen(1)
 
-        return sock, ""
-
+        return sock
     except socket.error as e:
-        return None, f"Socket error: {str(e)}"
+        raise SocketError(f"Failed to create {conn_type} socket on port {port}: {str(e)}") from e
 
-def read_available_data(sockets: Dict[str, socket.socket]) -> Dict[str, Tuple[bytes, str]]:
+def read_available_data(sockets: Dict[str, socket.socket]) -> Dict[str, bytes]:
     """Use select() to read available data from all sockets
 
     Args:
         sockets: Dict of topic_name -> socket
 
     Returns:
-        dict[str, tuple[bytes, str]]: Dict of topic_name -> (data, error_message)
+        dict[str, bytes]: Dict of topic_name -> data
+
+    Raises:
+        SocketError: If there's an error reading from a socket
     """
     result = {}
-    try:
-        readable, _, _ = select.select(list(sockets.values()), [], [], 0.1)
+    readable, _, _ = select.select(list(sockets.values()), [], [], 0.1)
 
-        for sock in readable:
+    for sock in readable:
 
-            # Find topic name for this socket
-            topic_name = next(name for name, s in sockets.items() if s == sock)
+        # Find topic name for this socket
+        topic_name = next(name for name, s in sockets.items() if s == sock)
 
-            try:
-                data, _ = sock.recvfrom(65536) # Read up to 64KB at a time
-                result[topic_name] = (data, "")
-            except socket.error as e:
-                result[topic_name] = (b"", f"Error reading from socket: {str(e)}")
-
-    except select.error as e:
-
-        # Return error for all sockets
-        return {name: (b"", f"Select error: {str(e)}") for name in sockets}
+        try:
+            data, _ = sock.recvfrom(65536) # Read up to 64KB at a time
+            result[topic_name] = data
+        except socket.error as e:
+            raise SocketError(f"Error reading from socket for topic {topic_name}: {str(e)}") from e
 
     return result
 
-def append_to_buffer(buffer: bytes, new_data: bytes, max_size: int = 1048576) -> Tuple[bytes, str]:
+def append_to_buffer(buffer: bytes, new_data: bytes, max_size: int = 1048576) -> bytes:
     """Append new data to buffer, with size limit
 
     Args:
@@ -231,14 +246,17 @@ def append_to_buffer(buffer: bytes, new_data: bytes, max_size: int = 1048576) ->
         max_size: Maximum allowed buffer size in bytes
 
     Returns:
-        tuple[bytes, str]: (updated_buffer, error_message)
+        bytes: Updated buffer
+
+    Raises:
+        BufferError: If buffer would exceed max size
     """
     if len(buffer) + len(new_data) > max_size:
-        return buffer, f"Buffer overflow: combined size {len(buffer) + len(new_data)} exceeds limit {max_size}"
+        raise BufferError(f"Buffer overflow: combined size {len(buffer) + len(new_data)} exceeds limit {max_size}")
 
-    return buffer + new_data, ""
+    return buffer + new_data
 
-def extract_messages(buffer: bytes, strategy: str, config: dict) -> Tuple[List[bytes], bytes, str]:
+def extract_messages(buffer: bytes, strategy: str, config: dict) -> Tuple[List[bytes], bytes]:
     """Extract complete messages from buffer based on strategy
 
     Args:
@@ -247,7 +265,10 @@ def extract_messages(buffer: bytes, strategy: str, config: dict) -> Tuple[List[b
         config: Configuration dict containing strategy-specific settings
 
     Returns:
-        tuple[list[bytes], bytes, str]: (complete_messages, remaining_buffer, error_message)
+        tuple[list[bytes], bytes]: (complete_messages, remaining_buffer)
+
+    Raises:
+        ParsingError: If there's an error parsing the buffer
     """
     messages = []
 
@@ -291,14 +312,14 @@ def extract_messages(buffer: bytes, strategy: str, config: dict) -> Tuple[List[b
                     break
 
             except UnicodeDecodeError as e:
-                return [], buffer, f"Invalid UTF-8 in buffer: {str(e)}"
+                raise ParsingError(f"Invalid UTF-8 in buffer: {str(e)}") from e
 
     else:
-        return [], buffer, f"Unknown parsing strategy: {strategy}"
+        raise ParsingError(f"Message extraction strategy not supported: {strategy}")
 
-    return messages, buffer, ""
+    return messages, buffer
 
-def parse_message(message: bytes, strategy: str, config: dict) -> Tuple[dict, str]:
+def parse_message(message: bytes, strategy: str, config: dict) -> dict:
     """Parse a single message according to strategy
 
     Args:
@@ -307,11 +328,13 @@ def parse_message(message: bytes, strategy: str, config: dict) -> Tuple[dict, st
         config: Configuration dict containing strategy-specific settings
 
     Returns:
-        tuple[dict, str]: (parsed_fields, error_message)
-        parsed_fields will be a dict mapping subtopic names to values
+        dict: Parsed fields mapping subtopic names to values
+
+    Raises:
+        ParsingError: If there's an error parsing the message
     """
     if strategy == "raw":
-        return {"data": message}, ""
+        return {"data": message}
 
     elif strategy == "delimited":
         return parse_delimited_message(message, config)
@@ -321,30 +344,38 @@ def parse_message(message: bytes, strategy: str, config: dict) -> Tuple[dict, st
 
     elif strategy == "json_array":
         return parse_json_array_message(message, config)
+    else:
+        raise ParsingError(f"Unknown parsing strategy: {strategy}")
 
-    return {}, f"Unknown parsing strategy: {strategy}"
+    return {}
 
-def is_valid_value(value: Any, type_hint: str) -> Tuple[bool, str]:
-    """Validate value type against type hint and return error message if not valid
+def is_valid_value(value: Any, type_hint: str) -> bool:
+    """Validate value type against type hint
 
     Args:
         value: The value to validate
         type_hint: String from config like "float", "str", "int", "bool", etc.
+
+    Returns:
+        bool: True if valid
+
+    Raises:
+        ValueError: If value doesn't match the expected type
     """
     # Validate type
     if type_hint.endswith("[]"):
         if not isinstance(value, (list, tuple)):
-            return False, f"Field should be an array"
+            raise ValueError("Field should be an array")
     elif type_hint == "float" and not isinstance(value, (int, float)):
-        return False, f"Field should be a number"
+        raise ValueError("Field should be a number")
     elif type_hint == "int" and not isinstance(value, int):
-        return False, f"Field should be an integer"
+        raise ValueError("Field should be an integer")
     elif type_hint == "bool" and not isinstance(value, bool):
-        return False, f"Field should be a boolean"
+        raise ValueError("Field should be a boolean")
 
-    return True, ""
+    return True
 
-def parse_delimited_message(message: bytes, config: dict) -> Tuple[dict, str]:
+def parse_delimited_message(message: bytes, config: dict) -> dict:
     """Parse delimited message into fields
 
     Args:
@@ -352,7 +383,10 @@ def parse_delimited_message(message: bytes, config: dict) -> Tuple[dict, str]:
         config: Config dict containing delimiter and subtopic definitions
 
     Returns:
-        tuple[dict, str]: (parsed_fields, error_message)
+        dict: Parsed fields mapping subtopic names to values
+
+    Raises:
+        ParsingError: If there's an error parsing the message
     """
     try:
 
@@ -367,7 +401,7 @@ def parse_delimited_message(message: bytes, config: dict) -> Tuple[dict, str]:
 
             # Check field exists
             if isinstance(field_id, int) and field_id >= len(fields):
-                return {}, f"Field index {field_id} out of range for message with {len(fields)} fields"
+                raise ParsingError(f"Field index {field_id} out of range for message with {len(fields)} fields")
 
             # Get the raw value
             raw_value = fields[field_id]
@@ -383,19 +417,19 @@ def parse_delimited_message(message: bytes, config: dict) -> Tuple[dict, str]:
                 elif subtopic_config["type"] == "str":
                     value = str(raw_value)
                 else:
-                    return {}, f"Unsupported delimited field type: {subtopic_config['type']}"
+                    raise ParsingError(f"Unsupported delimited field type: {subtopic_config['type']}")
 
                 result[subtopic_name] = value
 
             except ValueError as e:
-                return {}, f"Error converting field {field_id} to {subtopic_config['type']}: {str(e)}"
+                raise ParsingError(f"Error converting field {field_id} to {subtopic_config['type']}: {str(e)}")
 
-        return result, ""
+        return result
 
     except UnicodeDecodeError as e:
-        return {}, f"Invalid UTF-8 in message: {str(e)}"
+        raise ParsingError(f"Invalid UTF-8 in message: {str(e)}") from e
 
-def parse_json_dict_message(message: bytes, config: dict) -> Tuple[dict, str]:
+def parse_json_dict_message(message: bytes, config: dict) -> dict:
     """Parse JSON dictionary message
 
     Args:
@@ -403,14 +437,14 @@ def parse_json_dict_message(message: bytes, config: dict) -> Tuple[dict, str]:
         config: Config dict containing subtopic definitions
 
     Returns:
-        tuple[dict, str]: (parsed_fields, error_message)
+        dict: Parsed fields mapping subtopic names to values
     """
     try:
 
         # Parse JSON
         data = json.loads(message)
         if not isinstance(data, dict):
-            return {}, "JSON message is not a dictionary"
+            raise ParsingError("JSON message is not a dictionary")
 
         result = {}
 
@@ -420,23 +454,23 @@ def parse_json_dict_message(message: bytes, config: dict) -> Tuple[dict, str]:
 
             # Check field exists
             if field_id not in data:
-                return {}, f"Field '{field_id}' not found in JSON message"
+                raise ParsingError(f"Field '{field_id}' not found in JSON message")
 
             # Get the raw value
             raw_value = data[field_id]
 
-            is_valid, error = is_valid_value(raw_value, subtopic_config["type"])
+            is_valid = is_valid_value(raw_value, subtopic_config["type"])
             if not is_valid:
-                return {}, f"Field '{field_id}' is not a valid {subtopic_config['type']}: {error}"
+                raise ParsingError(f"Field '{field_id}' is not a valid {subtopic_config['type']}")
 
             result[subtopic_name] = raw_value
 
-        return result, ""
+        return result
 
     except json.JSONDecodeError as e:
-        return {}, f"Invalid JSON: {str(e)}"
+        raise ParsingError(f"Invalid JSON: {str(e)}") from e
 
-def parse_json_array_message(message: bytes, config: dict) -> Tuple[dict, str]:
+def parse_json_array_message(message: bytes, config: dict) -> dict:
     """Parse JSON array message
 
     Args:
@@ -444,14 +478,17 @@ def parse_json_array_message(message: bytes, config: dict) -> Tuple[dict, str]:
         config: Config dict containing subtopic definitions
 
     Returns:
-        tuple[dict, str]: (parsed_fields, error_message)
+        dict: Parsed fields mapping subtopic names to values
+
+    Raises:
+        ParsingError: If there's an error parsing the message
     """
     try:
 
         # Parse JSON
         data = json.loads(message)
         if not isinstance(data, (list, tuple)):
-            return {}, "JSON message is not an array"
+            raise ParsingError("JSON message is not an array")
 
         result = {}
 
@@ -461,26 +498,26 @@ def parse_json_array_message(message: bytes, config: dict) -> Tuple[dict, str]:
 
             # Check field exists
             if not isinstance(field_id, int):
-                return {}, f"Field ID must be an integer for JSON array messages, got '{field_id}'"
+                raise ParsingError(f"Field ID must be an integer for JSON array messages, got '{field_id}'")
             if field_id >= len(data):
-                return {}, f"Field index {field_id} out of range for message with {len(data)} elements"
+                raise ParsingError(f"Field index {field_id} out of range for message with {len(data)} elements")
 
             # Get the raw value
             raw_value = data[field_id]
 
             # Validate type
-            is_valid, error = is_valid_value(raw_value, subtopic_config["type"])
+            is_valid = is_valid_value(raw_value, subtopic_config["type"])
             if not is_valid:
-                return {}, f"Field '{field_id}' is not a valid {subtopic_config['type']}: {error}"
+                raise ParsingError(f"Field '{field_id}' is not a valid {subtopic_config['type']}")
 
             result[subtopic_name] = raw_value
 
-        return result, ""
+        return result
 
     except json.JSONDecodeError as e:
-        return {}, f"Invalid JSON: {str(e)}"
+        raise ParsingError(f"Invalid JSON: {str(e)}") from e
 
-def setup_publishers(config: dict) -> Tuple[Dict[str, dict], str]:
+def setup_publishers(config: dict) -> Dict[str, dict]:
     """Set up publishers for all topics and subtopics
 
     Args:
@@ -522,27 +559,26 @@ def setup_publishers(config: dict) -> Tuple[Dict[str, dict], str]:
                     queue_size=10
                 )
 
-    return publishers, ""
-
+    return publishers
 
 def publish_messages(topic_name: str, parsed_data: dict, publishers: dict,
-                    parsing_strategy: str, topic_config: dict) -> str:
+                    parsing_strategy: str, topic_config: dict) -> None:
     """Publish parsed data to appropriate topics
 
     Args:
         topic_name: Name of the base topic
         parsed_data: Dict of subtopic -> value mappings
         publishers: Dict of publishers from setup_publishers
+        parsing_strategy: The parsing strategy used
         topic_config: Dict of topic configuration values
 
-
-    Returns:
-        str: Error message (empty if successful)
+    Raises:
+        ValueError: If there's an error with the message data
+        ConversionError: If there's an error converting the message
     """
-
     if parsing_strategy == "raw":
         if "data" not in parsed_data:
-            return "Raw message missing 'data' field"
+            raise ValueError("Raw message missing 'data' field")
 
         msg = RawData()
         msg.data = list(parsed_data["data"])  # Convert bytes to list of ints
@@ -552,7 +588,6 @@ def publish_messages(topic_name: str, parsed_data: dict, publishers: dict,
         msg.header.stamp = current_time
 
         publishers[topic_name]["raw"].publish(msg)
-
     else:
 
         # Get the subtopic publishers for this topic
@@ -562,15 +597,13 @@ def publish_messages(topic_name: str, parsed_data: dict, publishers: dict,
         # Publish each parsed field to its subtopic
         for subtopic_name, value in parsed_data.items():
             if subtopic_name not in topic_publishers:
-                return f"No publisher found for subtopic '{subtopic_name}'"
+                raise ValueError(f"No publisher found for subtopic '{subtopic_name}'")
 
             # Convert value to ROS message
-            msg, error = convert_to_ros_msg(
+            msg = convert_to_ros_msg(
                 value,
                 subtopics_config[subtopic_name]["type"]
             )
-            if error:
-                return f"Error converting message for {subtopic_name}: {error}"
 
             topic_publishers[subtopic_name].publish(msg)
 
@@ -635,124 +668,119 @@ def main():
         rospy.logwarn("No network_data_capture configuration found, stopping node")
         return
 
-    is_valid, error = validate_config(config)
-    if not is_valid:
-        rospy.logerr(f"Invalid configuration: {error}")
-        return
+    try:
+        # Validate configuration
+        validate_config(config)
 
-    # Create sockets
-    sockets = {}
-    buffers = {}
-    stats = {}  # Track statistics per topic
+        # Create sockets
+        sockets = {}
+        buffers = {}
+        stats = {}  # Track statistics per topic
 
-    for topic_name, topic_config in config["topics"].items():
-        sock, error = create_socket(topic_config["connection_type"], topic_config["port"])
-        if error:
-            rospy.logerr(f"Error creating socket for {topic_name}: {error}")
+        for topic_name, topic_config in config["topics"].items():
+            try:
+                sock = create_socket(topic_config["connection_type"], topic_config["port"])
+                sockets[topic_name] = sock
+                buffers[topic_name] = b""
+                stats[topic_name] = TopicStats()
+
+                rospy.loginfo(f"Created {topic_config['connection_type'].upper()} socket for {topic_name} "
+                             f"on port {topic_config['port']}")
+            except SocketError as e:
+                rospy.logerr(f"Error creating socket for {topic_name}: {str(e)}")
+                return
+
+        # Set up publishers
+        try:
+            publishers = setup_publishers(config)
+        except Exception as e:
+            rospy.logerr(f"Error setting up publishers: {str(e)}")
             return
-        sockets[topic_name] = sock
-        buffers[topic_name] = b""
-        stats[topic_name] = TopicStats()
 
-        rospy.loginfo(f"Created {topic_config['connection_type'].upper()} socket for {topic_name} "
-                     f"on port {topic_config['port']}")
+        rospy.loginfo("Network Data Capture Node started")
 
-    # Set up publishers
-    publishers, error = setup_publishers(config)
-    if error:
-        rospy.logerr(f"Error setting up publishers: {error}")
-        return
+        # Stats logging timer
+        last_stats_time = time.time()
+        stats_interval = rospy.get_param("~stats_interval", 60)  # Log stats every 60 seconds
+        print_stats = rospy.get_param("~print_stats", False)
 
-    rospy.loginfo("Network Data Capture Node started")
+        while not rospy.is_shutdown():
+            current_time = time.time()
 
-    # Stats logging timer
-    last_stats_time = time.time()
-    stats_interval = rospy.get_param("~stats_interval", 60)  # Log stats every 60 seconds
-    print_stats = rospy.get_param("~print_stats", False)
-
-    while not rospy.is_shutdown():
-        current_time = time.time()
-
-        # Read available data
-        received_data = read_available_data(sockets)
-
-        # Process data for each topic
-        for topic_name, (data, error) in received_data.items():
-            topic_stats = stats[topic_name]
-
-            if error:
-                rospy.logerr(f"Error reading from {topic_name}: {error}")
-                topic_stats.error_times.append(current_time)
+            try:
+                # Read available data
+                received_data = read_available_data(sockets)
+            except SocketError as e:
+                rospy.logerr(f"Socket error: {str(e)}")
                 continue
 
-            if data:  # Data received
+            # Process data for each topic
+            for topic_name, data in received_data.items():
+                topic_stats = stats[topic_name]
                 topic_stats.bytes_received += len(data)
                 topic_stats.last_message_time = current_time
 
                 # Get topic config
                 topic_config = config["topics"][topic_name]
 
-                # Append to buffer
-                buffers[topic_name], error = append_to_buffer(buffers[topic_name], data)
-                if error:
-                    rospy.logerr(f"Buffer error for {topic_name}: {error}")
-                    topic_stats.error_times.append(current_time)
-                    continue
+                try:
+                    # Append to buffer
+                    buffers[topic_name] = append_to_buffer(buffers[topic_name], data)
+                    topic_stats.buffer_size = len(buffers[topic_name])
 
-                topic_stats.buffer_size = len(buffers[topic_name])
-
-                # Extract messages
-                messages, buffers[topic_name], error = extract_messages(
-                    buffers[topic_name],
-                    topic_config["parsing_strategy"],
-                    topic_config
-                )
-                if error:
-                    rospy.logerr(f"Error extracting messages for {topic_name}: {error}")
-                    topic_stats.error_times.append(current_time)
-                    continue
-
-                topic_stats.messages_processed += len(messages)
-
-                # Process and publish each message
-                for message in messages:
-                    topic_stats.message_times.append(current_time)
-
-                    parsed_data, error = parse_message(
-                        message,
+                    # Extract messages
+                    messages, buffers[topic_name] = extract_messages(
+                        buffers[topic_name],
                         topic_config["parsing_strategy"],
                         topic_config
                     )
-                    if error:
-                        rospy.logerr(f"Error parsing message for {topic_name}: {error}")
-                        topic_stats.parse_errors += 1
-                        topic_stats.error_times.append(current_time)
-                        continue
 
-                    error = publish_messages(
-                        topic_name,
-                        parsed_data,
-                        publishers,
-                        topic_config["parsing_strategy"],
-                        topic_config
-                    )
-                    if error:
-                        rospy.logerr(f"Error publishing message for {topic_name}: {error}")
-                        topic_stats.publish_errors += 1
-                        topic_stats.error_times.append(current_time)
-                        continue
+                    topic_stats.messages_processed += len(messages)
 
-                    topic_stats.messages_published += 1
+                    # Process and publish each message
+                    for message in messages:
+                        topic_stats.message_times.append(current_time)
 
-            # Update rates for this topic
-            topic_stats.update_rates(current_time)
+                        try:
+                            parsed_data = parse_message(
+                                message,
+                                topic_config["parsing_strategy"],
+                                topic_config
+                            )
 
-        # Log stats periodically
-        if current_time - last_stats_time >= stats_interval:
-            rospy.loginfo("=== Network Data Capture Statistics ===")
-            for topic_name, topic_stats in stats.items():
-                log_topic_stats(topic_name, topic_stats, print_stats)
-            last_stats_time = current_time
+                            publish_messages(
+                                topic_name,
+                                parsed_data,
+                                publishers,
+                                topic_config["parsing_strategy"],
+                                topic_config
+                            )
+
+                            topic_stats.messages_published += 1
+                        except (ParsingError, ValueError, ConversionError) as e:
+                            rospy.logerr(f"Error processing message for {topic_name}: {str(e)}")
+                            topic_stats.parse_errors += 1
+                            topic_stats.error_times.append(current_time)
+                            continue
+
+                except (BufferError, ParsingError) as e:
+                    rospy.logerr(f"Error processing data for {topic_name}: {str(e)}")
+                    topic_stats.error_times.append(current_time)
+                    continue
+
+                # Update rates for this topic
+                topic_stats.update_rates(current_time)
+
+            # Log stats periodically
+            if current_time - last_stats_time >= stats_interval:
+                rospy.loginfo("=== Network Data Capture Statistics ===")
+                for topic_name, topic_stats in stats.items():
+                    log_topic_stats(topic_name, topic_stats, print_stats)
+                last_stats_time = current_time
+
+    except ConfigurationError as e:
+        rospy.logerr(f"Configuration error: {str(e)}")
+        return
 
 if __name__ == '__main__':
     try:
