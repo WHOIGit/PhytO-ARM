@@ -666,118 +666,118 @@ def main():
         return
 
     try:
-        # Validate configuration
         validate_config(config)
-
-        # Create sockets
-        sockets = {}
-        buffers = {}
-        stats = {}  # Track statistics per topic
-
-        for topic_name, topic_config in config["topics"].items():
-            try:
-                sock = create_socket(topic_config["connection_type"], topic_config["port"])
-                sockets[topic_name] = sock
-                buffers[topic_name] = b""
-                stats[topic_name] = TopicStats()
-
-                rospy.loginfo(f"Created {topic_config['connection_type'].upper()} socket for {topic_name} "
-                             f"on port {topic_config['port']}")
-            except SocketError as e:
-                rospy.logerr(f"Error creating socket for {topic_name}: {str(e)}")
-                return
-
-        # Set up publishers
-        try:
-            publishers = setup_publishers(config)
-        except Exception as e:
-            rospy.logerr(f"Error setting up publishers: {str(e)}")
-            return
-
-        rospy.loginfo("Network Data Capture Node started")
-
-        # Stats logging timer
-        last_stats_time = time.time()
-        stats_interval = rospy.get_param("~stats_interval", 60)  # Log stats every 60 seconds
-        print_stats = rospy.get_param("~print_stats", False)
-
-        while not rospy.is_shutdown():
-            current_time = time.time()
-
-            try:
-                # Read available data
-                received_data = read_available_data(sockets)
-            except SocketError as e:
-                rospy.logerr(f"Socket error: {str(e)}")
-                continue
-
-            # Process data for each topic
-            for topic_name, data in received_data.items():
-                topic_stats = stats[topic_name]
-                topic_stats.bytes_received += len(data)
-                topic_stats.last_message_time = current_time
-
-                # Get topic config
-                topic_config = config["topics"][topic_name]
-
-                try:
-                    # Append to buffer
-                    buffers[topic_name] = append_to_buffer(buffers[topic_name], data)
-                    topic_stats.buffer_size = len(buffers[topic_name])
-
-                    # Extract messages
-                    messages, buffers[topic_name] = extract_messages(
-                        buffers[topic_name],
-                        topic_config["parsing_strategy"],
-                        topic_config
-                    )
-
-                    topic_stats.messages_processed += len(messages)
-
-                    # Process and publish each message
-                    for message in messages:
-                        topic_stats.message_times.append(current_time)
-
-                        try:
-                            parsed_data = parse_message(
-                                message,
-                                topic_config["parsing_strategy"],
-                                topic_config
-                            )
-
-                            publish_messages(
-                                topic_name,
-                                parsed_data,
-                                publishers,
-                                topic_config["parsing_strategy"],
-                                topic_config
-                            )
-
-                            topic_stats.messages_published += 1
-                        except (ParsingError, ValueError, ConversionError) as e:
-                            rospy.logerr(f"Error processing message for {topic_name}: {str(e)}")
-                            topic_stats.parse_errors += 1
-                            topic_stats.error_times.append(current_time)
-                            continue
-
-                except (BufferError, ParsingError) as e:
-                    rospy.logerr(f"Error processing data for {topic_name}: {str(e)}")
-                    topic_stats.error_times.append(current_time)
-                    continue
-
-                # Update rates for this topic
-                topic_stats.update_rates(current_time)
-
-            # Log stats periodically
-            if current_time - last_stats_time >= stats_interval:
-                rospy.loginfo("=== Network Data Capture Statistics ===")
-                for topic_name, topic_stats in stats.items():
-                    log_topic_stats(topic_name, topic_stats, print_stats)
-                last_stats_time = current_time
-
     except ConfigurationError as e:
         rospy.logerr(f"Configuration error: {str(e)}")
         return
+
+    # Create sockets
+    sockets = {}
+    buffers = {}
+    stats = {}  # Track statistics per topic
+
+    for topic_name, topic_config in config["topics"].items():
+        try:
+            sock = create_socket(topic_config["connection_type"], topic_config["port"])
+            sockets[topic_name] = sock
+            buffers[topic_name] = b""
+            stats[topic_name] = TopicStats()
+
+            rospy.loginfo(f"Created {topic_config['connection_type'].upper()} socket for {topic_name} "
+                            f"on port {topic_config['port']}")
+        except SocketError as e:
+            rospy.logerr(f"Error creating socket for {topic_name}: {str(e)}")
+            return
+
+    # Set up publishers
+    try:
+        publishers = setup_publishers(config)
+    except Exception as e:
+        rospy.logerr(f"Error setting up publishers: {str(e)}")
+        return
+
+    rospy.loginfo("Network Data Capture Node started")
+
+    # Stats logging timer
+    last_stats_time = time.time()
+    stats_interval = rospy.get_param("~stats_interval", 60)  # Log stats every 60 seconds
+    print_stats = rospy.get_param("~print_stats", False)
+
+    while not rospy.is_shutdown():
+        current_time = time.time()
+
+        try:
+            # Read available data
+            received_data = read_available_data(sockets)
+        except SocketError as e:
+            rospy.logerr(f"Socket error: {str(e)}")
+            continue
+
+        # Process data for each topic
+        for topic_name, data in received_data.items():
+            topic_stats = stats[topic_name]
+            topic_stats.bytes_received += len(data)
+            topic_stats.last_message_time = current_time
+
+            # Get topic config
+            topic_config = config["topics"][topic_name]
+
+            try:
+                # Append to buffer
+                buffers[topic_name] = append_to_buffer(buffers[topic_name], data)
+                topic_stats.buffer_size = len(buffers[topic_name])
+
+                # Extract messages
+                messages, buffers[topic_name] = extract_messages(
+                    buffers[topic_name],
+                    topic_config["parsing_strategy"],
+                    topic_config
+                )
+
+                topic_stats.messages_processed += len(messages)
+
+                # Process and publish each message
+                for message in messages:
+                    topic_stats.message_times.append(current_time)
+
+                    try:
+                        parsed_data = parse_message(
+                            message,
+                            topic_config["parsing_strategy"],
+                            topic_config
+                        )
+
+                        publish_messages(
+                            topic_name,
+                            parsed_data,
+                            publishers,
+                            topic_config["parsing_strategy"],
+                            topic_config
+                        )
+
+                        topic_stats.messages_published += 1
+                    except (ParsingError, ValueError, ConversionError) as e:
+                        rospy.logerr(f"Error processing message for {topic_name}: {str(e)}")
+                        topic_stats.parse_errors += 1
+                        topic_stats.error_times.append(current_time)
+                        continue
+
+            except (BufferError, ParsingError) as e:
+                rospy.logerr(f"Error processing data for {topic_name}: {str(e)}")
+                topic_stats.error_times.append(current_time)
+                continue
+
+            # Update rates for this topic
+            topic_stats.update_rates(current_time)
+
+        # Log stats periodically
+        if current_time - last_stats_time >= stats_interval:
+            rospy.loginfo("=== Network Data Capture Statistics ===")
+            for topic_name, topic_stats in stats.items():
+                log_topic_stats(topic_name, topic_stats, print_stats)
+            last_stats_time = current_time
+
+
 
 if __name__ == '__main__':
     try:
