@@ -498,8 +498,9 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
+        subtopic_config = topic_config["subtopics"]["test_subtopic"]
         # No exception should be raised
-        validate_subtopic_config(topic_config, "test_subtopic", "test_topic")
+        validate_subtopic_config(subtopic_config, topic_config["parsing_strategy"])
 
     def test_validate_subtopic_config_missing_field(self):
         topic_config = {
@@ -510,8 +511,9 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
+        subtopic_config = topic_config["subtopics"]["test_subtopic"]
         with self.assertRaises(network_data_capture.ConfigurationError) as context:
-            validate_subtopic_config(topic_config, "test_subtopic", "test_topic")
+            validate_subtopic_config(subtopic_config, topic_config["parsing_strategy"])
         self.assertIn("Missing required field 'type'", str(context.exception))
 
     def test_validate_subtopic_config_invalid_type(self):
@@ -524,8 +526,9 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
                 }
             }
         }
+        subtopic_config = topic_config["subtopics"]["test_subtopic"]
         with self.assertRaises(network_data_capture.ConfigurationError) as context:
-            validate_subtopic_config(topic_config, "test_subtopic", "test_topic")
+            validate_subtopic_config(subtopic_config, topic_config["parsing_strategy"])
         self.assertIn("Invalid type", str(context.exception))
 
 

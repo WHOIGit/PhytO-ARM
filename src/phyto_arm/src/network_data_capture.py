@@ -6,9 +6,9 @@ import socket
 import time
 from typing import Any, Dict, List, Tuple
 
+from ds_core_msgs.msg import RawData
 import rospy
 from std_msgs.msg import Float64, String, Int64, Bool, Float64MultiArray, Int64MultiArray, Int8MultiArray
-from ds_core_msgs.msg import RawData
 
 
 class ConfigurationError(Exception):
@@ -101,38 +101,39 @@ def validate_topic_config(topic_name: str, topic_config: dict) -> None:
         if not isinstance(topic_config["subtopics"], dict):
             raise ConfigurationError(f"Topic '{topic_name}': Subtopics must be a dictionary")
 
-        for subtopic_name, _ in topic_config["subtopics"].items():
-            validate_subtopic_config(topic_config, subtopic_name, topic_name)
+        for subtopic_name, subtopic_config in topic_config["subtopics"].items():
+            try:
+                validate_subtopic_config(subtopic_config, topic_config["parsing_strategy"])
+            except ConfigurationError as e:
+                raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': {str(e)}") from e
 
-def validate_subtopic_config(topic_config: dict, subtopic_name: str, topic_name: str) -> None:
+def validate_subtopic_config(subtopic_config: dict, parsing_strategy: str) -> None:
     """Validate single subtopic configuration including field_id and type
 
     Args:
-        topic_config: Dict containing topic configuration
-        subtopic_name: Name of the subtopic
-        topic_name: Name of the parent topic
+        subtopic_config: Dict containing subtopic configuration
+        parsing_strategy: Parsing strategy ("json_dict", "json_array", "raw", "delimited")
 
     Raises:
         ConfigurationError: If subtopic configuration is invalid
     """
-    subtopic_config = topic_config["subtopics"][subtopic_name]
     required_fields = ["field_id", "type"]
     for field in required_fields:
         if field not in subtopic_config:
-            raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': Missing required field '{field}'")
+            raise ConfigurationError(f"Missing required field '{field}'")
 
-    if topic_config["parsing_strategy"] == "delimited":
+    if parsing_strategy == "delimited":
         if subtopic_config["type"].endswith('[]'):
-            raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': Arrays are not a supported field type for delimited string parsing")
+            raise ConfigurationError(f"Arrays are not a supported field type for delimited string parsing")
 
     if not isinstance(subtopic_config["field_id"], (int, str)):
-        raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': field_id must be an integer or string")
+        raise ConfigurationError(f"Field_id must be an integer or string")
 
     if not isinstance(subtopic_config["type"], str):
-        raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': type must be a string")
+        raise ConfigurationError(f"Type must be a string")
 
     if subtopic_config["type"] not in ROS_TYPE_MAP:
-        raise ConfigurationError(f"Topic '{topic_name}', subtopic '{subtopic_name}': Invalid type. Must be one of {list(ROS_TYPE_MAP.keys())}")
+        raise ConfigurationError(f"Invalid type. Must be one of {list(ROS_TYPE_MAP.keys())}")
 
 def convert_to_ros_msg(value: Any, type_hint: str) -> Any:
     """Convert value to appropriate ROS message type based on config type_hint
@@ -168,8 +169,7 @@ def convert_to_ros_msg(value: Any, type_hint: str) -> Any:
 
         # Create appropriate array message
         if type_hint == "bool[]":
-            # Convert boolean array to int8 array
-            msg = msg_type(data=[int(x) for x in value])
+            msg = msg_type(data=[int(x) for x in value]) # type: ignore - value is checked above
         elif type_hint.endswith("[]"):
             msg = msg_type(data=value)
         else:
@@ -606,9 +606,6 @@ def publish_messages(topic_name: str, parsed_data: dict, publishers: dict,
             )
 
             topic_publishers[subtopic_name].publish(msg)
-
-    return ""
-
 
 
 @dataclass
