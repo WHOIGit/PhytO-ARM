@@ -663,13 +663,13 @@ def main():
     config = rospy.get_param('~', None)
     if config is None:
         rospy.logwarn("No network_data_capture configuration found, stopping node")
-        return
+        exit(0)
 
     try:
         validate_config(config)
     except ConfigurationError as e:
         rospy.logerr(f"Configuration error: {str(e)}")
-        return
+        exit(1)
 
     # Create sockets
     sockets = {}
@@ -687,14 +687,14 @@ def main():
                             f"on port {topic_config['port']}")
         except SocketError as e:
             rospy.logerr(f"Error creating socket for {topic_name}: {str(e)}")
-            return
+            exit(1)
 
     # Set up publishers
     try:
         publishers = setup_publishers(config)
     except Exception as e:
         rospy.logerr(f"Error setting up publishers: {str(e)}")
-        return
+        exit(1)
 
     rospy.loginfo("Network Data Capture Node started")
 
