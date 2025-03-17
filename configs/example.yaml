@@ -29,6 +29,7 @@ network_data_capture: #optional
             port: 44444  # Port for PhytO-ARM to listen to
             parsing_strategy: "delimited" # Can be "json_dict", "json_array", "raw", or "delimited"
             delimiter: ", " #optional. Only used if parsing_strategy is "delimited"
+            use_regex_delimiter: false #optional. If true, delimiter is treated as a regex pattern. Default is false.
             subtopics: #optional. If parsing_strategy is not raw use this to parse data into subtopics
                 example_subtopic: #optional. Name of the subtopic
                     field_id: 0 # Index of the field. Used if parsing_strategy is "json_array" or "delimited"
@@ -48,7 +49,8 @@ network_data_capture: #optional
             connection_type: "udp"
             port: 5678
             parsing_strategy: "delimited"
-            delimiter: ","
+            delimiter: ",? "
+            use_regex_delimiter: true #optional. If true, delimiter is treated as a regex pattern. Default is false.
             subtopics: #optional
                 temperature: #optional. Will publish to "/delimited_stream_example/temperature"
                     field_id: 0

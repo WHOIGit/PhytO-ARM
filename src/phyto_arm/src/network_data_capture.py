@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass, field as dc_field
 import json
+import re
 import select
 import socket
 import time
@@ -280,13 +281,26 @@ def extract_messages(buffer: bytes, strategy: str, config: dict) -> Tuple[List[b
 
     elif strategy == "delimited":
         delimiter = config["delimiter"].encode('utf-8')
+        use_regex = config.get("use_regex_delimiter", False)
 
         # Split on newlines first, then process delimited fields
         while b'\n' in buffer:
             idx = buffer.find(b'\n')
             message = buffer[:idx]
-            if delimiter in message:  # Only add if it contains the delimiter
-                messages.append(message)
+            
+            # Check if message contains delimiter (either as regex or literal string)
+            if use_regex:
+                try:
+                    message_str = message.decode('utf-8')
+                    if re.search(config["delimiter"], message_str):
+                        messages.append(message)
+                except UnicodeDecodeError:
+                    # Skip messages that can't be decoded as UTF-8
+                    rospy.logwarn(f"Skipping message due to UnicodeDecodeError: {message}")
+            else:
+                if delimiter in message:  # Only add if it contains the delimiter
+                    messages.append(message)
+                    
             buffer = buffer[idx + 1:]
 
     elif strategy in ["json_dict", "json_array"]:
@@ -389,10 +403,20 @@ def parse_delimited_message(message: bytes, config: dict) -> dict:
         ParsingError: If there's an error parsing the message
     """
     try:
-
         # Decode and split the message
         text = message.decode('utf-8').strip()
-        fields = text.split(config["delimiter"])
+
+        # Check if we should use regex for splitting
+        delimiter = config["delimiter"]
+        use_regex = config.get("use_regex_delimiter", False)
+
+        if use_regex:
+            # Use regex pattern for splitting
+            fields = re.split(delimiter, text)
+        else:
+            # Standard string delimiter
+            fields = text.split(delimiter)
+
         result = {}
 
         # Process each subtopic
