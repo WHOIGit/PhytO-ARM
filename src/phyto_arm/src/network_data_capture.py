@@ -603,8 +603,6 @@ def publish_messages(topic_name: str, parsed_data: dict, publishers: dict,
 
         # Publish each parsed field to its subtopic
         for subtopic_name, value in parsed_data.items():
-            if subtopic_name not in topic_publishers:
-                raise ValueError(f"No publisher found for subtopic '{subtopic_name}'")
 
             # Convert value to ROS message
             msg = convert_to_ros_msg(
