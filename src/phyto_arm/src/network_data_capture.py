@@ -298,23 +298,21 @@ def extract_messages(buffer: bytes, strategy: str, config: dict) -> Tuple[List[b
         # Process complete JSON objects
         decoder = json.JSONDecoder()
         while buffer:
+            if not buffer.strip():  # Skip empty buffers
+                break
+
+            # Try to decode JSON at current position
             try:
-                if not buffer.strip():  # Skip empty buffers
-                    break
+                _, idx = decoder.raw_decode(buffer.decode('utf-8'))
 
-                # Try to decode JSON at current position
-                try:
-                    _, idx = decoder.raw_decode(buffer.decode('utf-8'))
+                # Extract the exact bytes that made up this message
+                msg_bytes = buffer[:idx].strip()
+                messages.append(msg_bytes)
+                buffer = buffer[idx:].lstrip()
+            except json.JSONDecodeError:
 
-                    # Extract the exact bytes that made up this message
-                    msg_bytes = buffer[:idx].strip()
-                    messages.append(msg_bytes)
-                    buffer = buffer[idx:].lstrip()
-                except json.JSONDecodeError:
-
-                    # If we can't decode JSON, we need more data
-                    break
-
+                # If we can't decode JSON, we need more data
+                break
             except UnicodeDecodeError as e:
                 raise ParsingError(f"Invalid UTF-8 in buffer: {str(e)}") from e
 

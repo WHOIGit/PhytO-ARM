@@ -589,10 +589,10 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
         self.assertEqual(remaining, b"g,h")
 
     def test_extract_messages_delimited_with_regex(self):
-        buffer = b"a, b c\nd, e,  f\ng, h"
+        buffer = b"a, b,  c  d\nd, e,  f  e\ng, h"
         config = {"delimiter": ",?\\s+", "use_regex_delimiter": True}
         messages, remaining = extract_messages(buffer, "delimited", config)
-        self.assertEqual(messages, [b"a, b c", b"d, e,  f"])
+        self.assertEqual(messages, [b"a, b,  c  d", b"d, e,  f  e"])
         self.assertEqual(remaining, b"g, h")
 
     def test_extract_messages_json_dict(self):
