@@ -583,10 +583,17 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
 
     def test_extract_messages_delimited(self):
         buffer = b"a,b,c\nd,e,f\ng,h"
-        config = {"delimiter": ","}
+        config = {"delimiter": ",", "use_regex_delimiter": False}
         messages, remaining = extract_messages(buffer, "delimited", config)
         self.assertEqual(messages, [b"a,b,c", b"d,e,f"])
         self.assertEqual(remaining, b"g,h")
+
+    def test_extract_messages_delimited_with_regex(self):
+        buffer = b"a, b c\nd, e,  f\ng, h"
+        config = {"delimiter": ",?\\s+", "use_regex_delimiter": True}
+        messages, remaining = extract_messages(buffer, "delimited", config)
+        self.assertEqual(messages, [b"a, b c", b"d, e,  f"])
+        self.assertEqual(remaining, b"g, h")
 
     def test_extract_messages_json_dict(self):
         buffer = b'{"a":1}\n{"b":2}\n{"c":'
@@ -603,6 +610,23 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
         message = b"42.5,test,1"
         config = {
             "delimiter": ",",
+            "use_regex_delimiter": False,
+            "subtopics": {
+                "value": {"field_id": 0, "type": "float"},
+                "name": {"field_id": 1, "type": "str"},
+                "flag": {"field_id": 2, "type": "bool"}
+            }
+        }
+        result = parse_delimited_message(message, config)
+        self.assertEqual(result["value"], 42.5)
+        self.assertEqual(result["name"], "test")
+        self.assertEqual(result["flag"], True)
+
+    def test_parse_delimited_message_with_regex(self):
+        message = b"42.5, test  1"
+        config = {
+            "delimiter": ",?\\s+",
+            "use_regex_delimiter": True,
             "subtopics": {
                 "value": {"field_id": 0, "type": "float"},
                 "name": {"field_id": 1, "type": "str"},

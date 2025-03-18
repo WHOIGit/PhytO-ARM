@@ -282,25 +282,15 @@ def extract_messages(buffer: bytes, strategy: str, config: dict) -> Tuple[List[b
     elif strategy == "delimited":
         delimiter = config["delimiter"].encode('utf-8')
         use_regex = config.get("use_regex_delimiter", False)
+        if not use_regex:
+            delimiter = re.escape(delimiter)
 
         # Split on newlines first, then process delimited fields
         while b'\n' in buffer:
             idx = buffer.find(b'\n')
             message = buffer[:idx]
-            
-            # Check if message contains delimiter (either as regex or literal string)
-            if use_regex:
-                try:
-                    message_str = message.decode('utf-8')
-                    if re.search(config["delimiter"], message_str):
-                        messages.append(message)
-                except UnicodeDecodeError:
-                    # Skip messages that can't be decoded as UTF-8
-                    rospy.logwarn(f"Skipping message due to UnicodeDecodeError: {message}")
-            else:
-                if delimiter in message:  # Only add if it contains the delimiter
-                    messages.append(message)
-                    
+            if re.search(delimiter, message):
+                messages.append(message)
             buffer = buffer[idx + 1:]
 
     elif strategy in ["json_dict", "json_array"]:
@@ -409,14 +399,9 @@ def parse_delimited_message(message: bytes, config: dict) -> dict:
         # Check if we should use regex for splitting
         delimiter = config["delimiter"]
         use_regex = config.get("use_regex_delimiter", False)
-
-        if use_regex:
-            # Use regex pattern for splitting
-            fields = re.split(delimiter, text)
-        else:
-            # Standard string delimiter
-            fields = text.split(delimiter)
-
+        if not use_regex:
+            delimiter = re.escape(delimiter)
+        fields = re.split(delimiter, text)
         result = {}
 
         # Process each subtopic
