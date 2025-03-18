@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-from dataclasses import dataclass, field as dc_field
 import json
 import re
 import select
 import socket
 import time
+
+from dataclasses import dataclass, field as dc_field
 from typing import Any, Dict, List, Tuple
 
-from ds_core_msgs.msg import RawData
 import rospy
-from std_msgs.msg import Float64, String, Int64, Bool, Float64MultiArray, Int64MultiArray, Int8MultiArray
 
+from ds_core_msgs.msg import RawData
+from std_msgs.msg import Float64, String, Int64, Bool, Float64MultiArray, Int64MultiArray, Int8MultiArray
 
 class ConfigurationError(Exception):
     """Exception raised for config validation errors."""
