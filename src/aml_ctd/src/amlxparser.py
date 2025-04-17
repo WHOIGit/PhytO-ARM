@@ -46,10 +46,17 @@ def parseAMLx(s):
 
 def iterAMLx(s):
     # Parse the message number and between the {}s
-    m = re.match(r'msg(\d+)\{(.*?)\}', s)
+    m = re.match(r'msg(\d+)\{(.*?)\}(?:[*]([0-9a-fA-F]{2}))?', s)
     assert m
-    msgnum, inner = m.groups()
+    msgnum, inner, checksum = m.groups()
     msgnum = int(msgnum)
+    checksum = int(checksum, 16) if checksum else None
+
+    # Checksums are included when using `set monitor checksum y`
+    if checksum is not None:
+        for c in s[:m.start(3)-1]:
+            checksum ^= ord(c)
+        assert checksum == 0
 
     # Split into a list of sensors and their parameter lists
     m = re.findall(r'(.+?)((?:\[.+?\])+)(?:,|$)', inner)
