@@ -40,7 +40,7 @@ docker run --rm -it \
     --volume "$(pwd)"/configs:/app/configs:ro \
     --volume $CONFIG:/app/mounted_config.yaml:ro \
     --volume /home/ifcb/IFCBacquire/Host/Routines:/routines:ro \
-    --volume /mnt/data:/mnt/data \
+    --volume /data:/data \
     --device /dev/ttyS3 \
     whoi/phyto-arm:latest \
     $COMMAND

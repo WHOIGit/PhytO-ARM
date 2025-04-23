@@ -2,8 +2,8 @@ name: Example
 
 
 launch_args:
-    log_dir: /mnt/data/roslogs/
-    rosbag_prefix: /mnt/data/rosbags/phyto-arm
+    log_dir: /data/roslogs/
+    rosbag_prefix: /data/rosbags/phyto-arm
     classifier: false
     ifcb_winch: false
     chanos_winch: false
@@ -71,7 +71,7 @@ ifcb:
     routines_dir: "/routines"
     # This path is interpreted by IFCBacquire, which may be in another
     # container or namespace.
-    data_dir: "/mnt/data/ifcbdata"
+    data_dir: "/data/ifcbdata"
 
 
 arm_ifcb:
