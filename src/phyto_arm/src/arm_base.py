@@ -43,7 +43,6 @@ class ArmBase:
             release_move_clearance = rospy.ServiceProxy('/lock_manager/release', LockOperation)
             lock_op = LockOperationRequest(arm_name)
 
-
             # Bind lock operations to instance
             self.request_clearance = lambda: acquire_move_clearance(lock_op).success
             self.release_clearance = lambda: release_move_clearance(lock_op).success
@@ -74,13 +73,11 @@ class ArmBase:
 
 
     def send_winch_goal(self, depth, speed, callback):
-        global winches_moving
         rospy.loginfo(f'Sending winch move to {depth}')
 
         # Ensure winch is enabled
         if rospy.get_param('winch_enabled') is not True:
             raise ValueError('Move aborted: winch is disabled in config')
-
 
         # Safety check: Do not exceed depth bounds
         if depth < rospy.get_param('winch/range/min'):
@@ -88,11 +85,9 @@ class ArmBase:
         elif depth > rospy.get_param('winch/range/max'):
             raise ValueError(f'Move aborted: depth {depth} is above max {rospy.get_param("winch/range/max")}')
 
-
         # Set max speed if not specified
         if speed is None:
             speed = rospy.get_param('winch/max_speed')
-
 
         # Safety check: Speed cannot exceed max speed
         elif speed > rospy.get_param('winch/max_speed'):
@@ -112,8 +107,8 @@ class ArmBase:
                 assert self.release_clearance()
                 callback(move_result)
             except Exception as e:
-                rospy.logerr(f'Unexpected error during winch movement', exc_info=True)
-                rospy.signal_shutdown(f'Shutting down due to unexpected winch movement error')
+                rospy.logerr('Unexpected error during winch movement', exc_info=True)
+                rospy.signal_shutdown('Shutting down due to unexpected winch movement error')
                 raise e
 
         self.winch_client.send_goal(MoveToDepthGoal(depth=depth, velocity=speed), done_cb=winch_done)
@@ -121,7 +116,7 @@ class ArmBase:
 
     # Logic for determining arm tasks goes heres, all implementations should override this
     def get_next_task(self, last_task):
-        return None
+        raise NotImplementedError('Subclasses must implement this method')
 
 
     # Callback for when a task is complete. Unused result argument is required
@@ -142,11 +137,9 @@ class ArmBase:
                     rospy.logwarn(f'No winch; running {task.name}')
                     task.callback()
 
-
                 # Otherwise, move winch
                 else:
                     rospy.logwarn('Arm waiting for clearance')
-
 
                     # TODO: Consider replacing this with a queueing mechanism.  Requires setting up
                     # callbacks via ROS service calls. Unnecessarily complex for a 2 winch system,
@@ -155,7 +148,6 @@ class ArmBase:
                     while not rospy.is_shutdown() and not self.request_clearance():
                         # Wait until central semaphore clears us to move
                         rospy.sleep(1)
-
 
                     # TODO: Optimize task evaluation. Currently we are blocking on the assumption that
                     # movement will be needed; this is not always the case. Not a problem for 1 or 2
