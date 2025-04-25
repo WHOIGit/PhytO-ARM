@@ -37,9 +37,9 @@ docker run --rm -it \
     --publish 9090:9090/tcp \
     --publish 8098:8098/tcp \
     --publish 12345:12345/udp \
-    --volume "$(pwd)"/configs:/app/configs:ro \
-    --volume $CONFIG:/app/mounted_config.yaml:ro \
-    --volume /home/ifcb/IFCBacquire/Host/Routines:/routines:ro \
+    --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
+    --mount type=bind,source=$CONFIG,target=/app/mounted_config.yaml,readonly \
+    --mount type=bind,source=/home/ifcb/IFCBacquire/Host/Routines,target=/routines,readonly \
     --volume /data:/data \
     --device /dev/ttyS3 \
     whoi/phyto-arm:latest \
