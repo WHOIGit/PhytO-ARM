@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass
 from threading import Lock
+import math
 
 import actionlib
+from geopy.distance import distance as vincenty_distance
 import rospy
 
 from geopy.distance import distance as vincenty_distance
@@ -35,6 +37,15 @@ class ArmBase:
         self.arm_name = arm_name
         self.task_lock = Lock()
         self.winch_client = None
+
+        # GPS related variables
+        self._gps_lock = Lock()
+        self._last_gps_fix = None
+        self._last_gps_fix_time = None
+
+        # Subscribe to GPS data for geofence check
+        rospy.Subscriber("/gps/fix", NavSatFix, self.gps_callback)
+        rospy.loginfo(f"Subscribed to /gps/fix for {self.arm_name}")
 
         # GPS related variables
         self._gps_lock = Lock()
@@ -188,6 +199,10 @@ class ArmBase:
     def loop(self):
         task = None
         while not rospy.is_shutdown():
+            if self.geofence_block():
+                rospy.sleep(1.0)
+                continue # Skip to next loop iteration to re-evaluate geofence
+
             # Don't block so that we can keeping checking for shutdowns
             if self.task_lock.acquire(blocking=False):
                 # If no movement is required
