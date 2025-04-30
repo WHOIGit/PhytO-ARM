@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass
 from threading import Lock
+import math
 
 import actionlib
+from geopy.distance import distance as vincenty_distance
 import rospy
+from sensor_msgs.msg import NavSatFix
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 from phyto_arm.srv import LockCheck, LockCheckRequest, LockOperation, LockOperationRequest
@@ -32,6 +35,15 @@ class ArmBase:
         self.arm_name = arm_name
         self.task_lock = Lock()
         self.winch_client = None
+
+        # GPS related variables
+        self._gps_lock = Lock()
+        self._last_gps_fix = None
+        self._last_gps_fix_time = None
+
+        # Subscribe to GPS data for geofence check
+        rospy.Subscriber("/gps/fix", NavSatFix, self.gps_callback)
+        rospy.loginfo(f"Subscribed to /gps/fix for {self.arm_name}")
 
         if rospy.get_param('winch_enabled'):
             if winch_name is None:
@@ -66,6 +78,52 @@ class ArmBase:
             self.winch_client.wait_for_server()
             rospy.loginfo(f'Server acquired for {winch_name}')
 
+    def gps_callback(self, msg):
+        with self._gps_lock:
+            self._last_gps_fix = msg
+            self._last_gps_fix_time = rospy.get_time()
+
+    def geofence_block(self):
+        geofence_params = rospy.get_param(f'~{self.arm_name}/geofence', {})
+        geofence_enabled = geofence_params.get('enabled', False)
+
+        if not geofence_enabled:
+            return False
+
+        current_time = rospy.get_time()
+
+        with self._gps_lock:
+            last_fix = self._last_gps_fix
+            last_fix_time = self._last_gps_fix_time
+
+        if last_fix is None or (current_time - (last_fix_time or 0) > 300): # 5 minutes expiry
+            rospy.logwarn_throttle(60, f'{self.arm_name}: GPS fix is missing or expired.')
+            if geofence_params.get('strict', False):
+                rospy.logwarn_throttle(5, f'{self.arm_name}: Strict mode enabled, pausing task due to missing/expired GPS.')
+                return True # Pause due to strict mode and missing/expired GPS
+            else:
+                rospy.logdebug(f'{self.arm_name}: Strict mode disabled, proceeding without valid GPS.')
+                return False # Don't pause if not strict
+        else:
+
+            # Valid GPS fix, check deny zones
+            deny_zones = geofence_params.get('deny', [])
+            current_point = (last_fix.latitude, last_fix.longitude)
+
+            for zone in deny_zones:
+                zone_point = (zone.get('latitude'), zone.get('longitude'))
+                zone_radius = zone.get('radius')
+
+                if None in zone_point or zone_radius is None:
+                    raise ValueError(f'{self.arm_name}: Invalid deny zone definition: {zone}')
+
+                distance = vincenty_distance(current_point, zone_point).m
+
+                if distance < zone_radius:
+                    rospy.logwarn_throttle(5, f'{self.arm_name}: Inside denied geofence zone ({distance:.1f}m < {zone_radius}m). Pausing task.')
+                    return True # Pause due to being in a denied zone
+
+            return False 
 
     def winch_busy(self):
         state = self.winch_client.get_state()
@@ -129,6 +187,10 @@ class ArmBase:
     def loop(self):
         task = None
         while not rospy.is_shutdown():
+            if self.geofence_block():
+                rospy.sleep(1.0)
+                continue # Skip to next loop iteration to re-evaluate geofence
+
             # Don't block so that we can keeping checking for shutdowns
             if self.task_lock.acquire(blocking=False):
                 # If no movement is required
