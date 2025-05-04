@@ -107,6 +107,8 @@ def velocity_f(target, max_speed, half_speed_dist):
 #
 # Note we must estimate the time to our within-epsilon stopping distance, or
 # else the integral will not converge.
+#
+# FIXME: This does not account for acceleration.
 def estimate_time(v, start, target, epsilon):
     t, _ = quad(
         lambda x: 1/v(x),
@@ -270,9 +272,9 @@ async def move_to_depth(server, goal):
         rpm = rpm_ratio * velocity
 
         set_velocity(
-            velocity=rpm,       # RPM
-            acceleration=1200,  # RPM/s
-            torque=3.0          # rated torque
+            velocity=rpm,     # RPM
+            acceleration=60,  # RPM/s
+            torque=1.00       # nominal load
         )
 
         # Publish feedback about our current progress
