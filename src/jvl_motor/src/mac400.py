@@ -293,8 +293,8 @@ all_registers = [
     Register(name='EMK_B',           num=196),
     Register(name='EMK_C',           num=197),
     Register(name='U_BUS',           num=198,
-        decode=lambda lo, hi: unpack('L', lo, hi) / 0.888,  # V
-        encode=lambda x: pack('L', int(x * 0.888)),
+        decode=lambda lo, hi: unpack('L', lo, hi) * 0.888,  # V
+        encode=lambda x: pack('L', int(x / 0.888)),
     ),
     Register(name='U_BUS_OFFSET',    num=199),
     Register(name='TC0_CV1',         num=200),
