@@ -151,7 +151,7 @@ async def move_to_depth(server, goal):
 
     # Safety check: The motor should not be in motion
     if motor.value.mode != Motion.MODE_PASSIVE:
-        server.set_aborted(text='Motor is already in motion')
+        server.set_aborted(text=f'Motor is already in motion, mode: {motor.value.mode}')
         return
 
     # Safety check: Try to stop the motor (synchronously). This is a no-op but
@@ -238,7 +238,7 @@ async def move_to_depth(server, goal):
         # If we exceed the programmed position envelope, the motor will stop
         # automatically. Take this as a sign something bad happened.
         if started and motor.value.mode != Motion.MODE_VELOCITY:
-            server.set_aborted(text='Motor unexpectedly stopped')
+            server.set_aborted(text=f'Motor unexpectedly stopped, mode: {motor.value.mode}')
             if not (pos_min < motor.value.position < pos_max):
                 rospy.logerr(
                     'Position envelope exceeded -- '
