@@ -1,5 +1,9 @@
 baseURL = "https://hablab.whoi.edu/phyto-arm/"
 languageCode = "en-us"
 title = "PhytO-ARM"
-
-theme = "hugo-theme-techdoc"
+pluralizelisttitles = false
+ignorefiles = ["Archive/*", "Overview/*"]
+theme = "hugo-geekdoc"
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
