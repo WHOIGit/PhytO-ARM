@@ -2,7 +2,7 @@
 set -eo pipefail
 
 source /opt/ros/noetic/setup.bash
-source /app/install/setup.bash
+source /app/ros1/install/setup.bash
 
 if [ -d /hot/ros1/src ] && [ -n "$(ls -A /hot/ros1/src 2>/dev/null)" ]; then
     (
@@ -22,7 +22,7 @@ if [ -d /hot/ros1/src ] && [ -n "$(ls -A /hot/ros1/src 2>/dev/null)" ]; then
 
         # Build packages in the hot-patch workspace
         [ ! -f .catkin_workspace ] && catkin init
-        catkin config --extend /app/install --no-install --link-devel
+        catkin config --extend /app/ros1/install --no-install --link-devel
         catkin build
     )
 
