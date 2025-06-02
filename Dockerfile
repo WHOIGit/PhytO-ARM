@@ -42,10 +42,11 @@ RUN python3 -m pip install --ignore-installed -r python3-requirements.txt
 
 
 # Clone third-party dependencies from VCS
-COPY deps/deps.rosinstall ./
+WORKDIR /app/ros1
+COPY deps/ros1-deps.rosinstall ./
 RUN echo Installing ROS dependencies \
  && mkdir ./src \
- && vcs import src < deps.rosinstall
+ && vcs import src < ros1-deps.rosinstall
 
 # Install dependencies declared in package.xml files
 RUN apt update \
@@ -63,13 +64,13 @@ RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
  "
 
 # Copy package.xml files for local packages
-COPY ./src/aml_ctd/package.xml ./src/aml_ctd/package.xml
-COPY ./src/dli_power_switch/package.xml ./src/dli_power_switch/package.xml
-COPY ./src/ifcb/package.xml ./src/ifcb/package.xml
-COPY ./src/jvl_motor/package.xml ./src/jvl_motor/package.xml
-COPY ./src/phyto_arm/package.xml ./src/phyto_arm/package.xml
+COPY ./ros1/aml_ctd/package.xml ./src/aml_ctd/package.xml
+COPY ./ros1/dli_power_switch/package.xml ./src/dli_power_switch/package.xml
+COPY ./ros1/ifcb/package.xml ./src/ifcb/package.xml
+COPY ./ros1/jvl_motor/package.xml ./src/jvl_motor/package.xml
+COPY ./ros1/phyto_arm/package.xml ./src/phyto_arm/package.xml
 COPY ./src/phyto_sim_utils/package.xml ./src/phyto_sim_utils/package.xml
-COPY ./src/rbr_maestro3_ctd/package.xml ./src/rbr_maestro3_ctd/package.xml
+COPY ./ros1/rbr_maestro3_ctd/package.xml ./src/rbr_maestro3_ctd/package.xml
 
 # Install new rosdep dependencies declared in the above package.xml files
 RUN apt update \
@@ -78,6 +79,7 @@ RUN apt update \
 
 # Copy the rest of the source
 COPY ./src ./src
+COPY ./ros1 ./src
 
 # Build
 RUN bash -c "source devel/setup.bash \
@@ -101,6 +103,7 @@ RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
 ENV NO_VIRTUALENV=1
 
 # Copy the launch tools and server files
+WORKDIR /app
 COPY ./phyto-arm ./phyto-arm
 COPY configs/example.yaml ./configs/example.yaml
 
@@ -108,9 +111,9 @@ COPY configs/example.yaml ./configs/example.yaml
 EXPOSE 8080
 
 # Source ROS environment automatically for all bash sessions
-RUN echo "source /app/devel/setup.bash" >> /etc/bash.bashrc
+RUN echo "source /app/ros1/devel/setup.bash" >> /etc/bash.bashrc
 
-ENTRYPOINT ["/bin/bash", "-c", "source /app/devel/setup.bash && exec \"$@\"", "--"]
+ENTRYPOINT ["/bin/bash", "-c", "source /app/ros1/devel/setup.bash && exec \"$@\"", "--"]
 
 # Default command runs the server with ROS environment sourced
 CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]

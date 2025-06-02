@@ -162,7 +162,7 @@ PhytO-ARM can run with simulated hardware. To run automatic IFCB casts or operat
 
 To run unit tests, execute
 ```bash
-docker run -it --rm whoi/phyto-arm:latest /bin/bash -c "source devel/setup.bash && catkin test phyto_arm"
+docker run -it --rm whoi/phyto-arm:latest /bin/bash -c "cd /app/ros1 && source devel/setup.bash && catkin test phyto_arm"
 ```
 
 ## Configuration
@@ -193,7 +193,7 @@ When running in a container, ensure the config YAML refers to the Docker host's 
 
 The entries in the config file are loaded into the ROS [Parameter Server][]. Some parameters can be dynamically changed while the nodes are running:
 
-    $ source devel/setup.bash
+    $ source /app/ros1/devel/setup.bash
     $ rosparam get /conductor/schedule/every
     60
     $ rosparam set /profiler/data_topic /ctd/aml/port3/chloroblue
