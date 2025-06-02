@@ -4,6 +4,17 @@ ARG DEPSCACHE=1
 SHELL ["/usr/bin/bash", "-c"]
 WORKDIR /app
 
+
+# Replace expired GPG key:
+# https://discourse.ros.org/t/ros-gpg-key-expiration-incident/20669
+ADD https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
+    /tmp/open-robotics.asc
+RUN rm -f /usr/share/keyrings/ros1-latest-archive-keyring.gpg \
+ && gpg --dearmor -o /usr/share/keyrings/ros1-latest-archive-keyring.gpg \
+        /tmp/open-robotics.asc \
+ && rm -f /tmp/open-robotics.asc
+
+
 # Install apt package dependencies
 COPY deps/apt-requirements.txt ./
 RUN apt update \
