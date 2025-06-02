@@ -64,6 +64,7 @@ RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
 
 # Copy package.xml files for local packages
 COPY ./src/aml_ctd/package.xml ./src/aml_ctd/package.xml
+COPY ./src/dli_power_switch/package.xml ./src/dli_power_switch/package.xml
 COPY ./src/ifcb/package.xml ./src/ifcb/package.xml
 COPY ./src/jvl_motor/package.xml ./src/jvl_motor/package.xml
 COPY ./src/phyto_arm/package.xml ./src/phyto_arm/package.xml

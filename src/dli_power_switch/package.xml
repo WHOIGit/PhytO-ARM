@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>dli_power_switch</name>
+    <version>1.0.0</version>
+    <description>Node for controlling and monitoring a Digital Logger Web Power Switch Pro</description>
+    <license>TODO</license>
+
+    <url type="repository">https://github.com/whoigit/PhytO-ARM</url>
+
+    <maintainer email="mbrosnahan@whoi.edu">Michael Brosnahan</maintainer>
+    <maintainer email="john.walsh@whoi.edu">John Walsh</maintainer>
+
+    <author email="john.walsh@whoi.edu">John Walsh</author>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <exec_depend>rospy</exec_depend>
+
+    <depend>std_msgs</depend>
+</package>
