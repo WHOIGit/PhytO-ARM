@@ -31,7 +31,7 @@ def prep_environment():
     #
     # Ref: https://github.com/catkin/catkin_tools/issues/376
     parent_dir = os.path.dirname(__file__)
-    setup_dir = os.path.abspath(os.path.join(parent_dir, 'devel'))
+    setup_dir = os.path.abspath(os.path.join(parent_dir, 'ros1_ws', 'devel'))
     env = {
         '_CATKIN_SETUP_DIR': setup_dir
     }

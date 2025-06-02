@@ -54,20 +54,22 @@ COPY deps/python3-requirements.txt ./
 RUN python3 -m pip install -r python3-requirements.txt
 
 
-# Clone third-party dependencies from VCS
-COPY deps/deps.rosinstall ./
-RUN echo Installing ROS dependencies:${DEPSCACHE} \
- && mkdir ./src \
- && vcs import src < deps.rosinstall
+## Clone third-party dependencies from VCS
+COPY deps/ros1-deps.rosinstall ./
+RUN echo Installing ROS1 dependencies:${DEPSCACHE} \
+ && mkdir -p ./ros1_ws/src \
+ && vcs import ./ros1_ws/src < ros1-deps.rosinstall \
+ && rm -f ros1-deps.rosinstall
 
 # Install dependencies declared in package.xml files
 RUN apt update \
- && rosdep install --default-yes --from-paths ./src --ignore-src \
+ && rosdep install --default-yes --from-paths ./ros1_ws/src --ignore-src \
  && rm -rf /var/lib/apt/lists/*
 
 # Warm the build directory with pre-built packages that don't change often.
 # This list can be updated according to `catkin build --dry-run phyto_arm`.
 RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
+ && cd ros1_ws \
  && stdbuf -o L catkin build \
         ds_core_msgs \
         ds_sensor_msgs \
@@ -76,23 +78,24 @@ RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
  "
 
 # Copy package.xml files for local packages
-COPY ./src/aml_ctd/package.xml ./src/aml_ctd/package.xml
-COPY ./src/ifcb/package.xml ./src/ifcb/package.xml
-COPY ./src/jvl_motor/package.xml ./src/jvl_motor/package.xml
-COPY ./src/phyto_arm/package.xml ./src/phyto_arm/package.xml
-COPY ./src/rbr_maestro3_ctd/package.xml ./src/rbr_maestro3_ctd/package.xml
+COPY ./ros1/aml_ctd/package.xml ./ros1_ws/src/aml_ctd/package.xml
+COPY ./ros1/ifcb/package.xml ./ros1_ws/src/ifcb/package.xml
+COPY ./ros1/jvl_motor/package.xml ./ros1_ws/src/jvl_motor/package.xml
+COPY ./ros1/phyto_arm/package.xml ./ros1_ws/src/phyto_arm/package.xml
+COPY ./ros1/rbr_maestro3_ctd/package.xml ./ros1_ws/src/rbr_maestro3_ctd/package.xml
 
 # Install new rosdep dependencies declared in the above package.xml files
 RUN apt update \
- && rosdep install --default-yes --from-paths ./src --ignore-src \
+ && rosdep install --default-yes --from-paths ./ros1_ws/src --ignore-src \
  && rm -rf /var/lib/apt/lists/*
 
 # Copy the rest of the sources
-COPY ./src ./src
+COPY ./ros1 ./ros1_ws/src
 COPY ./scripts ./scripts
 
 # Build
-RUN bash -c "source devel/setup.bash \
+RUN bash -c "cd ./ros1_ws \
+ && source devel/setup.bash \
  && stdbuf -o L catkin build phyto_arm \
  "
 
