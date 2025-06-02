@@ -22,7 +22,6 @@ add_message_files(
   ConductorState.msg
   ConductorStates.msg
   DepthProfile.msg
-  OutletStatus.msg
 )
 
 add_service_files(
