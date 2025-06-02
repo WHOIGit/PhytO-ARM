@@ -7,7 +7,7 @@ import urllib.request
 
 import rospy
 
-from phyto_arm.msg import OutletStatus
+from dli_power_switch.msg import OutletStatus
 
 # Global variables relevant to digital logger control. These variables are defined once the digital
 # logger node is initialized.
@@ -45,17 +45,16 @@ def control_outlet(msg):
     rospy.loginfo(f'sent status={str(msg.is_active).lower()} to {ADDRESS}:{url}, received: code {response.status} : {result}')
 
 
-def run_digital_logger_node():
+def run_dli_power_switch_node():
     """
-    Run the digital logger node. Publishes outlet statuses at 
-    /digital_logger/OUTLETS/{outlet num}/status. The OUTLETS can be controlled by publishing a 
-    OutletStatus message to /digital_logger/control. 
+    Run the Digital Logger power switch node. Publishes outlet statuses at
+    /digital_logger/OUTLETS/{outlet num}/status. The OUTLETS can be controlled by publishing a
+    OutletStatus message to /digital_logger/control.
     """
     global AUTH, ADDRESS, OUTLETS, OUTLET_NAMES
 
-    rospy.init_node('digital_logger')
+    rospy.init_node('dli_power_switch')
 
-    rospy.init_node('digital_logger')
     username = rospy.get_param('~username')
     password = rospy.get_param('~password')
     AUTH = f"Basic {base64.b64encode(f'{username}:{password}'.encode()).decode()}"
@@ -104,6 +103,6 @@ def run_digital_logger_node():
 
 if __name__ == '__main__':
     try:
-        run_digital_logger_node()
+        run_dli_power_switch_node()
     except rospy.ROSInterruptException:
         pass
