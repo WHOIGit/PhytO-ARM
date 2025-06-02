@@ -47,7 +47,8 @@ def parseAMLx(s):
 def iterAMLx(s):
     # Parse the message number and between the {}s
     m = re.match(r'msg(\d+)\{(.*?)\}(?:[*]([0-9a-fA-F]{2}))?', s)
-    assert m
+    if not m:
+        raise ValueError('Invalid message format')
     msgnum, inner, checksum = m.groups()
     msgnum = int(msgnum)
     checksum = int(checksum, 16) if checksum else None
@@ -56,7 +57,8 @@ def iterAMLx(s):
     if checksum is not None:
         for c in s[:m.start(3)-1]:
             checksum ^= ord(c)
-        assert checksum == 0
+        if checksum != 0:
+            raise ValueError('Incorrect checksum')
 
     # Split into a list of sensors and their parameter lists
     m = re.findall(r'(.+?)((?:\[.+?\])+)(?:,|$)', inner)
@@ -74,6 +76,5 @@ if __name__ == '__main__':
 
     import sys
     sample = sys.argv[1]
-    #sample = '''msg138{mux[meta=time,1590605500.55,s][data=uv,1],port1[data=Cond,0.000000,mS/cm][rawi=ADC,563,none][data=TempCT,23.881313,C][rawi=ADC,428710,none],port2[data=Pressure,0.071390,dbar][rawi=ADC,844470,2sComp],port3[data=SV,0.000000,m/s][rawf=NSV,0.000000,samples],derive[data=Depth,0.070998,m]}'''
 
     pprint.pprint(parseAMLx(sample))
