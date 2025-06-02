@@ -16,12 +16,12 @@
         // would result in the container ROS workspace being erased. Ugly workaround for now.
         // Alternatively could use postStart commands to symlink the workspace folder. Might
         // introduce other headaches.
-        "source=${localWorkspaceFolder}/src/aml_ctd,target=/app/src/aml_ctd,type=bind",
-        "source=${localWorkspaceFolder}/src/dli_power_switch,target=/app/src/dli_power_switch,type=bind",
-        "source=${localWorkspaceFolder}/src/ifcb,target=/app/src/ifcb,type=bind",
-        "source=${localWorkspaceFolder}/src/jvl_motor,target=/app/src/jvl_motor,type=bind",
-        "source=${localWorkspaceFolder}/src/phyto_arm,target=/app/src/phyto_arm,type=bind",
-        "source=${localWorkspaceFolder}/src/rbr_maestro3_ctd,target=/app/src/rbr_maestro3_ctd,type=bind",
+        "source=${localWorkspaceFolder}/ros1/aml_ctd,target=/app/ros1/src/aml_ctd,type=bind",
+        "source=${localWorkspaceFolder}/ros1/dli_power_switch,target=/app/ros1/src/dli_power_switch,type=bind",
+        "source=${localWorkspaceFolder}/ros1/ifcb,target=/app/ros1/src/ifcb,type=bind",
+        "source=${localWorkspaceFolder}/ros1/jvl_motor,target=/app/ros1/src/jvl_motor,type=bind",
+        "source=${localWorkspaceFolder}/ros1/phyto_arm,target=/app/ros1/src/phyto_arm,type=bind",
+        "source=${localWorkspaceFolder}/ros1/rbr_maestro3_ctd,target=/app/ros1/src/rbr_maestro3_ctd,type=bind",
         "source=${localWorkspaceFolder}/.gitignore,target=/app/.gitignore,type=bind",
         "source=${localWorkspaceFolder}/configs,target=/app/configs,type=bind",
         "source=${localWorkspaceFolder}/deps,target=/app/deps,type=bind",

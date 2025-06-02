@@ -25,9 +25,9 @@ RUN rosdep update --rosdistro=${ROS_DISTRO}
 FROM base AS base-with-vcs-sources
 
 # Copy and import VCS dependencies
-COPY deps/deps.rosinstall ./deps/
-RUN mkdir -p src \
- && vcs import src < deps/deps.rosinstall
+COPY deps/ros1-deps.rosinstall ./deps/
+RUN mkdir -p ros1/src \
+ && vcs import ros1/src < deps/ros1-deps.rosinstall
 
 
 
@@ -37,10 +37,10 @@ RUN mkdir -p src \
 FROM base-with-vcs-sources AS generate-rosdep-requirements
 
 # Copy local source packages (we really only need package.xml files).
-COPY src/ src/
+COPY ros1/ ros1/src/
 
 # Generate rosdep requirements list
-RUN rosdep install --from-paths src/ --ignore-src \
+RUN rosdep install --from-paths ros1/src/ --ignore-src \
         --rosdistro=${ROS_DISTRO} --simulate \
         | grep 'apt-get install' \
         | sed 's/.*apt-get install //' \
@@ -66,7 +66,7 @@ RUN apt update \
  && rm -rf /var/lib/apt/lists/*
 
 # Verify all dependencies are now installed
-RUN rosdep check --from-paths src/ --ignore-src || \
+RUN rosdep check --from-paths ros1/src/ --ignore-src || \
     (echo "ERROR: Missing dependencies!" \
      && echo "Run: ./scripts/generate-rosdep-requirements.sh" \
      && exit 1)
@@ -120,6 +120,7 @@ FROM with-deps-without-local-sources AS builder
 # Initialize the catkin workspace and pre-build the third-party packages.
 # This list can be updated according to `catkin build --dry-run phyto_arm`.
 RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
+ && cd ros1 \
  && catkin config --install \
  && catkin build \
         ds_asio \
@@ -138,9 +139,10 @@ RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
  "
 
 # Build and test local packages
-COPY src/ src/
+COPY ros1/ ros1/src/
 
-RUN bash -c "source install/setup.bash \
+RUN bash -c "cd ros1 \
+ && source install/setup.bash \
  && stdbuf -o L catkin build phyto_arm \
  && stdbuf -o L catkin test -- \
         aml_ctd \
@@ -178,7 +180,7 @@ EXPOSE 8080
 
 
 # Source ROS environment automatically for all bash sessions
-RUN echo 'source /app/install/setup.bash' >> /etc/bash.bashrc \
+RUN echo 'source /app/ros1/install/setup.bash' >> /etc/bash.bashrc \
  && echo 'if [ -f /hot/ros1/devel/setup.bash ]; then source /hot/ros1/devel/setup.bash; fi' >> /etc/bash.bashrc
 
 # Install the entrypoint script.
@@ -190,4 +192,4 @@ CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm 
 
 
 # Finally, copy the ROS install space from builder
-COPY --from=builder /app/install /app/install
+COPY --from=builder /app/ros1/install /app/ros1/install
