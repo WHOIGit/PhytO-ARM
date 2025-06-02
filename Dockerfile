@@ -22,9 +22,35 @@ RUN apt update \
  && sed '/^#/d' apt-requirements.txt | xargs apt install -y \
  && rm -rf /var/lib/apt/lists/*
 
+# Update Python setuptools and its dependencies.
+# https://github.com/pypa/setuptools/issues/4478#issuecomment-2235160778
+#
+# We also update to pip 21 which supports PEP 600 and allows us to install
+# wheels with the manylinux_2_17 platform tag. This works around a build error
+# with grpcio.
+#
+# TODO: Revisit this when upgrading beyond Python 3.8 (Ubuntu 20.04).
+RUN python3 -m pip install --upgrade \
+        'pip>=21,<22' \
+        setuptools \
+        importlib_metadata \
+        importlib_resources \
+        more_itertools \
+        ordered-set \
+        packaging \
+        platformdirs \
+        tomli \
+        wheel
+
+# Fix the Cython version to work around a gevent install error.
+# https://github.com/gevent/gevent/issues/2076
+#
+# For some reason related to isolated build environments, this can't go in the
+# python3-requirements.txt. We also have to avoid upgrading to a newer pip.
+RUN python3 -m pip install "Cython<3.1"
+
 # Install Python dependencies
 COPY deps/python3-requirements.txt ./
-RUN python3 -m pip install --upgrade setuptools==69.1.0
 RUN python3 -m pip install -r python3-requirements.txt
 
 

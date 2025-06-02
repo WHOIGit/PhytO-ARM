@@ -7,3 +7,7 @@ scipy==1.10
 tritonclient[all]==2.33.0
 
 git+https://github.com/WHOIGit/pyifcbclient.git#egg=pyifcbclient
+
+# Use an older version of grpcio that's available as a pre-built wheel.
+# TODO: Remove this when we move beyond Python 3.8 (Ubuntu 20.04).
+grpcio<1.71
