@@ -1,7 +1,8 @@
 FROM ros:noetic
+
 # Increment DEPSCACHE when there's a known change to deps.rosinstall
 ARG DEPSCACHE=1
-SHELL ["/usr/bin/bash", "-c"]
+
 WORKDIR /app
 
 
@@ -40,12 +41,13 @@ RUN apt update \
 
 # Warm the build directory with pre-built packages that don't change often.
 # This list can be updated according to `catkin build --dry-run phyto_arm`.
-RUN source /opt/ros/${ROS_DISTRO}/setup.bash \
+RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
  && stdbuf -o L catkin build \
         ds_core_msgs \
         ds_sensor_msgs \
         ds_util_nodes \
-        rtsp_camera
+        rtsp_camera \
+ "
 
 # Copy package.xml files for local packages
 COPY ./src/aml_ctd/package.xml ./src/aml_ctd/package.xml
@@ -64,8 +66,9 @@ COPY ./src ./src
 COPY ./scripts ./scripts
 
 # Build
-RUN source ./devel/setup.bash \
- && stdbuf -o L catkin build phyto_arm
+RUN bash -c "source devel/setup.bash \
+ && stdbuf -o L catkin build phyto_arm \
+ "
 
 # Copy the launch tool
 ENV DONT_SCREEN=1
