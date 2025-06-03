@@ -84,7 +84,7 @@ class ArmBase:
             self._last_gps_fix_time = rospy.get_time()
 
     def geofence_block(self):
-        geofence_params = rospy.get_param(f'~{self.arm_name}/geofence', {})
+        geofence_params = rospy.get_param('geofence', {})
         geofence_enabled = geofence_params.get('enabled', False)
 
         if not geofence_enabled:
