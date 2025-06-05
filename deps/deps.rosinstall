@@ -1,3 +1,5 @@
+# Cache buster: 1 -- increment to force rebuild of the container image layer
+
 - git:
     local-name: ds_base
     uri: https://bitbucket.org/whoidsl/ds_base.git
