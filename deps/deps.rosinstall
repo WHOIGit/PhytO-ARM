@@ -7,10 +7,6 @@
     uri: https://bitbucket.org/whoidsl/ds_msgs.git
 
 - git:
-    local-name: ds_sensors
-    uri: https://bitbucket.org/whoidsl/ds_sensors.git
-
-- git:
     local-name: ros-rtsp-camera
     uri: https://github.com/WHOIGit/ros-rtsp-camera.git
 
