@@ -1,0 +1,11 @@
+seatrac:
+  comms:
+    connection:
+      type: "UDP"
+      udp_rx: 62001
+      udp_tx: 62001
+      udp_address: "127.0.0.1"
+
+  outlets:
+    - name: "starlink"
+      outlet: 15
