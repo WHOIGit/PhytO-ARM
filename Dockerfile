@@ -94,7 +94,13 @@ COPY ./scripts ./scripts
 # Build
 RUN bash -c "source devel/setup.bash \
  && stdbuf -o L catkin build phyto_arm \
- "
+ && stdbuf -o L catkin test -- \
+        aml_ctd \
+        ifcb \
+        jvl_motor \
+        phyto_arm \
+        rbr_maestro3_ctd \
+"
 
 # Copy the launch tool
 ENV DONT_SCREEN=1

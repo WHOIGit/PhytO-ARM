@@ -15,6 +15,7 @@
     <author email="vlucke@whoi.edu">Verena Lucke</author>
 
     <buildtool_depend>catkin</buildtool_depend>
+    <test_depend>rosunit</test_depend>
 
     <!-- We use the DsHeader message type -->
     <depend>ds_core_msgs</depend>
