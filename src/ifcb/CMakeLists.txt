@@ -35,3 +35,7 @@ catkin_install_python(
   PROGRAMS nodes/ifcb nodes/ifcb_logfilter
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(tests)
+endif()

@@ -3,7 +3,6 @@ import functools
 import json
 import os
 import struct
-import sys
 import threading
 
 import rospy
@@ -19,7 +18,7 @@ from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import ImageMarker
 
-from .instrumentation import instrument
+from .instrumentation import instrument_routine
 
 
 ifcb_ready = threading.Event()
@@ -65,7 +64,7 @@ def do_runroutine(client, pub, req):
 
     # Optionally instrument the routine
     if req.instrument:
-        routine = instrument(routine, routine=req.routine)
+        routine = instrument_routine(routine, name=req.routine)
 
     # Encode and send the routine
     encoded = json.dumps(routine, separators=(',', ':'))  # less whitespace

@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-import copy
 import json
+
+from typing import Any, Dict, List, Optional
+
+
+Step = Dict[str, Any]
+StepGroup = Dict[str, Any]
+Routine = List[StepGroup]
 
 
 # This magic prefix identifies a report as being our instrumentation.
@@ -8,9 +14,9 @@ import json
 MAGIC = '$phyto-arm$0$'
 
 
-# A marker is a routine step of type Report which includes a JSON-encoded
-# structure that tells clients what part of the routine is being executed.
-def marker(kind, routine, path, node):
+# A marker is a Report step with a JSON-encoded payload indicating which
+# routine, step group, or step is starting/completing.
+def marker(kind: str, routine: str, path: List[int], node: Any) -> Step:
     return {
         'StepType': 'Report',
         'Arguments': [
@@ -26,52 +32,66 @@ def marker(kind, routine, path, node):
 
 # Given a report string, decodes the marker or returns None if it is not a valid
 # marker.
-def parse_marker(marker):
+def parse_marker(marker: str) -> Optional[Dict[str, Any]]:
     if not marker.startswith(MAGIC):
         return None
     return json.loads(marker[len(MAGIC):])
 
 
-# Instruments a node with markers.
-def instrument(node, routine='', path=None):
-    path = path or []
+def instrument_routine(routine: Routine, name: str) -> Routine:
+    result: Routine = []
+    result.append({
+        'Type': 'Sequence',
+        'Steps': [
+            marker('enter', name, [], routine),
+        ],
+    })
+    for i, group in enumerate(routine):
+        result.extend(instrument_stepgroup(group, name, i))
+    result.append({
+        'Type': 'Sequence',
+        'Steps': [
+            marker('exit', name, [], routine)
+        ],
+    })
+    return result
 
-    if isinstance(node, list):
-        children = node
-    elif 'Steps' in node:
-        children = node['Steps']
-    else:
-        return node  # return unmodified
 
-    new_children = []
+def instrument_stepgroup(group: StepGroup, routine_name: str, group_i: int) -> \
+List[StepGroup]:
+    new_steps: List[Step] = []
+    new_steps.append(marker('enter', routine_name, [group_i], group))
+    for j, step in enumerate(group.get('Steps', [])):
+        new_steps.extend(instrument_step(step, routine_name, group_i, j))
+    new_steps.append(marker('exit', routine_name, [group_i], group))
 
-    # Helper function to append a marker, creating a new Sequence to contain
-    # it if necessary.
-    def append_marker(*args, **kwargs):
-        if path == []:
-            # At the top level we need to create a new Sequence
-            new_children.append({
-                'Type': 'Sequence',
-                'Steps': [ marker(*args, **kwargs) ],
-            })
-        else:
-            new_children.append(marker(*args, **kwargs))
+    inner = group.copy()
+    inner['Steps'] = new_steps
 
-    # Instrument this node and its children
-    append_marker('enter', routine, path, node)
-    for i, child in enumerate(children):
-        append_marker('before', routine, path + [i], child)
-        new_children.append(instrument(child, routine, path + [i]))
-        append_marker('after', routine, path + [i], child)
-    append_marker('exit', routine, path, node)
+    return [
+        {
+            'Type': 'Sequence',
+            'Steps': [
+                marker('before', routine_name, [group_i], group),
+            ],
+        },
+        inner,
+        {
+            'Type': 'Sequence',
+            'Steps': [
+                marker('after', routine_name, [group_i], group),
+            ],
+        }
+    ]
 
-    # Return the instrumented object
-    if isinstance(node, list):
-        return new_children
-    else:
-        new_node = copy.deepcopy(node)
-        new_node['Steps'] = new_children
-        return new_node
+
+def instrument_step(step: Step, routine_name: str, group_i: int, step_j: int) \
+-> List[Step]:
+    return [
+        marker('before', routine_name, [group_i, step_j], step),
+        step,
+        marker('after', routine_name, [group_i, step_j], step),
+    ]
 
 
 if __name__ == '__main__':
@@ -83,6 +103,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with open(args.input) as f:
-        routine, _ = os.path.splitext(os.path.basename(args.input))
-        out = instrument(json.load(f), routine=routine)
+        routine_name, _ = os.path.splitext(os.path.basename(args.input))
+        out = instrument_routine(json.load(f), routine_name)
         print(json.dumps(out, indent=True))
