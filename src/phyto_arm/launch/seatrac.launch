@@ -1,0 +1,15 @@
+<launch>
+    <!-- Most settings are in config.yaml, which is easier to edit -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <node name="seatrac" pkg="seatrac" type="seatrac_node.py" required="true">
+        <remap from="~in" to="~comms/in" />
+        <remap from="~out" to="~comms/out" />
+    </node>
+
+    <node ns="seatrac" name="comms" pkg="ds_util_nodes" type="bridge_node"
+          required="true" />
+
+    <node name="seatrac_starlink_manager" pkg="phyto_arm"
+          type="seatrac_starlink_manager.py" required="true" />
+</launch>
