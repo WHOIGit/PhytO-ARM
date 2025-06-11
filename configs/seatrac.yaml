@@ -4,7 +4,7 @@ seatrac:
       type: "UDP"
       udp_rx: 62001
       udp_tx: 62001
-      udp_address: "127.0.0.1"
+      udp_address: "10.1.20.88"
 
   outlets:
     - name: "starlink"
