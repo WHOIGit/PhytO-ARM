@@ -9,3 +9,9 @@ seatrac:
   outlets:
     - name: "starlink"
       outlet: 15
+
+seatrac_starlink_manager:
+  shutdown_reminder:     900    # seconds
+  soc_force_threshold:   95     # percent (auto-enable until manual off)
+  soc_threshold:         80     # percent (auto-enable if last off > off_delay)
+  off_delay:             86400  # seconds (24h since manual off)

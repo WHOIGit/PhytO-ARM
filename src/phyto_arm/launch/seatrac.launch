@@ -9,4 +9,7 @@
 
     <node ns="seatrac" name="comms" pkg="ds_util_nodes" type="bridge_node"
           required="true" />
+
+    <node name="seatrac_starlink_manager" pkg="phyto_arm"
+          type="seatrac_starlink_manager.py" required="true" />
 </launch>
