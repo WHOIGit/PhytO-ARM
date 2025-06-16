@@ -75,6 +75,35 @@ ifcb:
     data_dir: "/data/ifcbdata"
 
 
+arm_sipper:
+    seawater_pump_outlet: 0
+    drain_outlet: 2
+    ifcb_valve_outlet: 3
+    task_durations:
+        presample_pump: 15 # seconds
+        presample_drain: 35
+        sample_pump: 15
+        ifcb_valve_open: 60
+        postsample_pump: 15
+        postsample_drain: 35
+    samples:
+        1:
+            location: "A"
+            outlet: 0
+            depth: 10.0 # meters
+            time: "2025-01-01 12:00:00"
+            collection_method: "IFCB"
+            ifcb_savedir: "/data/ifcbdata/1"
+        2:
+            location: "B"
+            outlet: 1
+            depth: 10.0 # meters
+            time: "2025-01-01 12:00:00"
+            collection_method: "IFCB"
+            ifcb_savedir: "/data/ifcbdata/2"
+    sequence: [ 1, 2 ]
+
+
 arm_ifcb:
     # Configuration related to tasks
     tasks: #optional
