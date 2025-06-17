@@ -15,6 +15,7 @@
     <buildtool_depend>catkin</buildtool_depend>
 
     <exec_depend>rospy</exec_depend>
+    <test_depend>rosunit</test_depend>
 
     <depend>std_msgs</depend>
     <depend>ds_core_msgs</depend>
