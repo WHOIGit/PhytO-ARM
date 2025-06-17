@@ -20,3 +20,7 @@ generate_messages(
 )
 
 catkin_package()
+
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(tests)
+endif()
