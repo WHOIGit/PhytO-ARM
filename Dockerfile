@@ -84,6 +84,7 @@ RUN bash -c "source devel/setup.bash \
  && stdbuf -o L catkin build phyto_arm \
  && stdbuf -o L catkin test -- \
         aml_ctd \
+        dli_power_switch \
         ifcb \
         jvl_motor \
         phyto_arm \
