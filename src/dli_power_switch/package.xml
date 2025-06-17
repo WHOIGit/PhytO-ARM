@@ -17,4 +17,5 @@
     <exec_depend>rospy</exec_depend>
 
     <depend>std_msgs</depend>
+    <depend>ds_core_msgs</depend>
 </package>
