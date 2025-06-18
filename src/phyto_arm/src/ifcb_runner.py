@@ -122,6 +122,11 @@ def run_sample_routines(goal):
 
     # Always run a debubble and sample
     playlist.append((ConductorStates.IFCB_DEBUBBLE,  'debubble'))
+
+    # Prime sample tube if needed
+    if rospy.get_param('ifcb_maintenance/prime_sample_tube'):
+        playlist.append((ConductorStates.IFCB_PRIMESAMPLETUBE, 'primetube'))
+
     playlist.append((ConductorStates.IFCB_RUNSAMPLE, 'runsample'))
 
     # Run IFCB steps in sequence

@@ -76,6 +76,7 @@ ifcb:
 
 
 arm_sipper:
+
     seawater_pump_outlet: 0
     drain_outlet: 2
     ifcb_valve_outlet: 3
@@ -86,22 +87,69 @@ arm_sipper:
         ifcb_valve_open: 60
         postsample_pump: 15
         postsample_drain: 35
-    samples:
+    sample_sequence: [ 1, 2 ]
+    sample_metadata:
         1:
             location: "A"
             outlet: 0
             depth: 10.0 # meters
             time: "2025-01-01 12:00:00"
-            collection_method: "IFCB"
-            ifcb_savedir: "/data/ifcbdata/1"
+            method: "IFCB"
+            ifcb_subdir: "samples/1"
         2:
             location: "B"
             outlet: 1
             depth: 10.0 # meters
             time: "2025-01-01 12:00:00"
-            collection_method: "IFCB"
-            ifcb_savedir: "/data/ifcbdata/2"
-    sequence: [ 1, 2 ]
+            method: "IFCB"
+            ifcb_subdir: "samples/2"
+        # Add more samples as needed
+    
+
+    digital_logger_1:
+        username: "admin"
+        password: "1234"
+        address: "192.168.1.2"
+        outlets:
+            - name: "flush_pump"
+              outlet: 0
+            - name: "sample_pump_1"
+              outlet: 1
+            - name: "sample_pump_2"
+              outlet: 2
+            - name: "sample_pump_3"
+              outlet: 3
+            - name: "sample_pump_4"
+              outlet: 4
+            - name: "sample_pump_5"
+              outlet: 5
+            - name: "sample_pump_6"
+              outlet: 6
+            - name: "sample_pump_7"
+              outlet: 7
+
+    digital_logger_2:
+        username: "admin"
+        password: "1234"
+        address: "192.168.1.3"
+        outlets:
+            - name: "drain_valve"
+              outlet: 0
+            - name: "ifcb_valve"
+              outlet: 1
+    
+    ifcb_maintenance:
+        # Prime sample tube between samples?
+        prime_sample_tube: true
+        # Interval at which we run a cartridge debubble, necessary when IFCB on its side
+        cartridge_debubble_interval: 0 # minutes, 0 = never
+        # Interval at which we run a biocide and bleach
+        clean_interval: 1440  # minutes, 0 = never
+        # Interval at which we run a debubble and bead sample. Make this a multiple of 
+        # the clean interval if you want a clean after each bead sample.
+        bead_interval: 1440  # minutes, 0 = never
+        
+
 
 
 arm_ifcb:
