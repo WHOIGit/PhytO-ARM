@@ -30,7 +30,7 @@ else
   # Launch the IFCB arm in pane 1
   tmux send-keys -t phyto-arm:0.1 "sleep 8" C-m
   tmux send-keys -t phyto-arm:0.1 "docker exec -it phyto-arm bash" C-m
-  tmux send-keys -t phyto-arm:0.1 "./phyto-arm start arm_ifcb ./mounted_config.yaml" C-m
+  tmux send-keys -t phyto-arm:0.1 "./phyto-arm start arm_sipper ./mounted_config.yaml" C-m
 
   # Select pane 3 and launch the Chanos arm in the same container
   # tmux send-keys -t phyto-arm:0.2 "sleep 10" C-m

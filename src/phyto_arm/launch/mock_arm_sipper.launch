@@ -1,0 +1,16 @@
+<launch>
+    <!-- Most settings are in config.yaml, which is easier to edit -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <group ns="arm_sipper">
+        <param name="winch_enabled" value="false" type="bool" />
+
+        <node name="arm" pkg="phyto_arm" type="arm_sipper.py" />
+
+        <node name="ifcb_runner" pkg="phyto_arm" type="mock_ifcb_runner.py" />
+
+        <node name="digital_logger_1" pkg="phyto_arm" type="mock_digital_logger_node.py"/>
+
+        <node name="digital_logger_2" pkg="phyto_arm" type="mock_digital_logger_node.py"/>
+    </group>
+</launch>
