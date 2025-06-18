@@ -8,6 +8,8 @@
 
     <!-- AML winch namespace. Important for separating similar nodes on different arms -->
     <group ns="arm_sipper">
+        <param name="winch_enabled" value="false" type="bool" />
+
         <node name="arm" pkg="phyto_arm" type="arm_sipper.py" />
 
         <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />

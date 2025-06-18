@@ -57,7 +57,7 @@ network_data_capture: #optional
                     type: "float" # Note delimited fields cannot be arrays
 
 
-gps:
+gps: #optional
     host: "172.17.0.1"
     check_fix_by_variance: false #optional. Often needed for GPS receivers that publish incomplete data.
 
@@ -75,8 +75,7 @@ ifcb:
     data_dir: "/data/ifcbdata"
 
 
-arm_sipper:
-
+arm_sipper: #optional
     seawater_pump_outlet: 0
     drain_outlet: 2
     ifcb_valve_outlet: 3
@@ -87,24 +86,23 @@ arm_sipper:
         ifcb_valve_open: 60
         postsample_pump: 15
         postsample_drain: 35
-    sample_sequence: [ 1, 2 ]
+    sample_sequence: [ example_name_1, example_name_2 ]
     sample_metadata:
-        1:
-            location: "A"
-            outlet: 0
-            depth: 10.0 # meters
-            time: "2025-01-01 12:00:00"
-            method: "IFCB"
-            ifcb_subdir: "samples/1"
-        2:
-            location: "B"
+        example_name_1: #optional. Name of a sample. Must be unique.
             outlet: 1
+            ifcb_subdir: "samples/1"
+            location: "A"
             depth: 10.0 # meters
             time: "2025-01-01 12:00:00"
             method: "IFCB"
+        example_name_2: #optional. Name of a sample. Must be unique.
+            outlet: 2
             ifcb_subdir: "samples/2"
+            location: "B"
+            depth: 10.0 # meters
+            time: "2025-01-01 12:00:00"
+            method: "IFCB"
         # Add more samples as needed
-    
 
     digital_logger_1:
         username: "admin"
@@ -152,7 +150,7 @@ arm_sipper:
 
 
 
-arm_ifcb:
+arm_ifcb: #optional
     # Configuration related to tasks
     tasks: #optional
         profiler_peak:
@@ -349,7 +347,7 @@ classifier: #optional
     triton_server_url: "172.17.0.1:9001/"
     classifier_model: "ifcb_iv3_onnx"
 
-camera:
+camera: #optional
     fore_camera: #optional
         video_stream_url: "rtsp://admin:example_password@192.168.13.123/"
     aft_camera: #optional
