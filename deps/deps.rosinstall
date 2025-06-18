@@ -15,3 +15,7 @@
 - git:
     local-name: ros-triton-classifier
     uri: https://github.com/WHOIGit/ros-triton-classifier.git
+
+- git:
+    local-name: seatrac-api
+    uri: https://github.com/WHOIGit/seatrac-api.git
