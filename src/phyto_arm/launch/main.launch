@@ -16,7 +16,8 @@
     <group if="$(arg classifier)">
         <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />
 
-        <node name="image_transport" pkg="phyto_arm" type="image_transport_node.py" />
+        <node name="image_converter" pkg="image_transport" type="republish"
+              args="compressed in:=/ifcb/roi/image raw out:=/ifcb/roi/image" />
     </group>
 
     <node name="gps" pkg="gpsd_client" type="gpsd_client">
