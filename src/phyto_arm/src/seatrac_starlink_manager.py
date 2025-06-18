@@ -58,8 +58,8 @@ def main():
         soc = msg.soc_percentage
         charging = msg.pack_current < 0
 
-        if soc >= high_threshold and charging and \
-            not last_state and not already_sent:
+        if (soc >= high_threshold and charging and
+            not last_state and not already_sent):
             rospy.loginfo(
                 f'Enabling Starlink: SOC {soc}% >= {high_threshold}% and charging'
             )
