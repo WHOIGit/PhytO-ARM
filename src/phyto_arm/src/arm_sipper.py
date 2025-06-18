@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import actionlib
+from os import path
 import rospy
 
 from arm_base import ArmBase, Task
@@ -34,11 +35,11 @@ class ArmSipper(ArmBase):
         if last_task.name in ['presample_pump', 'postsample_pump']:
             return Task('presample_drain', drain_for(rospy.get_param('task_durations/presample_drain')))
 
-        if last_task.name in ['presample_drain', 'postsample_drain']:
+        if last_task.name is 'presample_drain':
             return Task('sample_pump', pump_sample_for(next_sample, rospy.get_param('task_durations/sample_pump')))
 
         if last_task.name is 'presample_pump':
-            return Task('ifcb_valve_open', open_valve_and_run_ifcb_for(rospy.get_param('task_durations/ifcb_valve_open')))
+            return Task('ifcb_valve_open', open_valve_and_run_ifcb_for(next_sample, rospy.get_param('task_durations/ifcb_valve_open')))
 
         if last_task.name is 'ifcb_valve_open':
             return Task ('postsample_drain', drain_for(rospy.get_param('task_durations/postsample_drain')))
@@ -51,13 +52,15 @@ class ArmSipper(ArmBase):
 
 # Global reference to action provided by other node
 ifcb_runner = None
+ifcb_data_dir = None
 # Global reference to digital logger publisher
-digital_logger_pub = None
+digital_logger_1_pub = None
+digital_logger_2_pub = None
 # Global reference to arm state
 arm = None
 
 
-def timed_toggle(outlet, duration):
+def timed_toggle(outlet, duration, digital_logger_pub):
     def outlet_toggle_callback():
         digital_logger_pub.publish(OutletStatus(outlet, True))
         rospy.sleep(duration)
@@ -66,40 +69,52 @@ def timed_toggle(outlet, duration):
 
 def pump_seawater_for(duration):
     outlet = rospy.get_param('seawater_pump_outlet')
-    return timed_toggle(outlet, duration)
-
+    return timed_toggle(outlet, duration, digital_logger_1_pub)
 
 def drain_for(duration):
     outlet = rospy.get_param('drain_outlet')
-    return timed_toggle(outlet, duration)
-
+    return timed_toggle(outlet, duration, digital_logger_2_pub)
 
 def pump_sample_for(next_sample, duration):
     sample_config = rospy.get_param(f'samples/{next_sample}')
     outlet = sample_config['outlet']
-    return timed_toggle(outlet, duration)
+    return timed_toggle(outlet, duration, digital_logger_1_pub)
 
-
-def open_valve_and_run_ifcb_for(duration):
+def open_valve_and_run_ifcb_for(next_sample, duration):
     def open_valve_and_run_ifcb_callback():
+
+        # Set the data directory for IFCB to the sample subdirectory
+        ifcb_subdir = rospy.get_param(f'samples/{next_sample}/ifcb_subdir')
+        rospy.set_param('/ifcb/data_dir', path.join(ifcb_data_dir, ifcb_subdir))
+
+        # Open the IFCB valve
         outlet = rospy.get_param('ifcb_valve_outlet')
-        digital_logger_pub.publish(OutletStatus(outlet, True))
+        digital_logger_2_pub.publish(OutletStatus(outlet, True))
+
+        # Run the IFCB
         goal = RunIFCBGoal()
         ifcb_runner.send_goal(goal)
-        ifcb_runner.wait_for_result()
-        digital_logger_pub.publish(OutletStatus(outlet, False))
-    return open_valve_and_run_ifcb_callback
+        # ifcb_runner.wait_for_result() # TODO: Should probably prefer this over sleep
+        rospy.sleep(duration)
 
+        # Close the IFCB valve and reset the data directory
+        digital_logger_2_pub.publish(OutletStatus(outlet, False))
+        rospy.set_param('/ifcb/data_dir', ifcb_data_dir)
+    return open_valve_and_run_ifcb_callback
 
 def main():
     global arm
     global ifcb_runner
-    global digital_logger_pub
+    global ifcb_data_dir
+    global digital_logger_1_pub
+    global digital_logger_2_pub
 
     rospy.init_node('arm_sipper', log_level=rospy.DEBUG)
 
     arm = ArmSipper(rospy.get_name())
 
+    # Save the data directory for IFCB
+    ifcb_data_dir = rospy.get_param('/ifcb/data_dir')
 
     # Setup action client for running IFCB
     ifcb_runner = actionlib.SimpleActionClient('ifcb_runner/sample', RunIFCBAction)
@@ -113,7 +128,8 @@ def main():
     arm.last_bead_time = rospy.Time.now()
 
     # Setup publisher for digital logger control
-    digital_logger_pub = rospy.Publisher('/digital_logger/control', OutletStatus, queue_size=10)
+    digital_logger_1_pub = rospy.Publisher('digital_logger_1/control', OutletStatus, queue_size=10)
+    digital_logger_2_pub = rospy.Publisher('digital_logger_2/control', OutletStatus, queue_size=10)
 
     arm.loop()
 
