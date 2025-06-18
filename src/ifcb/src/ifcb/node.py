@@ -268,8 +268,10 @@ def main():
     tx_pub = rospy.Publisher('~out', RawData, queue_size=5)
 
     # Publishers for images, ROI images, and ROI markers
-    img_pub = rospy.Publisher('~image', CompressedImage, queue_size=5)
-    roi_pub = rospy.Publisher('~roi/image', CompressedImage, queue_size=5)
+    img_pub = rospy.Publisher('~image/compressed', CompressedImage,
+                              queue_size=5)
+    roi_pub = rospy.Publisher('~roi/image/compressed', CompressedImage,
+                              queue_size=5)
     mkr_pub = rospy.Publisher('~roi/markers', ImageMarkerArray, queue_size=5)
 
     # Publisher for connection status (latched so new subscribers get current state)
