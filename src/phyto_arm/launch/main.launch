@@ -39,10 +39,4 @@
     </group>
 
     <node if="$(arg digital_logger)" name="digital_logger" pkg="dli_power_switch" type="dli_power_switch_node.py"/>
-
-    <!--
-    disabled
-    <node name="instant_replay" pkg="phyto_arm" type="instant_replay_node.py"
-          launch-prefix="$(optenv LAUNCH_PREFIX)" />
-    -->
 </launch>
