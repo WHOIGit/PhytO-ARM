@@ -39,10 +39,11 @@
     <!-- For GPS -->
     <exec_depend>gpsd_client</exec_depend>
 
-    <!--
-        Dependencies related to republishing the RTSP feed.
-    -->
+    <!-- Dependencies related to publishing images -->
+    <exec_depend>image_transport</exec_depend>
     <exec_depend>compressed_image_transport</exec_depend>
+
+    <!-- Dependencies related to republishing the RTSP feed -->
     <exec_depend>rtsp_camera</exec_depend>
 
     <!--
