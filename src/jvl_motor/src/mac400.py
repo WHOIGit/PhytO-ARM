@@ -232,7 +232,7 @@ all_registers = [
     Register(name='KVFX2',           num=131),
     Register(name='KVFX1',           num=132),
     Register(name='KVFY5',           num=133),
-    Register(name='KVFY',            num=134),
+    Register(name='KVFY4',           num=134),
     Register(name='KVFY3',           num=135),
     Register(name='KVFY2',           num=136),
     Register(name='KVFY1',           num=137),
