@@ -17,8 +17,7 @@ def explode_bits(x, n):
     return [ (x >> i) & 1 for i in range(n) ]
 
 def implode_bits(bits):
-    n = len(bits)
-    return functools.reduce(lambda acc, bit: (bit << (n-1)) | (acc >> 1), bits)
+    return sum((b << i) for i, b in enumerate(bits))
 
 
 class Register:
