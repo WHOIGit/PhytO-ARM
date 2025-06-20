@@ -15,6 +15,7 @@
         // Alternatively could use postStart commands to symlink the workspace folder. Might
         // introduce other headaches.
         "source=${localWorkspaceFolder}/src/aml_ctd,target=/app/src/aml_ctd,type=bind",
+        "source=${localWorkspaceFolder}/src/dli_power_switch,target=/app/src/dli_power_switch,type=bind",
         "source=${localWorkspaceFolder}/src/ifcb,target=/app/src/ifcb,type=bind",
         "source=${localWorkspaceFolder}/src/jvl_motor,target=/app/src/jvl_motor,type=bind",
         "source=${localWorkspaceFolder}/src/phyto_arm,target=/app/src/phyto_arm,type=bind",
