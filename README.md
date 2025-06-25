@@ -306,8 +306,6 @@ The time must be set to UTC. To sync the clock, you can use:
 
 The current setup of the Chanos arm assumes the RBR CTD data is being transmitted to the host over UDP. In our setup, a proxy is running on a Raspberry Pi Zero which has a serial connection to the RBR, and forwards the CTD messages over UDP to the host.
 
-The proxying script used is provided in `rbr_relay.sh`, a systemd service equivalent is also provided in `rbr_relay.service`.
-
 The `udp_to_ros.py` node is used to read the proxied UDP packets and publish them on a ROS topic to be used by PhytO-ARM.
 
 
