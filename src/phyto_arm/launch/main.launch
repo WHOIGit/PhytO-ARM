@@ -16,7 +16,8 @@
     <group if="$(arg classifier)">
         <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />
 
-        <node name="image_transport" pkg="phyto_arm" type="image_transport_node.py" />
+        <node name="image_converter" pkg="image_transport" type="republish"
+              args="compressed in:=/ifcb/roi/image raw out:=/ifcb/roi/image" />
     </group>
 
     <node name="gps" pkg="gpsd_client" type="gpsd_client">
@@ -39,10 +40,4 @@
     </group>
 
     <node if="$(arg digital_logger)" name="digital_logger" pkg="phyto_arm" type="digital_logger_node.py"/>
-
-    <!--
-    disabled
-    <node name="instant_replay" pkg="phyto_arm" type="instant_replay_node.py"
-          launch-prefix="$(optenv LAUNCH_PREFIX)" />
-    -->
 </launch>
