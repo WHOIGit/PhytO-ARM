@@ -18,7 +18,7 @@ def control_outlet(client: DLIClient, number: int, msg: Bool) -> None:
     """
     Send the given msg to the digital logger as an HTTP request.
     """
-    client.set_outlet_state(number, msg.data)
+    client.set_outlet_state(number - 1, msg.data)
     rospy.loginfo(f'Switched {"ON" if msg.data else "OFF"} outlet {number}')
 
 
@@ -61,7 +61,7 @@ def run_dli_power_switch_node() -> None:
         for outlet in outlets:
             num = outlet['outlet']
             outlet_status = OutletStatus()
-            outlet_status.is_active = client.get_outlet_state(num)
+            outlet_status.is_active = client.get_outlet_state(num - 1)
             outlet_status.header.stamp = outlet_status.ds_header.io_time = \
                 rospy.Time.now()
             outlet_pubs[num].publish(outlet_status)
