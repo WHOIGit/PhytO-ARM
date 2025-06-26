@@ -86,16 +86,18 @@ class DelimitedFramingConfig(pydantic.BaseModel):
     pattern: re.Pattern
 
     @pydantic.field_validator('pattern', mode='after')
-    def check_pattern(self):
-        if self.pattern.match(b''):
+    @classmethod
+    def check_pattern(cls, pattern: re.Pattern) -> re.Pattern:
+        if pattern.match(b''):
             raise ValueError('Pattern must not match empty string')
-        return self.pattern
+        return pattern
 
     @pydantic.field_validator('pattern', mode='before')
-    def compile_regex(cls, v):
-        if isinstance(v, str):
-            return re.compile(v.encode())
-        return v
+    @classmethod
+    def compile_regex(cls, value: Union[str, re.Pattern]) -> re.Pattern:
+        if isinstance(value, str):
+            return re.compile(value.encode())
+        return value
 
 class JsonFramingConfig(pydantic.BaseModel):
     type: Literal['json']
@@ -134,36 +136,41 @@ class FieldSpec(pydantic.BaseModel):
     selector: str
 
     @pydantic.field_validator('selector', mode='after')
-    def validate_selector(self) -> str:
+    @classmethod
+    def validate_selector(cls, selector: str) -> str:
         # Normalize the selector to ensure it starts with a dot or bracket
-        if self.selector.startswith('$.'):
-            self.selector = self.selector[1:]  # keep leading dot
-        elif self.selector and self.selector[0] not in ('.', '['):
-            self.selector = f'.{self.selector}'
+        if selector.startswith('$.'):
+            selector = selector[1:]  # keep leading dot
+        elif selector and selector[0] not in ('.', '['):
+            selector = f'.{selector}'
     
         # Run through the path logic to make sure it works
-        getattr(self, 'path')
+        cls._parse_selector(selector)
 
-        return self.selector
+        return selector
 
-    @property
-    def path(self) -> List[Union[str, int]]:
+    @classmethod
+    def _parse_selector(cls, selector: str) -> List[Union[str, int]]:
         token_pattern = re.compile(r'''
             (?:\.(\w+))      # .field or .0
             | (?:\[(\w+)\])  # [field] or [0]
         ''', re.VERBOSE)
 
         # Pop tokens off the selector into the path
-        s, tokens = self.selector, []
-        while m := token_pattern.match(s):
+        tokens = []
+        while m := token_pattern.match(selector):
             field = m.group(1) or m.group(2)
             tokens.append(int(field) if field.isdigit() else field)
-            s = s[m.end():]
+            selector = selector[m.end():]
 
-        if s:
-            raise ValueError(f'Unable to parse selector: {s}')
+        if selector:
+            raise ValueError(f'Unable to parse selector: {selector}')
 
         return tokens
+
+    @property
+    def path(self) -> List[Union[str, int]]:
+        return self._parse_selector(self.selector)
 
 
 # Check that the ROS_TYPE_MAP keys match the type hints in FieldSpec
@@ -177,16 +184,18 @@ class DelimitedExtractorConfig(pydantic.BaseModel):
     fields: List[FieldSpec]
 
     @pydantic.field_validator('pattern', mode='before')
-    def compile_regex(cls, v):
-        if isinstance(v, str):
-            return re.compile(v.encode())
-        return v
+    @classmethod
+    def compile_regex(cls, value: Union[str, re.Pattern]) -> re.Pattern:
+        if isinstance(value, str):
+            return re.compile(value.encode())
+        return value
 
     @pydantic.field_validator('pattern', mode='after')
-    def check_pattern(self):
-        if self.pattern.match(b''):
+    @classmethod
+    def check_pattern(cls, pattern: re.Pattern) -> re.Pattern:
+        if pattern.match(b''):
             raise ValueError('Pattern must not match empty string')
-        return self.pattern
+        return pattern
 
     @pydantic.model_validator(mode='after')
     def check_field_indices(self) -> 'DelimitedExtractorConfig':
@@ -205,16 +214,18 @@ class DelimitedFramingConfig(pydantic.BaseModel):
     pattern: re.Pattern
 
     @pydantic.field_validator('pattern', mode='after')
-    def check_pattern(self):
-        if self.pattern.match(b''):
+    @classmethod
+    def check_pattern(cls, pattern: re.Pattern) -> re.Pattern:
+        if pattern.match(b''):
             raise ValueError('Pattern must not match empty string')
-        return self.pattern
+        return pattern
 
     @pydantic.field_validator('pattern', mode='before')
-    def compile_regex(cls, v):
-        if isinstance(v, str):
-            return re.compile(v.encode())
-        return v
+    @classmethod
+    def compile_regex(cls, value: Union[str, re.Pattern]) -> re.Pattern:
+        if isinstance(value, str):
+            return re.compile(value.encode())
+        return value
 
 class JsonExtractorConfig(pydantic.BaseModel):
     type: Literal['json']
