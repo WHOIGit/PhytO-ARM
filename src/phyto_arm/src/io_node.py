@@ -1,8 +1,9 @@
-from datetime import datetime, timezone
+import datetime
 import json
 import re
 import socket
 import struct
+import typing
 
 import rospy
 import pydantic
@@ -57,13 +58,13 @@ def convert_to_ros_msg(value: Any, type_hint: str) -> Any:
         raise ConversionError(f'Error converting to {type_hint}: {e}')
 
 
+# Configuration models for transports (UDP and serial)
 class UDPConfig(pydantic.BaseModel):
     type: Literal['UDP']
     rx_port: int
     tx_port: int
     rx_address: str = '0.0.0.0'
     tx_address: Optional[str] = None
-
 
 class SerialConfig(pydantic.BaseModel):
     type: Literal['Serial']
@@ -73,59 +74,175 @@ class SerialConfig(pydantic.BaseModel):
     stop_bits: Literal[1, 2] = 1
     parity: Literal['none', 'even', 'odd'] = 'none'
 
+TransportConfig = Union[UDPConfig, SerialConfig]
 
-class FramingConfig(pydantic.BaseModel):
-    type: Literal['raw', 'delimited', 'json']
-    pattern: Optional[re.Pattern] = None
 
-    @pydantic.field_validator('pattern', pre=True)
+# Configuration models for framing
+class RawFramingConfig(pydantic.BaseModel):
+    type: Literal['raw'] = 'raw'
+
+class DelimitedFramingConfig(pydantic.BaseModel):
+    type: Literal['delimited']
+    pattern: re.Pattern
+
+    @pydantic.field_validator('pattern', mode='after')
+    def check_pattern(self):
+        if self.pattern.match(b''):
+            raise ValueError('Pattern must not match empty string')
+        return self.pattern
+
+    @pydantic.field_validator('pattern', mode='before')
     def compile_regex(cls, v):
         if isinstance(v, str):
             return re.compile(v.encode())
         return v
 
-    @pydantic.model_validator(mode='after')
-    def check_pattern(self) -> 'FramingConfig':
-        if self.type == 'delimited' and not self.pattern:
-            raise ValueError('pattern required for delimited framing')
-        return self
+class JsonFramingConfig(pydantic.BaseModel):
+    type: Literal['json']
+
+FramingConfig = RawFramingConfig | DelimitedFramingConfig | JsonFramingConfig
 
 
-class FieldSpecDelimited(pydantic.BaseModel):
+# Configuration models for extractors
+class FieldSpec(pydantic.BaseModel):
     name: str
-    index: int
-
-
-class FieldSpecJson(pydantic.BaseModel):
-    name: str
-    path: str
     type: Literal['bool', 'bool[]', 'float', 'float[]', 'int', 'int[]', 'str']
 
+    @property
+    def is_array_type(self) -> bool:
+        return self.type.endswith('[]')
 
-class ExtractorConfig(pydantic.BaseModel):
-    type: Literal['none', 'delimited', 'json'] = 'none'
-    pattern: Optional[re.Pattern] = None
-    fields: Optional[List[Union[FieldSpecDelimited, FieldSpecJson]]] = None
+    # The selector represents a dot-separated path to the field in the data
+    # structure. This is loosely based on JSONPath or jq syntax.
+    #
+    # At validation time, we parse the selector into a list of indices which
+    # can be used by iteratively subscripting into the object.
+    #
+    # Examples:
+    #   - [field] -> ['field']  # bracket syntax
+    #   - .field -> ['field']  # dot syntax
+    #   - .field.subfield -> ['field', 'subfield']  # nested field
+    #   - field[0] -> ['field', 0]  # numeric index bracket syntax
+    #   - field.0 -> ['field', 0]  # numeric index dot syntax
+    #   - field -> ['field']  # leading dot is optional
+    #   - $.field -> ['field']  # leading $ (from JSONPath) is optional
+    #
+    # Not supported yet:
+    #   - .escaped\.char -> ['escaped.char']  # escaped characters
+    #   - .\"field with spaces\" -> ['field with spaces']  # quoted field
+    #   - .field['0'] -> ['field', '0']  # numeric string
+    selector: str
 
-    @pydantic.field_validator('pattern', pre=True)
+    @pydantic.field_validator('selector', mode='after')
+    def validate_selector(self) -> str:
+        # Normalize the selector to ensure it starts with a dot or bracket
+        if self.selector.startswith('$.'):
+            self.selector = self.selector[1:]  # keep leading dot
+        elif self.selector and self.selector[0] not in ('.', '['):
+            self.selector = f'.{self.selector}'
+    
+        # Run through the path logic to make sure it works
+        getattr(self, 'path')
+
+        return self.selector
+
+    @property
+    def path(self) -> List[Union[str, int]]:
+        token_pattern = re.compile(r'''
+            (?:\.(\w+))      # .field or .0
+            | (?:\[(\w+)\])  # [field] or [0]
+        ''', re.VERBOSE)
+
+        # Pop tokens off the selector into the path
+        s, tokens = self.selector, []
+        while m := token_pattern.match(s):
+            field = m.group(1) or m.group(2)
+            tokens.append(int(field) if field.isdigit() else field)
+            s = s[m.end():]
+
+        if s:
+            raise ValueError(f'Unable to parse selector: {s}')
+
+        return tokens
+
+
+# Check that the ROS_TYPE_MAP keys match the type hints in FieldSpec
+assert set(ROS_TYPE_MAP.keys()) == \
+       set(typing.get_args(typing.get_type_hints(FieldSpec)['type']))
+
+
+class DelimitedExtractorConfig(pydantic.BaseModel):
+    type: Literal['delimited']
+    pattern: re.Pattern
+    fields: List[FieldSpec]
+
+    @pydantic.field_validator('pattern', mode='before')
     def compile_regex(cls, v):
         if isinstance(v, str):
             return re.compile(v.encode())
         return v
 
+    @pydantic.field_validator('pattern', mode='after')
+    def check_pattern(self):
+        if self.pattern.match(b''):
+            raise ValueError('Pattern must not match empty string')
+        return self.pattern
+
     @pydantic.model_validator(mode='after')
-    def check_fields(self) -> 'ExtractorConfig':
-        if self.type in ('delimited', 'json') and not self.fields:
-            raise ValueError('fields required for extractor')
-        if self.type != 'delimited':
-            self.pattern = None
+    def check_field_indices(self) -> 'DelimitedExtractorConfig':
+        for f in self.fields:
+            if len(f.path) != 1 or not isinstance(f.path[0], int):
+                raise ValueError(
+                    f"Delimited extractor requires one numeric index; got {f.path} from '{f.selector}'"
+                )
+            if f.is_array_type:
+                raise ValueError(f"Array type '{f.type}' not supported for delimited extractor")
         return self
 
 
+class DelimitedFramingConfig(pydantic.BaseModel):
+    type: Literal['delimited']
+    pattern: re.Pattern
+
+    @pydantic.field_validator('pattern', mode='after')
+    def check_pattern(self):
+        if self.pattern.match(b''):
+            raise ValueError('Pattern must not match empty string')
+        return self.pattern
+
+    @pydantic.field_validator('pattern', mode='before')
+    def compile_regex(cls, v):
+        if isinstance(v, str):
+            return re.compile(v.encode())
+        return v
+
+class JsonExtractorConfig(pydantic.BaseModel):
+    type: Literal['json']
+    fields: List[FieldSpec]
+
+class NoExtractorConfig(pydantic.BaseModel):
+    type: Literal['none'] = 'none'
+
+ExtractorConfig = (DelimitedExtractorConfig | JsonExtractorConfig |
+                  NoExtractorConfig)
+
+
+# Root configuration model
 class Config(pydantic.BaseModel):
-    transport: Union[UDPConfig, SerialConfig]
-    framing: FramingConfig
-    extractor: ExtractorConfig = ExtractorConfig()
+    transport: TransportConfig
+    framing: FramingConfig = pydantic.Field(default_factory=RawFramingConfig)
+    extractor: ExtractorConfig = pydantic.Field(default_factory=NoExtractorConfig)
+
+    @pydantic.model_validator(mode='after')
+    def check_serial_framing(self) -> 'Config':
+        # It doesn't make sense to use raw framing with a serial device, because
+        if (isinstance(self.transport, SerialConfig) and
+            isinstance(self.framing, RawFramingConfig)):
+            raise ValueError('Raw framing not supported for serial transport, '
+                             'try delimited framing instead')
+        return self
+
+
 
 
 def is_multicast(addr: str) -> bool:
@@ -133,16 +250,29 @@ def is_multicast(addr: str) -> bool:
     return 224 <= o[0] <= 239
 
 
-class UDPTransport:
+class Transport:
+    def read(self) -> bytes:
+        raise NotImplementedError
+    
+    def write(self, data: bytes) -> None:
+        raise NotImplementedError
+
+
+class UDPTransport(Transport):
     def __init__(self, cfg: UDPConfig):
         self.rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         if is_multicast(cfg.rx_address):
-            mreq = struct.pack('4sL', socket.inet_aton(cfg.rx_address), socket.INADDR_ANY)
-            self.rx.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+            self.rx.setsockopt(
+                socket.IPPROTO_IP,
+                socket.IP_ADD_MEMBERSHIP, 
+                struct.pack('4sL', socket.inet_aton(cfg.rx_address),
+                            socket.INADDR_ANY)
+            )
         self.rx.bind((cfg.rx_address, cfg.rx_port))
         self.rx.settimeout(0.1)
+
         self.tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         addr = cfg.tx_address or cfg.rx_address
         self.tx.connect((addr, cfg.tx_port))
@@ -158,11 +288,23 @@ class UDPTransport:
         self.tx.send(data)
 
 
-class DsSerial:
+class SerialTransport(Transport):
     def __init__(self, cfg: SerialConfig):
-        pmap = {'none': serial.PARITY_NONE, 'even': serial.PARITY_EVEN, 'odd': serial.PARITY_ODD}
-        bmap = {5: serial.FIVEBITS, 6: serial.SIXBITS, 7: serial.SEVENBITS, 8: serial.EIGHTBITS}
-        smap = {1: serial.STOPBITS_ONE, 2: serial.STOPBITS_TWO}
+        pmap = {
+            'none': serial.PARITY_NONE,
+            'even': serial.PARITY_EVEN,
+            'odd': serial.PARITY_ODD,
+        }
+        bmap = {
+            5: serial.FIVEBITS,
+            6: serial.SIXBITS,
+            7: serial.SEVENBITS,
+            8: serial.EIGHTBITS,
+        }
+        smap = {
+            1: serial.STOPBITS_ONE,
+            2: serial.STOPBITS_TWO,
+        }
         self.ser = serial.Serial(
             port=cfg.port,
             baudrate=cfg.baud,
@@ -181,76 +323,76 @@ class DsSerial:
 
 class Framer:
     def __init__(self):
-        self.first_byte_time: Optional[datetime.datetime] = None
+        self.timestamp: Optional[datetime.datetime] = None
 
     def frame(self, data: bytes) -> List[Tuple[datetime.datetime, bytes]]:
         raise NotImplementedError
 
 
 class RawFramer(Framer):
-    def __init__(self):
-        super().__init__()
-
     def frame(self, data: bytes) -> List[Tuple[datetime.datetime, bytes]]:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        if data and self.first_byte_time is None:
-            self.first_byte_time = now
-        out: List[Tuple[datetime.datetime, bytes]] = []
-        if data:
-            out.append((self.first_byte_time, data))
-            self.first_byte_time = None
-        return out
+        return ([(datetime.datetime.now(datetime.timezone.utc), data)]
+                if data else [])
 
 
 class DelimitedFramer(Framer):
     def __init__(self, pattern: re.Pattern):
         super().__init__()
-        self.buf = bytearray()
         self.pattern = pattern
+        self.buffer = bytearray()
 
     def frame(self, data: bytes) -> List[Tuple[datetime.datetime, bytes]]:
+        if not data:
+            return []
+
+        # Append data to the buffer. If the buffer was empty, record the
+        # timestamp for the DsHeader.io_time field.
         now = datetime.datetime.now(datetime.timezone.utc)
-        was_empty = not self.buf
-        if data and was_empty and self.first_byte_time is None:
-            self.first_byte_time = now
-        self.buf.extend(data)
+        if not self.buffer:
+            self.timestamp = now
+        self.buffer.extend(data)
+
+        # Pop delimited frames from the buffer
         out: List[Tuple[datetime.datetime, bytes]] = []
-        while True:
-            m = self.pattern.search(self.buf)
-            if not m:
-                break
-            end = m.end()
-            out.append((self.first_byte_time, bytes(self.buf[:end])))
-            del self.buf[:end]
-            self.first_byte_time = now
-        if not self.buf:
-            self.first_byte_time = None
+        while m := self.pattern.search(self.buffer):
+            out.append((
+                typing.cast(datetime.datetime, self.timestamp),
+                bytes(self.buffer[:m.end()])
+            ))
+            self.timestamp = now
         return out
 
 
 class JsonFramer(Framer):
     def __init__(self):
         super().__init__()
-        self.buf = bytearray()
+        self.buffer = bytearray()
         self.decoder = json.JSONDecoder()
 
     def frame(self, data: bytes) -> List[Tuple[datetime.datetime, bytes]]:
+        if not data:
+            return []
+        
+        # Append data to the buffer. If the buffer was empty, record the
+        # timestamp for the DsHeader.io_time field.
         now = datetime.datetime.now(datetime.timezone.utc)
-        was_empty = not self.buf
-        if data and was_empty and self.first_byte_time is None:
-            self.first_byte_time = now
-        self.buf.extend(data)
+        if not self.buffer:
+            self.timestamp = now
+        self.buffer.extend(data)
+
+        # Pop JSON objects from the buffer
         out: List[Tuple[datetime.datetime, bytes]] = []
         while True:
             try:
-                _, idx = self.decoder.raw_decode(self.buf.decode('utf-8'))
-                out.append((self.first_byte_time, bytes(self.buf[:idx])))
-                del self.buf[:idx]
-                self.first_byte_time = now
-            except Exception:
+                _, idx = self.decoder.raw_decode(self.buffer.decode())
+                out.append((
+                    typing.cast(datetime.datetime, self.timestamp),
+                    bytes(self.buffer[:idx])
+                ))
+                del self.buffer[:idx]
+                self.timestamp = now
+            except json.JSONDecodeError:
                 break
-        if not self.buf:
-            self.first_byte_time = None
         return out
 
 
@@ -260,26 +402,30 @@ class Extractor:
 
 
 class DelimitedExtractor(Extractor):
-    def __init__(self, pattern: re.Pattern, fields: List[FieldSpecDelimited]):
+    def __init__(self, pattern: re.Pattern, fields: List[FieldSpec]):
         self.pattern = pattern
-        self.fields = [(f.name, f.index) for f in fields]
+        self.fields = [(f.name, f.path[0]) for f in fields]
 
     def extract(self, pkt: bytes) -> dict:
-        parts = self.pattern.split(pkt)
-        return {n: parts[i] for n, i in self.fields if i < len(parts)}
+        parts = self.pattern.split(pkt.decode())
+        result: dict = {}
+        for n, idx in self.fields:
+            if 0 <= idx < len(parts):
+                result[n] = parts[idx]
+        return result
 
 
 class JsonExtractor(Extractor):
-    def __init__(self, fields: List[FieldSpecJson]):
-        self.fields = [(f.name, f.path) for f in fields]
+    def __init__(self, fields: List[FieldSpec]):
+        self.fields = [(f.name, f.path, f.type) for f in fields]
 
     def extract(self, pkt: bytes) -> dict:
         obj = json.loads(pkt)
         res = {}
-        for n, path in self.fields:
+        for n, path, _ in self.fields:
             cur = obj
-            for key in path.lstrip('.').split('.'):
-                cur = cur[int(key)] if key.isdigit() else cur.get(key)
+            for step in path:
+                cur = cur[step] if isinstance(step, int) else cur.get(step)
             res[n] = cur
         return res
 
@@ -287,17 +433,17 @@ class JsonExtractor(Extractor):
 def main():
     rospy.init_node('io_node')
     cfg = Config.model_validate(rospy.get_param('~'))
-    tr = UDPTransport(cfg.transport) if cfg.transport.type == 'UDP' else DsSerial(cfg.transport)
-    if cfg.framing.type == 'raw':
-        fr = RawFramer()
-    elif cfg.framing.type == 'delimited':
+    tr = UDPTransport(cfg.transport) if cfg.transport.type == 'UDP' else SerialTransport(cfg.transport)
+    if isinstance(cfg.framing, DelimitedFramingConfig):
         fr = DelimitedFramer(cfg.framing.pattern)
-    else:
+    elif isinstance(cfg.framing, JsonFramingConfig):
         fr = JsonFramer()
-    if cfg.extractor.type == 'delimited':
-        ex = DelimitedExtractor(cfg.extractor.pattern, cfg.extractor.fields or [])
-    elif cfg.extractor.type == 'json':
-        ex = JsonExtractor(cfg.extractor.fields or [])
+    else:
+        fr = RawFramer()
+    if isinstance(cfg.extractor, DelimitedExtractorConfig):
+        ex = DelimitedExtractor(cfg.extractor.pattern, cfg.extractor.fields)
+    elif isinstance(cfg.extractor, JsonExtractorConfig):
+        ex = JsonExtractor(cfg.extractor.fields)
     else:
         ex = Extractor()
     pub_raw = rospy.Publisher('~in', RawData, queue_size=10)
@@ -305,10 +451,10 @@ def main():
     pub_fields = {}
     for name, spec in field_specs.items():
         topic = f'~in/{name}'
-        if isinstance(spec, FieldSpecDelimited):
+        if isinstance(cfg.extractor, DelimitedExtractorConfig):
             msg_type = String
         else:
-            msg_type = ROS_TYPE_MAP[spec.type]  # type: ignore
+            msg_type = ROS_TYPE_MAP[spec.type]
         pub_fields[name] = rospy.Publisher(topic, msg_type, queue_size=10)
 
     def on_out(msg: RawData):
@@ -330,10 +476,10 @@ def main():
             pub_raw.publish(m)
             for name, val in ex.extract(pkt).items():
                 spec = field_specs.get(name)
-                if isinstance(spec, FieldSpecDelimited):
+                if isinstance(cfg.extractor, DelimitedExtractorConfig):
                     msg = String(str(val))
                 else:
-                    msg = convert_to_ros_msg(val, spec.type)  # type: ignore
+                    msg = convert_to_ros_msg(val, spec.type)
                 pub_fields[name].publish(msg)
 
 
