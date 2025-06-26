@@ -59,6 +59,7 @@ network_data_capture: #optional
 
 gps:
     host: "172.17.0.1"
+    check_fix_by_variance: false #optional. Often needed for GPS receivers that publish incomplete data.
 
 lock_manager:
     # Use this to control how many motors can be in motion at once.
