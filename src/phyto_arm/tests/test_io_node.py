@@ -26,27 +26,36 @@ for module in stub_modules:
 
 
 from io_node import (
-    FieldSpec,
-    RawFramer,
-    JsonFramer,
     DelimitedExtractor,
+    DelimitedFramer,
+    FieldSpec,
     JsonExtractor,
-    Extractor,
+    JsonFramer,
+    RawFramer,
 )
 
 
 class TestFieldSpec(unittest.TestCase):
-    def test_simple_field(self):
-        spec = FieldSpec(name='f', type='int', selector='field')
-        self.assertEqual(spec.path, ['field'])
-
-    def test_bracket_and_dot_syntax(self):
+    def test_selector_syntax(self):
         cases = {
-            '[a]': ['a'],
-            '.a.b': ['a', 'b'],
-            'x[0]': ['x', 0],
-            'y.1': ['y', 1],
-            '$.z': ['z'],
+          '[field]': ['field'],  # bracket syntax
+          '.field': ['field'],  # dot syntax
+          '.field.subfield': ['field', 'subfield'],  # nested field
+          'field[0]': ['field', 0],  # numeric index bracket syntax
+          'field.0': ['field', 0],  # numeric index dot syntax
+          'field': ['field'],  # leading dot is optional
+          '$.field': ['field'],  # leading $ (from JSONPath) is optional
+        }
+        for sel, expected in cases.items():
+            spec = FieldSpec(name='f', type='str', selector=sel)
+            self.assertEqual(spec.path, expected)
+
+    @unittest.expectedFailure
+    def test_future_selector_syntax(self):
+        cases = {
+            '.escaped\\.char': ['escaped.char'],  # escaped characters
+            '."field with spaces"': ['field with spaces'],  # quoted field
+            '.field[\'0\']': ['field', '0'],  # numeric string
         }
         for sel, expected in cases.items():
             spec = FieldSpec(name='f', type='str', selector=sel)
@@ -59,53 +68,80 @@ class TestFieldSpec(unittest.TestCase):
 
 class TestRawFramer(unittest.TestCase):
     def test_empty(self):
-        fr = RawFramer()
-        self.assertEqual(fr.frame(b''), [])
+        f = RawFramer()
+        self.assertEqual(f.frame(b''), [])
 
     def test_non_empty(self):
-        fr = RawFramer()
-        out = fr.frame(b'data')
-        self.assertEqual(len(out), 1)
-        ts, payload = out[0]
+        f = RawFramer()
+        frames = f.frame(b'data')
+        self.assertEqual(len(frames), 1)
+        ts, payload = frames[0]
         self.assertIsInstance(ts, datetime.datetime)
         self.assertEqual(payload, b'data')
 
 
+class TestDelimitedFramer(unittest.TestCase):
+    def test_empty(self):
+        f = DelimitedFramer(pattern=re.compile(rb'\n'))
+        self.assertEqual(f.frame(b''), [])
+
+    def test_non_empty(self):
+        f = DelimitedFramer(pattern=re.compile(rb'\n'))
+        frames = f.frame(b'data')
+        self.assertEqual(len(frames), 0)  # no newline yet
+        frames = f.frame(b'\n')
+        self.assertEqual(len(frames), 1)
+        ts, payload = frames[0]
+        self.assertIsInstance(ts, datetime.datetime)
+        self.assertEqual(payload, b'data\n')
+        frames = f.frame(b'data\nmore data\nyet more')
+        self.assertEqual(len(frames), 2)
+        (_, first), (_, second) = frames
+        self.assertEqual(first, b'data\n')
+        self.assertEqual(second, b'more data\n')
+        self.assertEqual(f.buffer, b'yet more')
+
+
 class TestJsonFramer(unittest.TestCase):
-    def test_complete_json(self):
-        fr = JsonFramer()
-        out = fr.frame(b'{"a":1}')
-        self.assertEqual(len(out), 1)
-        _, payload = out[0]
+    def test_complete_frame(self):
+        f = JsonFramer()
+        frames = f.frame(b'{"a":1}')
+        self.assertEqual(len(frames), 1)
+        ts, payload = frames[0]
+        self.assertIsInstance(ts, datetime.datetime)
         self.assertEqual(payload, b'{"a":1}')
 
-    def test_incremental_json(self):
-        fr = JsonFramer()
-        self.assertEqual(fr.frame(b'{"a":1'), [])
-        out = fr.frame(b'}{"b":2}')
-        self.assertEqual(len(out), 2)
-        _, first = out[0]
+    def test_partial_frames(self):
+        f = JsonFramer()
+        frames = f.frame(b'{"a":')
+        self.assertEqual(len(frames), 0)
+        frames = f.frame(b'1}{"b":2}{')
+        self.assertEqual(len(frames), 2)
+        (_, first), (_, second) = frames
         self.assertEqual(first, b'{"a":1}')
-        out2 = fr.frame(b'')
-        self.assertEqual(out2, [])
+        self.assertEqual(second, b'{"b":2}')
+        self.assertEqual(f.buffer, b'{')
 
 
-class TestExtractor(unittest.TestCase):
-    def test_base(self):
-        self.assertEqual(Extractor().extract(b'anything'), {})
-
+class TestDelimitedExtractor(unittest.TestCase):
     def test_delimited(self):
-        pattern = re.compile(r',')
-        fields = [FieldSpec(name='one', type='str', selector='[0]'),
-                  FieldSpec(name='three', type='str', selector='[2]')]
-        ex = DelimitedExtractor(pattern, fields)
-        result = ex.extract(b'a,b,c,d')
-        self.assertEqual(result, {'one': 'a', 'three': 'c'})
+        ex = DelimitedExtractor(
+            re.compile(rb','), 
+            [
+                FieldSpec(name='one', type='str', selector='[0]'),
+                FieldSpec(name='three', type='int', selector='[2]')
+            ]
+        )
+        result = ex.extract(b'a,b,42,d')
+        self.assertEqual(result, {'one': 'a', 'three': 42})
 
+
+class TestJsonExtractor(unittest.TestCase):
     def test_json_extractor(self):
+        ex = JsonExtractor([
+            FieldSpec(name='x', type='int', selector='a.b.2')
+        ])
         data = b'{"a":{"b":[10,20,30]}}'
-        spec = FieldSpec(name='x', type='int', selector='a.b.2')
-        ex = JsonExtractor([spec])
         self.assertEqual(ex.extract(data), {'x': 30})
 
 

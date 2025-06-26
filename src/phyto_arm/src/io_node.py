@@ -9,7 +9,7 @@ import rospy
 import pydantic
 import serial
 
-from typing import Any, Literal, Optional, Union, List, Tuple
+from typing import Any, Dict, Literal, Optional, Union, List, Tuple
 
 from ds_core_msgs.msg import RawData
 from std_msgs.msg import (Bool, Float64, Float64MultiArray, Int64,
@@ -370,6 +370,7 @@ class DelimitedFramer(Framer):
                 typing.cast(datetime.datetime, self.timestamp),
                 bytes(self.buffer[:m.end()])
             ))
+            del self.buffer[:m.end()]
             self.timestamp = now
         return out
 
@@ -409,7 +410,7 @@ class JsonFramer(Framer):
 
 class Extractor:
     def extract(self, pkt: bytes) -> dict:
-        return {}
+        raise NotImplementedError
 
 
 class DelimitedExtractor(Extractor):
@@ -417,11 +418,12 @@ class DelimitedExtractor(Extractor):
         self.pattern = pattern
         self.fields = [(f.name, f.path[0]) for f in fields]
 
-    def extract(self, pkt: bytes) -> dict:
-        parts = self.pattern.split(pkt.decode())
-        result: dict = {}
+    def extract(self, pkt: bytes) -> Dict[str, str]:
+        parts = self.pattern.split(pkt)
+        result: Dict[str, str] = {}
         for n, idx in self.fields:
             if 0 <= idx < len(parts):
+                # TODO: Cast to correct type
                 result[n] = parts[idx]
         return result
 
@@ -430,9 +432,9 @@ class JsonExtractor(Extractor):
     def __init__(self, fields: List[FieldSpec]):
         self.fields = [(f.name, f.path, f.type) for f in fields]
 
-    def extract(self, pkt: bytes) -> dict:
+    def extract(self, pkt: bytes) -> Dict[str, Any]:
         obj = json.loads(pkt)
-        res = {}
+        res: Dict[str, Any] = {}
         for n, path, _ in self.fields:
             cur = obj
             for step in path:
