@@ -13,7 +13,10 @@ import time
 
 # Hack for getting this to recognize local modules for import
 # Have not found a ROS-recommended way to import modules being tested
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    os.path.pardir, 'src'
+))
 
 from arm_chanos import profiler_peak_ready, compute_profiler_steps, clamp_steps
 import arm_ifcb
