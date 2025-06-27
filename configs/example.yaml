@@ -116,7 +116,7 @@ arm_sipper: #optional
             method: "IFCB"
         # Add more samples as needed
     digital_loggers:
-        digital_logger_1: #optional. Name of the digital logger. Must be unique.
+        digital_logger_1: # Name must match the name of the node in the launch file
             username: "admin"
             password: "1234"
             address: "192.168.1.2"
@@ -138,7 +138,7 @@ arm_sipper: #optional
                 - name: "sample_pump_7"
                   outlet: 7
 
-        digital_logger_2: #optional. Name of the digital logger. Must be unique.
+        digital_logger_2: # Name must match the name of the node in the launch file
             username: "admin"
             password: "1234"
             address: "192.168.1.3"

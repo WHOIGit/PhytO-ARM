@@ -38,7 +38,7 @@ docker run --rm -it \
     --publish 8098:8098/tcp \
     --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
     --mount type=bind,source=$CONFIG,target=/app/mounted_config.yaml,readonly \
-    --mount type=bind,source=/home/ifcb/IFCBacquire/Host/Routines,target=/routines,readonly \
+    --mount type=bind,source=/home/hablab/routines,target=/routines,readonly \
     --volume /data:/data \
-    whoi/phyto-arm:latest \
+    whoi/phyto-arm:nathan.figueroa-super-sipper \
     $COMMAND
