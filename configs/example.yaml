@@ -86,19 +86,19 @@ arm_sipper: #optional
     non_sample_power:
         seawater_pump:
             digital_logger: digital_logger_1
-            outlet: 1
+            outlet: seawater_pump
         drain_valve:
             digital_logger: digital_logger_1
-            outlet: 2
+            outlet: drain_valve
         ifcb_valve:
             digital_logger: digital_logger_2
-            outlet: 1
+            outlet: ifcb_valve
     samples: # Order of config drives the sequence of samples, top to bottom.
         - name: example_name_1 #optional. Name of a sample. Must be unique.
           ifcb_subdir: "samples/1"
           power:
             digital_logger: digital_logger_1 
-            outlet: 1
+            outlet: sample_pump_1
           metadata:
             location: "A"
             depth: 10.0 # meters
@@ -108,7 +108,7 @@ arm_sipper: #optional
           ifcb_subdir: "samples/2"
           power:
             digital_logger: digital_logger_1 
-            outlet: 2
+            outlet: sample_pump_2
           metadata:
             location: "B"
             depth: 10.0 # meters
@@ -121,31 +121,22 @@ arm_sipper: #optional
             password: "1234"
             address: "192.168.1.2"
             outlets:
-                - name: "flush_pump"
+                - name: seawater_pump
                   outlet: 0
-                - name: "sample_pump_1"
+                - name: sample_pump_1
                   outlet: 1
-                - name: "sample_pump_2"
+                - name: sample_pump_2
                   outlet: 2
-                - name: "sample_pump_3"
-                  outlet: 3
-                - name: "sample_pump_4"
-                  outlet: 4
-                - name: "sample_pump_5"
-                  outlet: 5
-                - name: "sample_pump_6"
-                  outlet: 6
-                - name: "sample_pump_7"
-                  outlet: 7
+                # Add more outlets as needed
 
         digital_logger_2: # Name must match the name of the node in the launch file
             username: "admin"
             password: "1234"
             address: "192.168.1.3"
             outlets:
-                - name: "drain_valve"
+                - name: drain_valve
                   outlet: 0
-                - name: "ifcb_valve"
+                - name: ifcb_valve
                   outlet: 1
     
     ifcb_maintenance:

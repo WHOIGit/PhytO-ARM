@@ -5,8 +5,9 @@ import rospy
 
 import actionlib
 from arm_base import ArmBase, Task
-from std_msgs.msg import String
-from phyto_arm.msg import RunIFCBGoal, RunIFCBAction, OutletStatus
+from std_msgs.msg import String, Bool
+from phyto_arm.msg import RunIFCBGoal, RunIFCBAction
+from dli_power_switch.msg import OutletStatus
 
 
 class ArmSipper(ArmBase):
@@ -23,9 +24,9 @@ class ArmSipper(ArmBase):
     #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
         try:
-            samples = rospy.get_param('~samples')
+            samples = rospy.get_param('samples')
         except KeyError:
-            rospy.logerr("Missing required parameter '~samples'. Shutting down node.")
+            rospy.logerr("Missing required parameter 'samples'. Shutting down node.")
             rospy.signal_shutdown("Missing configuration")
             return None
 
@@ -38,9 +39,9 @@ class ArmSipper(ArmBase):
         next_sample_name = next_sample.get('name', f'sample_{self.sample_index}')
 
         try:
-            task_durations = rospy.get_param('~task_durations')
+            task_durations = rospy.get_param('task_durations')
         except KeyError:
-            rospy.logerr("Missing required parameter '~task_durations'. Shutting down node.")
+            rospy.logerr("Missing required parameter 'task_durations'. Shutting down node.")
             rospy.signal_shutdown("Missing configuration")
             return None
 
@@ -75,7 +76,7 @@ class ArmSipper(ArmBase):
 # Global references
 ifcb_runner = None
 ifcb_data_dir = None
-digital_logger_publishers = {}  # Maps digital logger names to publishers
+outlet_publishers = {}  # Maps "<logger_name>/<outlet_name>" to publishers
 metadata_publishers = {}  # Maps metadata keys to publishers
 arm = None
 
@@ -83,10 +84,10 @@ arm = None
 def validate_config():
     """Validate that all required configuration parameters exist and are correct."""
     required_params = [
-        '~samples',
-        '~task_durations', 
-        '~non_sample_power',
-        '~digital_loggers'
+        'samples',
+        'task_durations', 
+        'non_sample_power',
+        'digital_loggers'
     ]
 
     for param in required_params:
@@ -97,9 +98,9 @@ def validate_config():
 
     # Validate samples structure
     try:
-        samples = rospy.get_param('~samples')
+        samples = rospy.get_param('samples')
         if not isinstance(samples, list) or len(samples) == 0:
-            rospy.logerr("Parameter '~samples' must be a non-empty list. Shutting down node.")
+            rospy.logerr("Parameter 'samples' must be a non-empty list. Shutting down node.")
             rospy.signal_shutdown("Invalid configuration")
             return False
 
@@ -130,8 +131,8 @@ def validate_config():
 
     # Validate non_sample_power structure
     try:
-        non_sample_power = rospy.get_param('~non_sample_power')
-        required_power_items = ['seatwater_pump', 'drain_valve', 'ifcb_valve']
+        non_sample_power = rospy.get_param('non_sample_power')
+        required_power_items = ['seawater_pump', 'drain_valve', 'ifcb_valve']
         for item in required_power_items:
             if item not in non_sample_power:
                 rospy.logerr(f"Missing required non_sample_power item '{item}'. Shutting down node.")
@@ -152,26 +153,36 @@ def validate_config():
     return True
 
 
-def setup_digital_logger_publishers():
-    """Create publishers for each digital logger based on configuration."""
+def setup_outlet_publishers():
+    """Create publishers for each outlet in each digital logger based on configuration."""
     try:
-        digital_loggers = rospy.get_param('~digital_loggers')
-        for dl_name in digital_loggers.keys():
-            topic_name = f'{dl_name}/control'
-            digital_logger_publishers[dl_name] = rospy.Publisher(topic_name, OutletStatus, queue_size=10)
-            rospy.loginfo(f"Created publisher for digital logger '{dl_name}' on topic '{topic_name}'")
+        digital_loggers = rospy.get_param('digital_loggers')
+        for dl_name, dl_config in digital_loggers.items():
+            if 'outlets' not in dl_config:
+                rospy.logwarn(f"Digital logger '{dl_name}' has no outlets configured")
+                continue
+                
+            for outlet in dl_config['outlets']:
+                outlet_name = outlet['name']
+                lookup_key = f"{dl_name}/{outlet_name}"
+                topic_name = f'digital_loggers/{dl_name}/outlet/{outlet_name}/control'
+                
+                outlet_publishers[lookup_key] = rospy.Publisher(topic_name, Bool, queue_size=10)
+                rospy.loginfo(f"Created publisher for outlet '{lookup_key}' on topic '{topic_name}'")
+                
     except Exception as e:
-        rospy.logerr(f"Error setting up digital logger publishers: {e}. Shutting down node.")
+        rospy.logerr(f"Error setting up outlet publishers: {e}. Shutting down node.")
         rospy.signal_shutdown("Configuration error")
 
 
-def get_digital_logger_publisher(digital_logger_name):
-    """Get the publisher for a given digital logger name."""
-    if digital_logger_name not in digital_logger_publishers:
-        rospy.logerr(f"Digital logger '{digital_logger_name}' not found in configuration. Shutting down node.")
+def get_outlet_publisher(digital_logger_name, outlet_name):
+    """Get the publisher for a given digital logger and outlet name."""
+    lookup_key = f"{digital_logger_name}/{outlet_name}"
+    if lookup_key not in outlet_publishers:
+        rospy.logerr(f"Outlet '{lookup_key}' not found in configuration. Shutting down node.")
         rospy.signal_shutdown("Configuration error")
         return None
-    return digital_logger_publishers[digital_logger_name]
+    return outlet_publishers[lookup_key]
 
 
 def get_metadata_publisher(metadata_key):
@@ -183,22 +194,22 @@ def get_metadata_publisher(metadata_key):
     return metadata_publishers[metadata_key]
 
 
-def timed_toggle(outlet, duration, digital_logger_pub):
+def timed_toggle(outlet, duration, outlet_pub):
     def outlet_toggle_callback():
-        digital_logger_pub.publish(OutletStatus(str(outlet), True))
+        outlet_pub.publish(Bool(True))
         rospy.sleep(duration)
-        digital_logger_pub.publish(OutletStatus(str(outlet), False))
+        outlet_pub.publish(Bool(False))
         arm.start_next_task()
     return outlet_toggle_callback
 
 
 def pump_seawater_for(duration):
     try:
-        power_config = rospy.get_param('~non_sample_power/seatwater_pump')
+        power_config = rospy.get_param('non_sample_power/seawater_pump')
         digital_logger_name = power_config['digital_logger']
         outlet = power_config['outlet']
 
-        publisher = get_digital_logger_publisher(digital_logger_name)
+        publisher = get_outlet_publisher(digital_logger_name, outlet)
         if publisher is None:
             return None
 
@@ -211,11 +222,11 @@ def pump_seawater_for(duration):
 
 def drain_for(duration):
     try:
-        power_config = rospy.get_param('~non_sample_power/drain_valve')
+        power_config = rospy.get_param('non_sample_power/drain_valve')
         digital_logger_name = power_config['digital_logger']
         outlet = power_config['outlet']
 
-        publisher = get_digital_logger_publisher(digital_logger_name)
+        publisher = get_outlet_publisher(digital_logger_name, outlet)
         if publisher is None:
             return None
 
@@ -232,7 +243,7 @@ def pump_sample_for(sample_config, duration):
         digital_logger_name = power_config['digital_logger']
         outlet = power_config['outlet']
 
-        publisher = get_digital_logger_publisher(digital_logger_name)
+        publisher = get_outlet_publisher(digital_logger_name, outlet)
         if publisher is None:
             return None
 
@@ -265,15 +276,15 @@ def open_valve_and_run_ifcb_for(sample_config, duration):
             rospy.set_param('/ifcb/data_dir', path.join(ifcb_data_dir, ifcb_subdir))
 
             # Open the IFCB valve
-            power_config = rospy.get_param('~non_sample_power/ifcb_valve')
+            power_config = rospy.get_param('non_sample_power/ifcb_valve')
             digital_logger_name = power_config['digital_logger']
             outlet = power_config['outlet']
 
-            publisher = get_digital_logger_publisher(digital_logger_name)
+            publisher = get_outlet_publisher(digital_logger_name, outlet)
             if publisher is None:
                 return
 
-            publisher.publish(OutletStatus(str(outlet), True))
+            publisher.publish(Bool(True))
 
             # Run the IFCB and publish sample metadata
             goal = RunIFCBGoal()
@@ -283,7 +294,7 @@ def open_valve_and_run_ifcb_for(sample_config, duration):
             rospy.sleep(duration)
 
             # Close the IFCB valve and reset the data directory
-            publisher.publish(OutletStatus(str(outlet), False))
+            publisher.publish(Bool(False))
             rospy.set_param('/ifcb/data_dir', ifcb_data_dir)
             arm.start_next_task()
         except Exception as e:
@@ -305,8 +316,8 @@ def main():
 
     arm = ArmSipper(rospy.get_name())
 
-    # Setup digital logger publishers
-    setup_digital_logger_publishers()
+    # Setup outlet publishers
+    setup_outlet_publishers()
 
     # Save the data directory for IFCB
     try:
