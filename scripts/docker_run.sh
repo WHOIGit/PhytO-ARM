@@ -39,6 +39,7 @@ docker run --rm -it \
     --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
     --mount type=bind,source=$CONFIG,target=/app/mounted_config.yaml,readonly \
     --mount type=bind,source=/home/hablab/routines,target=/routines,readonly \
+    --mount type=bind,source="$(pwd)"/src/phyto_arm,target=/app/src/phyto_arm,readonly \
     --volume /data:/data \
-    whoi/phyto-arm:nathan.figueroa-super-sipper \
+    whoi/phyto-arm:latest \
     $COMMAND
