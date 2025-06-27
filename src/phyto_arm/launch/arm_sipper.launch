@@ -15,9 +15,9 @@
         <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
 
         <group ns="digital_loggers">
-            <node name="digital_logger_1" pkg="phyto_arm" type="digital_logger_node.py"/>
+            <node name="digital_logger_1" pkg="dli_power_switch" type="dli_power_switch_node.py" />
 
-            <node name="digital_logger_2" pkg="phyto_arm" type="digital_logger_node.py"/>
+            <node name="digital_logger_2" pkg="dli_power_switch" type="dli_power_switch_node.py" />
         </group>
     </group>
 </launch>
