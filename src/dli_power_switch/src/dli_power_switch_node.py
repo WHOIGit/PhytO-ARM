@@ -10,7 +10,7 @@ from typing import Dict
 
 from std_msgs.msg import Bool
 
-from dli_power_switch.api import DLIClient
+from api import DLIClient
 from dli_power_switch.msg import OutletStatus
 
 
