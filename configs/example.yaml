@@ -77,12 +77,10 @@ ifcb:
 
 arm_sipper: #optional
     task_durations:
-        presample_pump: 15 # seconds
-        presample_drain: 35
+        flush_pump: 15 # seconds
+        drain_valve_open: 35
         sample_pump: 15
         ifcb_valve_open: 60
-        postsample_pump: 15
-        postsample_drain: 35
     non_sample_power:
         seawater_pump:
             digital_logger: digital_logger_1
@@ -100,7 +98,7 @@ arm_sipper: #optional
             digital_logger: digital_logger_1 
             outlet: sample_pump_1
           metadata:
-            location: "A"
+            location: "A" # Any metadata you want to add to the sample will create topic, e.g. /arm_sipper/sample_metadata/location
             depth: 10.0 # meters
             time: "2025-01-01 12:00:00"
             method: "IFCB"

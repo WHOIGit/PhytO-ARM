@@ -32,8 +32,7 @@ class ArmSipper(ArmBase):
 
         if self.sample_index is None:
             self.sample_index = 0
-        else:
-            self.sample_index = (self.sample_index + 1) % len(samples)
+            
 
         next_sample = samples[self.sample_index]
         next_sample_name = next_sample.get('name', f'sample_{self.sample_index}')
@@ -46,29 +45,26 @@ class ArmSipper(ArmBase):
             return None
 
         # Start at presample_pump if no previous task
-        if last_task is None:
-            rospy.logwarn(f'Sample {next_sample_name}: starting at presample_pump')
-            return Task('presample_pump', pump_seawater_for(task_durations['presample_pump']))
+        if last_task is None or last_task.name == 'postsample_drain':
+            rospy.logwarn(f'Sample {next_sample_name}: starting presample seawater flush')
+            return Task('flush_pump', pump_seawater_for(task_durations['flush_pump']))
 
-        if last_task.name in ['presample_pump', 'postsample_pump']:
-            rospy.logwarn(f'Sample {next_sample_name}: starting at presample_drain')
-            return Task('presample_drain', drain_for(task_durations['presample_drain']))
+        if last_task.name == 'flush_pump':
+            rospy.logwarn(f'Sample {next_sample_name}: starting presample flush drain')
+            return Task('presample_drain', drain_for(task_durations['drain_valve_open']))
 
         if last_task.name == 'presample_drain':
-            rospy.logwarn(f'Sample {next_sample_name}: starting at sample_pump')
+            rospy.logwarn(f'Sample {next_sample_name}: starting sample pump')
             return Task('sample_pump', pump_sample_for(next_sample, task_durations['sample_pump']))
 
         if last_task.name == 'sample_pump':
-            rospy.logwarn(f'Sample {next_sample_name}: starting at ifcb_valve_open')
+            rospy.logwarn(f'Sample {next_sample_name}: opening IFCB valve')
             return Task('ifcb_valve_open', open_valve_and_run_ifcb_for(next_sample, task_durations['ifcb_valve_open']))
 
         if last_task.name == 'ifcb_valve_open':
-            rospy.logwarn(f'Sample {next_sample_name}: starting at postsample_drain')
-            return Task('postsample_drain', drain_for(task_durations['postsample_drain']))
-
-        if last_task.name == 'postsample_drain':
-            rospy.logwarn(f'Sample {next_sample_name}: starting at postsample_pump')
-            return Task('postsample_pump', pump_seawater_for(task_durations['postsample_pump']))
+            rospy.logwarn(f'Sample {next_sample_name}: starting post-sample drain')
+            self.sample_index = (self.sample_index + 1) % len(samples)
+            return Task('postsample_drain', drain_for(task_durations['drain_valve_open']))
 
         raise ValueError(f'Unhandled next-task state where last task={last_task.name}')
 
