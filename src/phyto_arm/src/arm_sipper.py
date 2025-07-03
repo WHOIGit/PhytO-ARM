@@ -31,8 +31,11 @@ class ArmSipper(ArmBase):
             return None
 
         if self.sample_index is None:
-            self.sample_index = 0
-            
+            self.sample_index = rospy.get_param('starting_sample_index')
+            if self.sample_index < 0 or self.sample_index >= len(samples):
+                rospy.logerr(f"Starting sample index {self.sample_index} is not in range 0-{len(samples)-1}. Shutting down node.")
+                rospy.signal_shutdown("Invalid configuration")
+                return None
 
         next_sample = samples[self.sample_index]
         next_sample_name = next_sample.get('name', f'sample_{self.sample_index}')
@@ -185,7 +188,7 @@ def get_metadata_publisher(metadata_key):
     """Get or create a publisher for a given metadata key."""
     if metadata_key not in metadata_publishers:
         topic_name = f'sample_metadata/{metadata_key}'
-        metadata_publishers[metadata_key] = rospy.Publisher(topic_name, String, queue_size=10)
+        metadata_publishers[metadata_key] = rospy.Publisher(topic_name, String, queue_size=1, latch=True)
         rospy.loginfo(f"Created publisher for metadata key '{metadata_key}' on topic '{topic_name}'")
     return metadata_publishers[metadata_key]
 
@@ -271,6 +274,8 @@ def open_valve_and_run_ifcb_for(sample_config, duration):
             ifcb_subdir = sample_config['ifcb_subdir']
             rospy.set_param('/ifcb/data_dir', path.join(ifcb_data_dir, ifcb_subdir))
 
+            publish_sample_metadata(sample_config)
+
             # Open the IFCB valve
             power_config = rospy.get_param('non_sample_power/ifcb_valve')
             digital_logger_name = power_config['digital_logger']
@@ -278,6 +283,7 @@ def open_valve_and_run_ifcb_for(sample_config, duration):
 
             publisher = get_outlet_publisher(digital_logger_name, outlet)
             if publisher is None:
+                rospy.logerr(f"Outlet '{digital_logger_name}/{outlet}' not found in configuration.")
                 return
 
             publisher.publish(Bool(True))
@@ -285,8 +291,7 @@ def open_valve_and_run_ifcb_for(sample_config, duration):
             # Run the IFCB and publish sample metadata
             goal = RunIFCBGoal()
             ifcb_runner.send_goal(goal)
-            publish_sample_metadata(sample_config)
-            # ifcb_runner.wait_for_result() # TODO: Should probably prefer this over sleep
+            ifcb_runner.wait_for_result()
             rospy.sleep(duration)
 
             # Close the IFCB valve and reset the data directory
