@@ -125,7 +125,7 @@ def run_sample_routines(goal):
 
     # Prime sample tube if needed
     if rospy.get_param('ifcb_maintenance/prime_sample_tube'):
-        playlist.append((ConductorStates.IFCB_PRIMESAMPLETUBE, 'primetube'))
+        playlist.append((ConductorStates.IFCB_PRIMESAMPLETUBE, 'primesampletube'))
 
     playlist.append((ConductorStates.IFCB_RUNSAMPLE, 'runsample'))
 
