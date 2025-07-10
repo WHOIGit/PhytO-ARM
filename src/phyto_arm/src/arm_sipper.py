@@ -47,6 +47,9 @@ class ArmSipper(ArmBase):
             rospy.signal_shutdown("Missing configuration")
             return None
 
+        # Just publish sample metadata every time
+        publish_sample_metadata(next_sample)
+
         # Start at presample_pump if no previous task
         if last_task is None or last_task.name == 'postsample_drain':
             rospy.logwarn(f'Sample {next_sample_name}: starting presample seawater flush')
@@ -273,8 +276,6 @@ def open_valve_and_run_ifcb_for(sample_config, duration):
             # Set the data directory for IFCB to the sample subdirectory
             ifcb_subdir = sample_config['ifcb_subdir']
             rospy.set_param('/ifcb/data_dir', path.join(ifcb_data_dir, ifcb_subdir))
-
-            publish_sample_metadata(sample_config)
 
             # Open the IFCB valve
             power_config = rospy.get_param('non_sample_power/ifcb_valve')
