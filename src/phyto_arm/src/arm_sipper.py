@@ -191,7 +191,7 @@ def get_metadata_publisher(metadata_key):
     """Get or create a publisher for a given metadata key."""
     if metadata_key not in metadata_publishers:
         topic_name = f'sample_metadata/{metadata_key}'
-        metadata_publishers[metadata_key] = rospy.Publisher(topic_name, String, queue_size=1, latch=True)
+        metadata_publishers[metadata_key] = rospy.Publisher(topic_name, String, queue_size=1, latch=False)
         rospy.loginfo(f"Created publisher for metadata key '{metadata_key}' on topic '{topic_name}'")
     return metadata_publishers[metadata_key]
 
@@ -257,13 +257,28 @@ def pump_sample_for(sample_config, duration):
 
 
 def publish_sample_metadata(sample_config):
-    """Dynamically publish all metadata fields for a sample."""
+    """Dynamically publish all metadata fields for a sample and clear fields not in current sample."""
     try:
-        metadata = sample_config['metadata']
-        for key, value in metadata.items():
+        current_metadata = sample_config['metadata']
+        current_keys = set(current_metadata.keys())
+        
+        # Get all previously published metadata keys
+        all_published_keys = set(metadata_publishers.keys())
+        
+        # Publish current sample's metadata
+        for key, value in current_metadata.items():
             publisher = get_metadata_publisher(key)
             publisher.publish(str(value))
             rospy.logdebug(f"Published metadata {key}: {value}")
+        
+        # Clear metadata fields that are not in the current sample
+        keys_to_clear = all_published_keys - current_keys
+        for key in keys_to_clear:
+            if key in metadata_publishers:
+                publisher = metadata_publishers[key]
+                publisher.publish("")  # Publish empty string to clear the field
+                rospy.logdebug(f"Cleared metadata {key} (not in current sample)")
+                
     except KeyError as e:
         rospy.logerr(f"Missing metadata in sample configuration: {e}")
     except Exception as e:

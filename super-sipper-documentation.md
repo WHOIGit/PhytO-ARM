@@ -32,7 +32,7 @@ Connect to the rPi:
     ssh hablab@[rPi IP Address]
     pw: [PW]
 
-## Running Super-Sipper
+## Running Super-Sipperchmod +x ~/Desktop/PhytO-ARM-Kill.desktop
 
 On the rPi, confirm you are on the proper PhytO-ARM branch: nathan.figueroa/super-sipper.
 
@@ -234,32 +234,6 @@ arm_sipper: #optional
         # the clean interval if you want a clean after each bead sample.
         bead_interval: 1440  # minutes, 0 = never
 
-# this is where users can specify the information that will be captured in a HDR file. More fields can be added as needed.
-web: 
-    field_map:
-        #optional indicates that a parameter will not be required to be present by the config validator
-        commitHash: #optional
-            environment: COMMIT_HASH #optional, get value from COMMIT_HASH environment variable
-            default: 'No hash' #optional for environment variables
-        sampleLocation: #optional
-            topic: /arm_sipper/sample_metadata/location #optional, ROS topic to update value
-            topic_field: data #optional unless 'topic' is used
-            default: 'location' # Replace with desired location (will be published if no location data is set above in metadata section)
-        sampleDepth: #optional
-            topic: /arm_sipper/sample_metadata/depth
-            topic_field: data
-            default: '10.0' # Replace with desired default depth 
-        sampleTime: #optional
-            topic: /arm_sipper/sample_metadata/time
-            topic_field: data
-            default: 'time' # Replace with desired time
-        sampleMethod: #optional
-            topic: /arm_sipper/sample_metadata/method
-            topic_field: data
-            default: 'method' # Replace with desired default method      
-        # defaultOnlyExample: #optional
-        #     default: 'static_value' # No topic, making this default value permanent
-
 ```
 
 ## Running Super-Siper
@@ -290,11 +264,9 @@ curl http://localhost:8098
 Example output: 
 ```
 hablab@papi2:~/PhytO-ARM$ curl http://localhost:8098
-{"commitHash": "No hash", "sampleLocation": "G", "sampleDepth": "4.0", "sampleTime": "2025-01-01 12:00:00", "sampleMethod": "IFCB", "defaultOnlyExample": "static_value"}
+{"location": "G", "depth": "4.0", "time": "2025-01-01 12:00:00", "method": "IFCB"}
 ```
-If the metadata is publishing default values instead of correct sample information, confirm that the topic paths are correct in the webnode section of the config file.
-
-Correct format: /arm_sipper/sample_metadata/depth where 'depth' can be replaced with any metadata field created in the arm_sipper section of the config file.
+The web node automatically discovers and publishes all metadata fields defined in the `arm_sipper.samples[].metadata` sections. Only the metadata fields from the currently active sample will be shown - when switching samples, fields not present in the new sample are automatically removed from the response.
 
 To follow along with the super-sipper sequence, users can re-attach to the PhytO-ARM tmux window:
 

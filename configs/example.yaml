@@ -354,7 +354,7 @@ camera: #optional
     aft_camera: #optional
         video_stream_url: "rtsp://admin:example_password@192.168.13.124/"
 
-web:
+web: #optional
     field_map:
         #optional indicates that a parameter will not be required to be present by the config validator
         commitHash: #optional
