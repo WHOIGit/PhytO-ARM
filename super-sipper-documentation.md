@@ -29,8 +29,8 @@ If PhytO-ARM has not been previously installed on the rPi unit, follow the insta
 
 Connect to the rPi:
 
-    ssh hablab@10.1.10.52
-    pw: SuperSipperOSU!
+    ssh hablab@[rPi IP Address]
+    pw: [PW]
 
 ## Running Super-Sipper
 
@@ -91,9 +91,9 @@ lock_manager:
 
 # users will need to update this section with IFCB-specific details
 ifcb:
-    address: "192.168.13.2" # update with IFCB ip address
+    address: "IFCB IPADDR" # update with IFCB ip address
     port: 8092
-    serial: "111-111-124" # update with IFCB serial number
+    serial: "111-111-###" # update with IFCB serial number
     routines_dir: "/routines"
     # This path is interpreted by IFCBacquire, which may be in another container or namespace. Unless routines are moved on the rPi to another directory that is not /hablab/routines, this will not change. 
     data_dir: "/home/ifcb/ifcbdata/testing" # This is the parent directory for all data. Can change to be super-sipper specific. 
@@ -191,9 +191,9 @@ arm_sipper: #optional
         # Add more samples as needed
     digital_loggers:
         digital_logger_1: #optional. Name of the digital logger. Must be unique.
-            username: "admin" # this will need to be updated
-            password: "whoi1930" # this will need to be updated
-            address: "192.168.13.49" # this will need to be updated
+            username: "user" # this will need to be updated
+            password: "pw" # this will need to be updated
+            address: "IPADDR" # this will need to be updated
             outlets: # 
                 - name: "flush_pump"
                   outlet: 1
@@ -213,9 +213,9 @@ arm_sipper: #optional
                   outlet: 8
 
         digital_logger_2: #optional. Name of the digital logger. Must be unique.
-            username: "admin" # this will need to be updated
-            password: "1234" # this will need to be updated
-            address: "192.168.13.51" # this will need to be updated
+            username: "user" # this will need to be updated
+            password: "pw" # this will need to be updated
+            address: "IPADDR" # this will need to be updated
             outlets:
                 - name: "drain_valve"
                   outlet: 1
