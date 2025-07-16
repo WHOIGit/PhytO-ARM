@@ -115,7 +115,7 @@ arm_sipper: #optional
         ifcb_valve:
             digital_logger: digital_logger_2
             outlet: ifcb_valve
-    starting_sample_index: 0
+    starting_sample_index: 0 # start with first sample, change this if you need to start with another sample
     samples: # Order of config drives the sequence of samples, top to bottom.
         - name: example_name_1 #optional. Name of a sample. Must be unique.
           ifcb_subdir: "samples/1"
