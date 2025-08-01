@@ -43,5 +43,5 @@ docker run --rm -it \
     --mount type=bind,source="$(pwd)"/src/phyto_arm,target=/app/src/phyto_arm,readonly \
     --volume /data:/data \
     --device /dev/ttyS3 \
-    whoi/phyto-arm:latest \
+    whoi/phyto-arm:nathan.figueroa-gps-lockout \
     $COMMAND
