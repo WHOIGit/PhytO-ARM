@@ -11,7 +11,7 @@
 
     <node name="lock_manager" pkg="phyto_arm" type="lock_manager.py" />
 
-    <node name="network_data_capture" pkg="phyto_arm" type="network_data_capture.py" required="false" />
+    <!-- <node name="network_data_capture" pkg="phyto_arm" type="network_data_capture.py" required="false" /> -->
 
     <group if="$(arg classifier)">
         <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />
@@ -27,7 +27,7 @@
     <node name="web" pkg="phyto_arm" type="web_node.py" />
 
     <group ns="camera">
-        <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">
+        <!-- <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">
             <remap from="~image" to="~image/do_not_use" />
             <remap from="~image/do_not_use/compressed" to="~image/compressed" />
         </node>
@@ -35,7 +35,7 @@
         <node name="aft_camera" pkg="rtsp_camera" type="rtsp_camera_node">
             <remap from="~image" to="~image/do_not_use" />
             <remap from="~image/do_not_use/compressed" to="~image/compressed" />
-        </node>
+        </node> -->
     </group>
 
     <node if="$(arg digital_logger)" name="digital_logger" pkg="dli_power_switch" type="dli_power_switch_node.py"/>
