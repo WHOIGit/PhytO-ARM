@@ -10,7 +10,7 @@ import rospy
 from std_msgs.msg import Bool
 
 from arm_base import ArmBase, Task
-from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
+from phyto_arm.msg import RunIFCBGoal, RunIFCBAction
 
 
 class ArmOleander(ArmBase):
@@ -93,11 +93,7 @@ def main():
 
     rospy.init_node('arm_oleander', log_level=rospy.DEBUG)
 
-    winch_name = None
-    if rospy.get_param('winch_enabled') is True:
-        winch_name = rospy.get_namespace() + 'winch/move_to_depth'
-    arm = ArmOleander(rospy.get_name(), winch_name)
-
+    arm = ArmOleander(rospy.get_name())
 
     # Setup publisher for DL outlet
     dl_pump_pub = rospy.Publisher('/digital_logger/outlet/pump/status', Bool, queue_size=10)
