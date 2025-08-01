@@ -40,6 +40,7 @@ docker run --rm -it \
     --mount type=bind,source=$CONFIG,target=/app/mounted_config.yaml,readonly \
     --mount type=bind,source=/home/embedpi/routines,target=/routines,readonly \
     --mount type=bind,source="$(pwd)"/src/phyto_arm,target=/app/src/phyto_arm,readonly \
+    --mount type=bind,source="$(pwd)"/src/dli_power_switch,target=/app/src/dli_power_switch,readonly \
     --volume /data:/data \
     whoi/phyto-arm:nathan.figueroa-gps-lockout \
     $COMMAND
