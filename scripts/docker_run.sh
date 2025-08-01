@@ -39,7 +39,8 @@ docker run --rm -it \
     --publish 12345:12345/udp \
     --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
     --mount type=bind,source=$CONFIG,target=/app/mounted_config.yaml,readonly \
-    --mount type=bind,source=/home/ifcb/IFCBacquire/Host/Routines,target=/routines,readonly \
+    --mount type=bind,source=/home/embedpi/routines,target=/routines,readonly \
+    --mount type=bind,source="$(pwd)"/src/phyto_arm,target=/app/src/phyto_arm,readonly \
     --volume /data:/data \
     --device /dev/ttyS3 \
     whoi/phyto-arm:latest \
