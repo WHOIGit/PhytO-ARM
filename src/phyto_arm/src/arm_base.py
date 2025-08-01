@@ -187,10 +187,6 @@ class ArmBase:
     def loop(self):
         task = None
         while not rospy.is_shutdown():
-            if self.geofence_block():
-                rospy.sleep(1.0)
-                continue # Skip to next loop iteration to re-evaluate geofence
-
             # Don't block so that we can keeping checking for shutdowns
             if self.task_lock.acquire(blocking=False):
                 # If no movement is required

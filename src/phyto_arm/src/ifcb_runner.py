@@ -124,6 +124,11 @@ def run_sample_routines(goal):
     playlist.append((ConductorStates.IFCB_DEBUBBLE,  'debubble'))
     playlist.append((ConductorStates.IFCB_RUNSAMPLE, 'runsample'))
 
+    # Determine if we should flush the sample tube after each sample
+    flush_after_sample = rospy.get_param('ifcb_maintenance/flush_after_sample')
+    if flush_after_sample:
+        playlist.append((ConductorStates.IFCB_FLUSH, 'flushsampletube'))
+
     # Run IFCB steps in sequence
     for state_const, routine in playlist:
         # Wait for previous routine to finish before we submit a new one. The
