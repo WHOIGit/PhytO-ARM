@@ -26,7 +26,7 @@ class ArmOleander(ArmBase):
     def get_next_task(self, last_task):
         # Always check if we're in the geofence
         if self.geofence_block():
-            if last_task == 'shutdown_sampling':
+            if last_task == 'shutdown_sampling' or last_task is None:
                 return Task('await_geofence', await_geofence)
             # If not, shut down sampling
             return Task('shutdown_sampling', shutdown_sampling)
