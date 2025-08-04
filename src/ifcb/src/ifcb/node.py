@@ -4,6 +4,7 @@ import json
 import os
 import struct
 import threading
+import time
 
 import rospy
 
@@ -22,10 +23,16 @@ from .instrumentation import instrument_routine
 
 
 ifcb_ready = threading.Event()
+connection_lost = threading.Event()
 
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
 def do_command(client, pub, req):
+    # Check if IFCB is connected
+    if connection_lost.is_set():
+        rospy.logwarn(f'Cannot send command "{req.command}": IFCB is not connected')
+        return srv.CommandResponse()  # Commands don't return success/failure
+    
     send_command(client, pub, req.command)
     return srv.CommandResponse()
 
@@ -42,6 +49,11 @@ def do_runroutine(client, pub, req):
     #
     # This means that the routines *must* be written to disk at the expected
     # location.
+
+    # Check if IFCB is connected
+    if connection_lost.is_set():
+        rospy.logwarn(f'Cannot run routine "{req.routine}": IFCB is not connected')
+        return srv.RunRoutineResponse(success=False)
 
     # Deny path traversal
     if '/' in req.routine:
@@ -77,7 +89,13 @@ def do_runroutine(client, pub, req):
 # Send a command to the IFCB host and publish it to ROS
 def send_command(client, pub, command):
     # Wait for the IFCB to be ready; this prevents sending a command too early
-    ifcb_ready.wait()
+    if not ifcb_ready.wait(timeout=30):  # 30 second timeout
+        rospy.logwarn('IFCB not ready after 30 seconds, command may fail')
+    
+    # Check if we're connected before trying to send
+    if connection_lost.is_set():
+        rospy.logwarn(f'IFCB disconnected, cannot send command: {command}')
+        return
 
     # Construct the message we are going to publish
     msg = RawData()
@@ -85,12 +103,16 @@ def send_command(client, pub, command):
     msg.data_direction = RawData.DATA_OUT
     msg.data = command.encode()
 
-    # Send the command
-    client.relay_message_to_host(command)
-
-    # Publish the message after sending it, so that the timestamp is more
-    # accurate.
-    pub.publish(msg)
+    # Send the command with error handling
+    try:
+        client.relay_message_to_host(command)
+        # Publish the message after sending it, so that the timestamp is more accurate
+        pub.publish(msg)
+    except Exception as e:
+        rospy.logerr(f'Failed to send command "{command}": {e}')
+        # Mark connection as lost to trigger reconnection
+        connection_lost.set()
+        ifcb_ready.clear()
 
 
 # Publish incoming "raw" messages from the IFCB as ROS messages
@@ -110,8 +132,15 @@ def on_any_message(pub, data):
 def on_started(client, pub, *args, **kwargs):
     rospy.loginfo('Established connection to the IFCB')
 
-    # Allow any queued commands to proceed now that the IFCB is available
+    # Clear the connection lost flag and allow any queued commands to proceed
+    connection_lost.clear()
     ifcb_ready.set()
+
+# Callback for when connection is lost
+def on_connection_lost():
+    rospy.logwarn('IFCB connection lost, attempting to reconnect...')
+    connection_lost.set()
+    ifcb_ready.clear()
 
 # Reset the data folder to the configured data directory
 def on_interactive_stopped(client, pub, *_):
@@ -173,6 +202,52 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     mkr_pub.publish(markers)
 
 
+def connection_manager(client, retry_interval=5, max_retry_interval=60):
+    """
+    Manages IFCB connection with automatic retry on failure.
+    Runs in a separate thread to handle connection and reconnection.
+    
+    Args:
+        client: IFCBClient instance
+        retry_interval: Initial retry interval in seconds
+        max_retry_interval: Maximum retry interval in seconds (with exponential backoff)
+    """
+    current_retry_interval = retry_interval
+    
+    while not rospy.is_shutdown():
+        try:
+            if connection_lost.is_set() or not ifcb_ready.is_set():
+                rospy.loginfo('Attempting to connect to IFCB...')
+                
+                # Try to connect
+                client.connect()
+                
+                # Wait a bit to see if connection establishes
+                time.sleep(2)
+                
+                # Check if we got the startedAsClient callback
+                if ifcb_ready.is_set() and not connection_lost.is_set():
+                    rospy.loginfo('IFCB connection successful')
+                    current_retry_interval = retry_interval  # Reset retry interval on success
+                else:
+                    raise ConnectionError("Connection did not establish properly")
+                    
+            # Connection monitoring - check every few seconds
+            time.sleep(5)
+            
+        except Exception as e:
+            rospy.logwarn(f'IFCB connection failed: {e}')
+            connection_lost.set()
+            ifcb_ready.clear()
+            
+            # Exponential backoff with jitter
+            rospy.loginfo(f'Retrying connection in {current_retry_interval} seconds...')
+            time.sleep(current_retry_interval)
+            
+            # Increase retry interval, but cap it at max_retry_interval
+            current_retry_interval = min(current_retry_interval * 1.5, max_retry_interval)
+
+
 def main():
     rospy.init_node('ifcb', anonymous=True)
 
@@ -228,8 +303,16 @@ def main():
         functools.partial(do_runroutine, client, tx_pub),
     )
 
-    # Connect the client
-    client.connect()
+    # Start connection manager in a separate thread
+    connection_lost.set()  # Start in disconnected state to trigger initial connection
+    connection_thread = threading.Thread(
+        target=connection_manager,
+        args=(client,),
+        daemon=True
+    )
+    connection_thread.start()
+    
+    rospy.loginfo('IFCB node started, waiting for connection...')
 
     # Keep the program alive while other threads work
     rospy.spin()
