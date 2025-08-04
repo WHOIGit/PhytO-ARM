@@ -24,21 +24,23 @@ from .instrumentation import instrument_routine
 
 ifcb_ready = threading.Event()
 connection_lost = threading.Event()
+ifcb_client = None  # Global client managed by connection manager
+client_lock = threading.Lock()  # Protect client access
 
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
-def do_command(client, pub, req):
+def do_command(pub, req):
     # Check if IFCB is connected
     if connection_lost.is_set():
         rospy.logwarn(f'Cannot send command "{req.command}": IFCB is not connected')
         return srv.CommandResponse()  # Commands don't return success/failure
     
-    send_command(client, pub, req.command)
+    send_command(pub, req.command)
     return srv.CommandResponse()
 
 
 # The ROS service handler that runs a routine, optionally with instrumentation
-def do_runroutine(client, pub, req):
+def do_runroutine(pub, req):
     # XXX
     # We always use the 'interactive:start' command instead of 'routine' because
     # the latter does not (as of Apr 21, 2022) provide any feedback when the
@@ -49,7 +51,7 @@ def do_runroutine(client, pub, req):
     #
     # This means that the routines *must* be written to disk at the expected
     # location.
-
+        
     # Check if IFCB is connected
     if connection_lost.is_set():
         rospy.logwarn(f'Cannot run routine "{req.routine}": IFCB is not connected')
@@ -61,9 +63,9 @@ def do_runroutine(client, pub, req):
 
     # Check for beads routines
     if req.routine == 'beads':
-        send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
+        send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
     else:
-        send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
+        send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
 
     # Attempt to load the file
     path = os.path.join(rospy.get_param('~routines_dir'), f'{req.routine}.json')
@@ -80,14 +82,14 @@ def do_runroutine(client, pub, req):
 
     # Encode and send the routine
     encoded = json.dumps(routine, separators=(',', ':'))  # less whitespace
-    send_command(client, pub, f'interactive:load:{encoded}')
-    send_command(client, pub, 'interactive:start')
+    send_command(pub, f'interactive:load:{encoded}')
+    send_command(pub, 'interactive:start')
 
     return srv.RunRoutineResponse(success=True)
 
 
 # Send a command to the IFCB host and publish it to ROS
-def send_command(client, pub, command):
+def send_command(pub, command):
     # Wait for the IFCB to be ready; this prevents sending a command too early
     if not ifcb_ready.wait(timeout=30):  # 30 second timeout
         rospy.logwarn('IFCB not ready after 30 seconds, command may fail')
@@ -96,6 +98,13 @@ def send_command(client, pub, command):
     if connection_lost.is_set():
         rospy.logwarn(f'IFCB disconnected, cannot send command: {command}')
         return
+
+    # Get client safely
+    with client_lock:
+        client = ifcb_client
+        if client is None:
+            rospy.logwarn(f'No IFCB client available, cannot send command: {command}')
+            return
 
     # Construct the message we are going to publish
     msg = RawData()
@@ -129,7 +138,7 @@ def on_any_message(pub, data):
 
 
 # Callback for the "startedAsClient" message from the IFCB
-def on_started(client, pub, *args, **kwargs):
+def on_started(pub, *args, **kwargs):
     rospy.loginfo('Established connection to the IFCB')
 
     # Clear the connection lost flag and allow any queued commands to proceed
@@ -143,8 +152,8 @@ def on_connection_lost():
     ifcb_ready.clear()
 
 # Reset the data folder to the configured data directory
-def on_interactive_stopped(client, pub, *_):
-    send_command(client, pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
+def on_interactive_stopped(pub, *_):
+    send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
 
 def on_triggerimage(pub, _, image):
     # The image data should be in PNG format, which is an allowed ROS image type
@@ -202,31 +211,62 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     mkr_pub.publish(markers)
 
 
-def connection_manager(client, retry_interval=5, max_retry_interval=60):
+def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
     """
-    Manages IFCB connection with automatic retry on failure.
-    Runs in a separate thread to handle connection and reconnection.
+    Manages IFCB client creation, connection, and callback setup with automatic retry on failure.
+    Runs in a separate thread to handle the complete client lifecycle.
     
     Args:
-        client: IFCBClient instance
+        publishers: Dict of publisher objects needed for callbacks
         retry_interval: Initial retry interval in seconds
         max_retry_interval: Maximum retry interval in seconds (with exponential backoff)
     """
+    global ifcb_client
     current_retry_interval = retry_interval
     
     while not rospy.is_shutdown():
         try:
             if connection_lost.is_set() or not ifcb_ready.is_set():
-                rospy.loginfo('Attempting to connect to IFCB...')
+                rospy.loginfo('Creating IFCB client and attempting connection...')
+                
+                # Create the client
+                try:
+                    client = IFCBClient(
+                        f'ws://{rospy.get_param("~address")}'\
+                            f':{rospy.get_param("~port", 8092)}/ifcbHub',
+                        rospy.get_param('~serial'),
+                    )
+                except Exception as client_error:
+                    raise ConnectionError(f"Failed to create IFCB client: {client_error}")
+                
+                # Set up callbacks before connecting
+                client.hub_connection.on('messageRelayed',
+                    functools.partial(on_any_message, publishers['rx']))
+                client.hub_connection.on('startedAsClient',
+                    functools.partial(on_started, publishers['tx']))
+                client.on(('triggerimage',),
+                          functools.partial(on_triggerimage, publishers['img']))
+                client.on(('triggercontent',),
+                          functools.partial(on_triggercontent, publishers['roi'], publishers['mkr']))
+                client.on(('triggerrois',),
+                          functools.partial(on_triggerrois, publishers['roi'], publishers['mkr']))
+                client.on(('valuechanged','interactive','stopped',),
+                          functools.partial(on_interactive_stopped, publishers['tx']))
                 
                 # Try to connect
-                client.connect()
+                try:
+                    client.connect()
+                except Exception as connect_error:
+                    raise ConnectionError(f"Failed to initiate connection: {connect_error}")
                 
                 # Wait a bit to see if connection establishes
                 time.sleep(2)
                 
                 # Check if we got the startedAsClient callback
                 if ifcb_ready.is_set() and not connection_lost.is_set():
+                    # Store the working client globally
+                    with client_lock:
+                        ifcb_client = client
                     rospy.loginfo('IFCB connection successful')
                     current_retry_interval = retry_interval  # Reset retry interval on success
                 else:
@@ -237,6 +277,9 @@ def connection_manager(client, retry_interval=5, max_retry_interval=60):
             
         except Exception as e:
             rospy.logwarn(f'IFCB connection failed: {e}')
+            # Clear the failed client
+            with client_lock:
+                ifcb_client = None
             connection_lost.set()
             ifcb_ready.clear()
             
@@ -260,59 +303,40 @@ def main():
     roi_pub = rospy.Publisher('~roi/image', CompressedImage, queue_size=5)
     mkr_pub = rospy.Publisher('~roi/markers', ImageMarkerArray, queue_size=5)
 
-    # Create an IFCB websocket API client
-    client = IFCBClient(
-        f'ws://{rospy.get_param("~address")}'\
-            f':{rospy.get_param("~port", 8092)}/ifcbHub',
-        rospy.get_param('~serial'),
-    )
-
-    # Publish all messages that come in, prior to being parsed.
-    # Note: This relies on internal implementation details of pyifcbclient.
-    client.hub_connection.on('messageRelayed',
-        functools.partial(on_any_message, rx_pub))
-
-    # Set up a callback for when the connection starts.
-    # Note: This too relies on internal implementation details of pyifcbclient.
-    client.hub_connection.on('startedAsClient',
-        functools.partial(on_started, client, tx_pub))
-
-    # Set up callbacks for trigger images and ROIs
-    client.on(('triggerimage',),
-              functools.partial(on_triggerimage, img_pub))
-    client.on(('triggercontent',),
-              functools.partial(on_triggercontent, roi_pub, mkr_pub))
-    client.on(('triggerrois',),
-              functools.partial(on_triggerrois, roi_pub, mkr_pub))
-
-    # Set up callbacks for datafolder switching
-    client.on(('valuechanged','interactive','stopped',),
-              functools.partial(on_interactive_stopped, client, tx_pub))
+    # Bundle publishers for the connection manager
+    publishers = {
+        'rx': rx_pub,
+        'tx': tx_pub,
+        'img': img_pub,
+        'roi': roi_pub,
+        'mkr': mkr_pub
+    }
 
     # Create a ROS service for sending commands
     rospy.Service(
         '~command',
         srv.Command,
-        functools.partial(do_command, client, tx_pub),
+        functools.partial(do_command, tx_pub),
     )
 
     # Create a ROS service for running routines
     rospy.Service(
         '~routine',
         srv.RunRoutine,
-        functools.partial(do_runroutine, client, tx_pub),
+        functools.partial(do_runroutine, tx_pub),
     )
 
     # Start connection manager in a separate thread
+    # It will handle client creation, connection, and callback setup
     connection_lost.set()  # Start in disconnected state to trigger initial connection
     connection_thread = threading.Thread(
         target=connection_manager,
-        args=(client,),
+        args=(publishers,),
         daemon=True
     )
     connection_thread.start()
     
-    rospy.loginfo('IFCB node started, waiting for connection...')
+    rospy.loginfo('IFCB node started, connection manager will handle IFCB setup...')
 
     # Keep the program alive while other threads work
     rospy.spin()
@@ -323,3 +347,7 @@ if __name__ == '__main__':
         main()
     except rospy.ROSInterruptException:
         pass
+    except Exception as e:
+        rospy.logerr(f'IFCB node failed to start: {e}')
+        # With the new architecture, startup failures should be very rare
+        # since we don't create clients in main() anymore
