@@ -73,7 +73,9 @@ def shutdown_sampling():
     dl_pump_pub.publish(Bool(data=False))
 
     # Wait for the IFCB to finish its current sample
-    rospy.sleep(rospy.get_param('tasks/shutdown_wait_duration'))
+    shutdown_duration = rospy.get_param('tasks/shutdown_wait_duration')
+    rospy.logwarn(f'Shutting down sampling for {shutdown_duration} seconds')
+    rospy.sleep(shutdown_duration)
     dl_ifcb_pub.publish(Bool(data=False))
     arm.start_next_task()
 
@@ -82,7 +84,9 @@ def restart_sampling():
     dl_ifcb_pub.publish(Bool(data=True))
 
     # Wait for IFCB to start up
-    rospy.sleep(rospy.get_param('tasks/restart_wait_duration'))
+    restart_duration = rospy.get_param('tasks/restart_wait_duration')
+    rospy.logwarn(f'Waiting for IFCB to start up for {restart_duration} seconds')
+    rospy.sleep(restart_duration)
     arm.start_next_task()
 
 def main():
