@@ -275,8 +275,7 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
             # Connection monitoring - check every few seconds
             time.sleep(5)
             
-        except Exception as e:
-            rospy.logwarn(f'IFCB connection failed: {e}')
+        except Exception:
             # Clear the failed client
             with client_lock:
                 ifcb_client = None
@@ -284,7 +283,7 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
             ifcb_ready.clear()
             
             # Exponential backoff with jitter
-            rospy.loginfo(f'Retrying connection in {current_retry_interval} seconds...')
+            rospy.loginfo(f'Retrying IFCB connection in {current_retry_interval} seconds...')
             time.sleep(current_retry_interval)
             
             # Increase retry interval, but cap it at max_retry_interval
