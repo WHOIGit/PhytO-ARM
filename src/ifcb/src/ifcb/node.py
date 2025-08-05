@@ -16,10 +16,10 @@ from ds_core_msgs.msg import RawData
 from foxglove_msgs.msg import ImageMarkerArray
 from geometry_msgs.msg import Point
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import ColorRGBA
+from std_msgs.msg import ColorRGBA, Bool
 from visualization_msgs.msg import ImageMarker
 
-from .instrumentation import instrument_routine
+from ifcb.instrumentation import instrument_routine
 
 
 ifcb_ready = threading.Event()
@@ -138,18 +138,24 @@ def on_any_message(pub, data):
 
 
 # Callback for the "startedAsClient" message from the IFCB
-def on_started(pub, *args, **kwargs):
+def on_started(pub, status_pub, *args, **kwargs):
     rospy.loginfo('Established connection to the IFCB')
 
     # Clear the connection lost flag and allow any queued commands to proceed
     connection_lost.clear()
     ifcb_ready.set()
+    
+    # Publish connection status
+    status_pub.publish(Bool(data=True))
 
 # Callback for when connection is lost
-def on_connection_lost():
+def on_connection_lost(status_pub):
     rospy.logwarn('IFCB connection lost, attempting to reconnect...')
     connection_lost.set()
     ifcb_ready.clear()
+    
+    # Publish connection status
+    status_pub.publish(Bool(data=False))
 
 # Reset the data folder to the configured data directory
 def on_interactive_stopped(pub, *_):
@@ -243,7 +249,7 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
                 client.hub_connection.on('messageRelayed',
                     functools.partial(on_any_message, publishers['rx']))
                 client.hub_connection.on('startedAsClient',
-                    functools.partial(on_started, publishers['tx']))
+                    functools.partial(on_started, publishers['tx'], publishers['status']))
                 client.on(('triggerimage',),
                           functools.partial(on_triggerimage, publishers['img']))
                 client.on(('triggercontent',),
@@ -282,6 +288,9 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
             connection_lost.set()
             ifcb_ready.clear()
             
+            # Publish disconnected status
+            on_connection_lost(publishers['status'])
+            
             # Exponential backoff with jitter
             rospy.loginfo(f'Retrying IFCB connection in {current_retry_interval} seconds...')
             time.sleep(current_retry_interval)
@@ -301,6 +310,9 @@ def main():
     img_pub = rospy.Publisher('~image', CompressedImage, queue_size=5)
     roi_pub = rospy.Publisher('~roi/image', CompressedImage, queue_size=5)
     mkr_pub = rospy.Publisher('~roi/markers', ImageMarkerArray, queue_size=5)
+    
+    # Publisher for connection status (latched so new subscribers get current state)
+    status_pub = rospy.Publisher('~connected', Bool, queue_size=1, latch=True)
 
     # Bundle publishers for the connection manager
     publishers = {
@@ -308,7 +320,8 @@ def main():
         'tx': tx_pub,
         'img': img_pub,
         'roi': roi_pub,
-        'mkr': mkr_pub
+        'mkr': mkr_pub,
+        'status': status_pub
     }
 
     # Create a ROS service for sending commands
@@ -325,6 +338,9 @@ def main():
         functools.partial(do_runroutine, tx_pub),
     )
 
+    # Publish initial disconnected status (will be updated when connection succeeds)
+    status_pub.publish(Bool(data=False))
+    
     # Start connection manager in a separate thread
     # It will handle client creation, connection, and callback setup
     connection_lost.set()  # Start in disconnected state to trigger initial connection

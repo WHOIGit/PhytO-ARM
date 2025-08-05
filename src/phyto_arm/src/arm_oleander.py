@@ -52,6 +52,19 @@ arm = None
 dl_pump_pub = None
 dl_ifcb_pub = None
 
+# IFCB connection status tracking
+ifcb_connected = False
+ifcb_connection_event = Event()
+
+def on_ifcb_connection_status(msg):
+    """Callback for IFCB connection status updates"""
+    global ifcb_connected
+    ifcb_connected = msg.data
+    if msg.data:
+        ifcb_connection_event.set()
+    else:
+        ifcb_connection_event.clear()
+
 def send_ifcb_action():
     goal = RunIFCBGoal()
     ifcb_runner.send_goal(goal)
@@ -66,27 +79,65 @@ def await_geofence():
     arm.start_next_task()
 
 def ifcb_sample():
+    if not ifcb_connected:
+        stop_pump()
+        
+        # Important for pump to stop. Wait 2 seconds to give network time to act
+        rospy.sleep(2)
+        rospy.signal_shutdown('IFCB not connected, shutting down')
+        raise Exception('IFCB not connected, shutting down')
     send_ifcb_action()
     arm.start_next_task()
 
-def shutdown_sampling():
+def stop_pump():
     dl_pump_pub.publish(Bool(data=False))
 
+
+def stop_ifcb():
+    dl_pump_pub.publish(Bool(data=False))
     # Wait for the IFCB to finish its current sample
     shutdown_duration = rospy.get_param('tasks/shutdown_wait_duration')
     rospy.logwarn(f'Shutting down sampling for {shutdown_duration} seconds')
     rospy.sleep(shutdown_duration)
     dl_ifcb_pub.publish(Bool(data=False))
+
+def shutdown_sampling():
+    stop_pump()
+    stop_ifcb()
     arm.start_next_task()
 
-def restart_sampling():
+
+def start_pump():
     dl_pump_pub.publish(Bool(data=True))
+
+
+def start_ifcb():
     dl_ifcb_pub.publish(Bool(data=True))
 
-    # Wait for IFCB to start up
+    # Wait for IFCB to connect, with timeout
     restart_duration = rospy.get_param('tasks/restart_wait_duration')
-    rospy.logwarn(f'Waiting for IFCB to start up for {restart_duration} seconds')
-    rospy.sleep(restart_duration)
+    rospy.logwarn(f'Waiting for IFCB to connect (timeout: {restart_duration} seconds)')
+    
+    # If already connected, proceed immediately
+    if ifcb_connected:
+        rospy.logwarn('IFCB already connected, proceeding')
+        return
+    
+    # Wait for connection with timeout
+    if ifcb_connection_event.wait(timeout=restart_duration):
+        rospy.logwarn('IFCB connected successfully')
+    else:
+        stop_pump()
+
+        # Important for pump to stop. Wait 2 seconds to give network time to act
+        rospy.sleep(2)
+        rospy.signal_shutdown('IFCB failed to come up within timeout')
+        raise Exception('IFCB failed to come up within timeout')
+
+
+def restart_sampling():
+    start_pump()
+    start_ifcb()
     arm.start_next_task()
 
 def main():
@@ -99,10 +150,13 @@ def main():
 
     arm = ArmOleander(rospy.get_name())
 
-    # Setup publisher for DL outlet
-    dl_pump_pub = rospy.Publisher('/digital_logger/outlet/pump/status', Bool, queue_size=10)
-    dl_ifcb_pub = rospy.Publisher('/digital_logger/outlet/ifcb/status', Bool, queue_size=10)
+    # Setup publisher for DL outlet control
+    dl_pump_pub = rospy.Publisher('/digital_logger/outlet/pump/control', Bool, queue_size=10)
+    dl_ifcb_pub = rospy.Publisher('/digital_logger/outlet/ifcb/control', Bool, queue_size=10)
 
+    # Subscribe to IFCB connection status
+    rospy.Subscriber('/ifcb/connected', Bool, on_ifcb_connection_status)
+    
     # Setup action client for running IFCB
     ifcb_runner = actionlib.SimpleActionClient('ifcb_runner/sample', RunIFCBAction)
     rospy.loginfo(f'Arm {rospy.get_name()} awaiting IFCB-run action server')
