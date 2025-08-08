@@ -81,7 +81,7 @@ def await_geofence():
 def ifcb_sample():
     if not ifcb_connected:
         stop_pump()
-        
+
         # Important for pump to stop. Wait 2 seconds to give network time to act
         rospy.sleep(2)
         rospy.signal_shutdown('IFCB not connected, shutting down')
@@ -94,16 +94,14 @@ def stop_pump():
 
 
 def stop_ifcb():
-    dl_pump_pub.publish(Bool(data=False))
-    # Wait for the IFCB to finish its current sample
-    shutdown_duration = rospy.get_param('tasks/shutdown_wait_duration')
-    rospy.logwarn(f'Shutting down sampling for {shutdown_duration} seconds')
-    rospy.sleep(shutdown_duration)
     dl_ifcb_pub.publish(Bool(data=False))
 
 def shutdown_sampling():
-    stop_pump()
+    shutdown_duration = rospy.get_param('tasks/shutdown_wait_duration')
+    rospy.logwarn(f'Waiting for IFCB to finish current sample for {shutdown_duration} seconds')
+    rospy.sleep(shutdown_duration)
     stop_ifcb()
+    stop_pump()
     arm.start_next_task()
 
 
@@ -117,12 +115,12 @@ def start_ifcb():
     # Wait for IFCB to connect, with timeout
     restart_duration = rospy.get_param('tasks/restart_wait_duration')
     rospy.logwarn(f'Waiting for IFCB to connect (timeout: {restart_duration} seconds)')
-    
+
     # If already connected, proceed immediately
     if ifcb_connected:
         rospy.logwarn('IFCB already connected, proceeding')
         return
-    
+
     # Wait for connection with timeout
     if ifcb_connection_event.wait(timeout=restart_duration):
         rospy.logwarn('IFCB connected successfully')
@@ -156,7 +154,7 @@ def main():
 
     # Subscribe to IFCB connection status
     rospy.Subscriber('/ifcb/connected', Bool, on_ifcb_connection_status)
-    
+
     # Setup action client for running IFCB
     ifcb_runner = actionlib.SimpleActionClient('ifcb_runner/sample', RunIFCBAction)
     rospy.loginfo(f'Arm {rospy.get_name()} awaiting IFCB-run action server')
