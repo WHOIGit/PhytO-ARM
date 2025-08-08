@@ -97,11 +97,11 @@ def stop_ifcb():
     dl_ifcb_pub.publish(Bool(data=False))
 
 def shutdown_sampling():
+    stop_pump()
     shutdown_duration = rospy.get_param('tasks/shutdown_wait_duration')
     rospy.logwarn(f'Waiting for IFCB to finish current sample for {shutdown_duration} seconds')
     rospy.sleep(shutdown_duration)
     stop_ifcb()
-    stop_pump()
     arm.start_next_task()
 
 
