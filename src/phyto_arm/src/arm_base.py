@@ -99,10 +99,10 @@ class ArmBase:
         if last_fix is None or (current_time - (last_fix_time or 0) > 300): # 5 minutes expiry
             rospy.logwarn_throttle(60, f'{self.arm_name}: GPS fix is missing or expired.')
             if geofence_params.get('strict', False):
-                rospy.logwarn_throttle(5, f'{self.arm_name}: Strict mode enabled, pausing task due to missing/expired GPS.')
+                rospy.logwarn_throttle(5, f'{self.arm_name}: Strict mode enabled.')
                 return True # Pause due to strict mode and missing/expired GPS
             else:
-                rospy.logdebug(f'{self.arm_name}: Strict mode disabled, proceeding without valid GPS.')
+                rospy.logdebug(f'{self.arm_name}: Strict mode disabled.')
                 return False # Don't pause if not strict
         else:
 
@@ -120,7 +120,7 @@ class ArmBase:
                 distance = vincenty_distance(current_point, zone_point).m
 
                 if distance < zone_radius:
-                    rospy.logwarn_throttle(5, f'{self.arm_name}: Inside denied geofence zone ({distance:.1f}m < {zone_radius}m). Pausing task.')
+                    rospy.logwarn_throttle(5, f'{self.arm_name}: Inside denied geofence zone ({distance:.1f}m < {zone_radius}m).')
                     return True # Pause due to being in a denied zone
 
             return False 
