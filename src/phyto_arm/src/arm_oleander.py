@@ -27,6 +27,7 @@ class ArmOleander(ArmBase):
         # Always check if we're in the geofence
         if self.geofence_block():
             if last_task is None or last_task.name == 'shutdown_sampling':
+                rospy.logwarn('Geofence blocked, awaiting geofence clearance')
                 return Task('await_geofence', await_geofence)
             # If not, shut down sampling
             return Task('shutdown_sampling', shutdown_sampling)
