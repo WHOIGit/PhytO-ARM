@@ -5,10 +5,8 @@ import urllib.request
 
 import rospy
 
-from seatrac.msg import PowerLevel
+from seatrac.msg import OutletStatus, PowerLevel
 from std_msgs.msg import Bool as StdBool
-
-from phyto_arm.msg import OutletStatus
 
 
 def send_alerts(alert_config, message):
