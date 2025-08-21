@@ -13,7 +13,6 @@ from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 from phyto_arm.srv import LockCheck, LockCheckRequest, LockOperation, LockOperationRequest
 
 
-
 @dataclass
 class Task:
     '''A task to be executed by an arm.
