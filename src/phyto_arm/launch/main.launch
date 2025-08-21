@@ -11,7 +11,7 @@
 
     <node name="lock_manager" pkg="phyto_arm" type="lock_manager.py" />
 
-    <node name="network_data_capture" pkg="phyto_arm" type="network_data_capture.py" required="false" />
+    <node if="$(arg network_data_capture)" name="network_data_capture" pkg="phyto_arm" type="network_data_capture.py" required="false" />
 
     <group if="$(arg classifier)">
         <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />

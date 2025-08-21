@@ -8,6 +8,7 @@ launch_args:
     ifcb_winch: false
     chanos_winch: false
     digital_logger: true
+    network_data_capture: false
 
 
 alerts:
