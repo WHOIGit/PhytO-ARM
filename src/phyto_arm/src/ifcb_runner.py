@@ -47,8 +47,12 @@ def on_ifcb_msg(msg):
     # Parse the message and see if it is a marker
     marker = None
     parsed = parse_ifcb_msg(msg.data.decode())
+    rospy.logwarn(f"IFCB parsed message: {parsed}")
+    
     if len(parsed) == 2 and parsed[0] == 'reportevent':
         marker = parse_ifcb_marker(parsed[1])
+        if marker:
+            rospy.logwarn(f"IFCB marker - routine: {marker.get('routine')}, kind: {marker.get('kind')}, path: {marker.get('path')}")
 
     # For routines sent with 'interactive:start', the IFCB will tell us when the
     # routine has started and finished. This is the most reliable way to detect
@@ -74,6 +78,7 @@ def on_ifcb_msg(msg):
        marker['value'].get('Arguments', []) == ['{#SamplingSpeed}']:
 
         rospy.loginfo('Should release position hold now')
+        rospy.logwarn(f"IFCB position hold release - marker value: {marker['value']}")
 
         with state.position_hold_condition:
             state.position_hold = False
