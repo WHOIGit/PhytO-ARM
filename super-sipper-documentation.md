@@ -24,15 +24,13 @@ Users will need the IP addresses for the following components:
 - Digital Logger #1
 - Digital Logger #2
 
-## Installation of Super-Sipper on rPi
+## Installation of Super-Sipper on rPi - skip if unit has Super-Sipper pre-installed
 If PhytO-ARM has not been previously installed on the rPi unit, follow the installation steps in the main [PhytO-ARM README](https://github.com/WHOIGit/PhytO-ARM/blob/dcd7d4064e0d8783ed86763b99b0ad49c00cecbc/README.md). 
 
 Connect to the rPi:
 
     ssh hablab@[rPi IP Address]
     pw: [PW]
-
-## Running Super-Sipperchmod +x ~/Desktop/PhytO-ARM-Kill.desktop
 
 On the rPi, confirm you are on the proper PhytO-ARM branch: nathan.figueroa/super-sipper.
 
@@ -55,11 +53,15 @@ If you are not on the super-sipper branch, navigate to it:
     docker pull whoi/phyto-arm:nathan.figueroa-super-sipper
 
 
-### Super-Sipper Config
+## Running Super-Sipper on rPi
+
+Connect the rPi unit to a desktop computer using the included HDMI cord. Use the provide username and pw.
+
+### Update Super-Sipper Config
 
 Unless significant changes need to be made to the super-sipper sequence, users will only need to update the super-sipper config file after PhytO-ARM has been installed.
 
-Navigate to super_sipper_NWFSC.yaml:
+Navigate to super_sipper_NWFSC.yaml in a new terminal window on the rPi unit:
 ```
 cd PhytO-ARM/configs/super_sipper_NWFSC.yaml
 ```
@@ -236,9 +238,9 @@ arm_sipper: #optional
 
 ```
 
-## Running Super-Siper
+### Starting Super-Siper
 
-Confirm that the IFCB is powered up. Start IFCBAcquire and confirm that webUI is loading properly. Consider running a cleaning cycle or a debubble to confirm DAQ and fluids ports are working properly.
+Confirm that the IFCB is powered up. Start IFCBAcquire and confirm that webUI is loading properly using normal IFCB desktop applications. Consider running a cleaning cycle or a debubble to confirm DAQ and fluids ports are working properly.
 
 Next, on the rPi, confirm that the IFCB and two digital logger switches are all reachable on the local network from the rPi:
 
@@ -246,15 +248,9 @@ Next, on the rPi, confirm that the IFCB and two digital logger switches are all 
     eg. ping 192.168.13.2 
 
 
-Open a new terminal window on the rPi. First, navigate into the PhytO-ARM directory.
+From the home window on the rPi, you should see two Desktop icons: PhytO-ARM Super Sipper and PhytO-ARM kill. You can use these shortcuts to start and stop PhytO-ARM.
 
-To start super-sipper, run the following command from the `PhytO-ARM` directory:
-
-
-    ./scripts/tmux_run.sh ./configs/super_sipper_NWFSC.yaml
-
-
-This will open a tmux window, which allows PhytO-ARM to run even after the original terminal window is closed. To exit out of this window, use ctl+b d. See [tmux cheat sheet](https://tmuxcheatsheet.com/) for more tmux-specific commands.
+![IMG_2078](https://github.com/user-attachments/assets/14b16a67-3c25-4606-868f-d5520a661862)
 
 Now back in the main rPi terminal window, confirm that the webnode is publishing data correctly:
 
@@ -268,15 +264,8 @@ hablab@papi2:~/PhytO-ARM$ curl http://localhost:8098
 ```
 The web node automatically discovers and publishes all metadata fields defined in the `arm_sipper.samples[].metadata` sections. Only the metadata fields from the currently active sample will be shown - when switching samples, fields not present in the new sample are automatically removed from the response.
 
-To follow along with the super-sipper sequence, users can re-attach to the PhytO-ARM tmux window:
-
-```
-tmux attach -t phyto-arm
-```
 
 Finally, confirm that the IFCB custom routine loaded and the IFCB is sampling as expected on the webUI.
 
-To abort PhytO-ARM, run:
-
-```
-./scripts/tmux_kill.sh
+### Stopping Super-Sipper
+To abort PhytO-ARM, click the PhytO-ARM kill shortcut.
