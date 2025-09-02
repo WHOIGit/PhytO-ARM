@@ -138,15 +138,12 @@ def on_any_message(pub, data):
 
 
 # Callback for the "startedAsClient" message from the IFCB
-def on_started(pub, status_pub, *args, **kwargs):
+def on_started(*args, **kwargs):
     rospy.loginfo('Established connection to the IFCB')
 
     # Clear the connection lost flag and allow any queued commands to proceed
     connection_lost.clear()
     ifcb_ready.set()
-    
-    # Publish connection status
-    status_pub.publish(Bool(data=True))
 
 # Callback for when connection is lost
 def on_connection_lost(status_pub):
@@ -248,8 +245,7 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
                 # Set up callbacks before connecting
                 client.hub_connection.on('messageRelayed',
                     functools.partial(on_any_message, publishers['rx']))
-                client.hub_connection.on('startedAsClient',
-                    functools.partial(on_started, publishers['tx'], publishers['status']))
+                client.hub_connection.on('startedAsClient', on_started)
                 client.on(('triggerimage',),
                           functools.partial(on_triggerimage, publishers['img']))
                 client.on(('triggercontent',),
@@ -270,10 +266,12 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
                 
                 # Check if we got the startedAsClient callback
                 if ifcb_ready.is_set() and not connection_lost.is_set():
+                    rospy.loginfo('IFCB connection successful')
                     # Store the working client globally
                     with client_lock:
                         ifcb_client = client
-                    rospy.loginfo('IFCB connection successful')
+                    # Publish connection status after client is set
+                    publishers['status'].publish(Bool(data=True))
                     current_retry_interval = retry_interval  # Reset retry interval on success
                 else:
                     raise ConnectionError("Connection did not establish properly")
