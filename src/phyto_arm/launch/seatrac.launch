@@ -1,15 +1,33 @@
 <launch>
-    <!-- Most settings are in config.yaml, which is easier to edit -->
+    <!-- Most settings are in config.yaml, which is easier to edit. -->
     <rosparam command="load" file="$(arg config_file)" />
 
-    <node name="seatrac" pkg="seatrac" type="seatrac_node.py" required="true">
-        <remap from="~in" to="~comms/in" />
-        <remap from="~out" to="~comms/out" />
-    </node>
+    <node name="ifcb" pkg="ifcb" type="ifcb" />
 
-    <node ns="seatrac" name="comms" pkg="ds_util_nodes" type="bridge_node"
-          required="true" />
+    <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
 
-    <node name="seatrac_starlink_manager" pkg="phyto_arm"
-          type="seatrac_starlink_manager.py" required="true" />
+    <group>
+        <node name="seatrac" pkg="seatrac" type="seatrac_node.py">
+            <remap from="~in" to="~comms/in" />
+            <remap from="~out" to="~comms/out" />
+        </node>
+
+        <node ns="seatrac" name="comms" pkg="ds_util_nodes" type="bridge_node"/>
+
+        <node name="seatrac_starlink_manager" pkg="phyto_arm"
+            type="seatrac_starlink_manager.py" />
+    </group>
+
+    <!-- Match namespace from arm_ifcb.launch -->
+    <group ns="arm_ifcb">
+        <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
+
+        <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
+
+        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+            <remap from="~in" to="ctd_comms/in" />
+        </node>
+
+        <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
+    </group>
 </launch>
