@@ -1,7 +1,9 @@
+# Cache buster: 1 -- increment to force rebuild of the container image layer
+
 aiohttp==3.10.11
 pyModbusTCP==0.1.8
 scipy==1.10
-
+geopy==2.4.1
 # Workaround - eventually should move to ros-triton-classifier
 # and make PhytO-ARM triton agnostic
 tritonclient[all]==2.33.0
