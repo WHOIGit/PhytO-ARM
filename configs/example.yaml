@@ -121,6 +121,8 @@ arm_ifcb:
         # Interval at which we run a debubble and bead sample. Make this a multiple of 
         # the clean interval if you want a clean after each bead sample.
         bead_interval: 1440  # minutes, 0 = never
+        # Should we flush sample tube after each sample?
+        flush_after_sample: false
 
     ctd_topic: '/arm_ifcb/ctd/depth'
 
