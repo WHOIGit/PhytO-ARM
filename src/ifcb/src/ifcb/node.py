@@ -16,21 +16,21 @@ from ds_core_msgs.msg import RawData
 from foxglove_msgs.msg import ImageMarkerArray
 from geometry_msgs.msg import Point
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import ColorRGBA, Bool
+from std_msgs.msg import Bool, ColorRGBA
 from visualization_msgs.msg import ImageMarker
 
 from .instrumentation import instrument_routine
 
 
 ifcb_ready = threading.Event()
-connection_lost = threading.Event()
+connection_lost = True  # Start disconnected
 ifcb_client = None  # Global client managed by connection manager
 client_lock = threading.Lock()  # Protect client access
 
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
 def do_command(pub, req):
-    if connection_lost.is_set():
+    if connection_lost:
         rospy.logwarn(f'Cannot send command "{req.command}": IFCB is not connected')
         return srv.CommandResponse()  # Commands don't return success/failure
 
@@ -51,7 +51,7 @@ def do_runroutine(pub, req):
     # This means that the routines *must* be written to disk at the expected
     # location.
 
-    if connection_lost.is_set():
+    if connection_lost:
         rospy.logwarn(f'Cannot run routine "{req.routine}": IFCB is not connected')
         return srv.RunRoutineResponse(success=False)
 
@@ -88,11 +88,13 @@ def do_runroutine(pub, req):
 
 # Send a command to the IFCB host and publish it to ROS
 def send_command(pub, command):
+    global connection_lost
+
     # Wait for the IFCB to be ready; this prevents sending a command too early
     ifcb_ready.wait()
 
     # Check if we're connected before trying to send
-    if connection_lost.is_set():
+    if connection_lost:
         rospy.logwarn(f'IFCB disconnected, cannot send command: {command}')
         return
 
@@ -117,7 +119,7 @@ def send_command(pub, command):
     except Exception as e:
         rospy.logerr(f'Failed to send command "{command}": {e}')
         # Mark connection as lost to trigger reconnection
-        connection_lost.set()
+        connection_lost = True
         ifcb_ready.clear()
 
 
@@ -136,16 +138,18 @@ def on_any_message(pub, data):
 
 # Callback for the "startedAsClient" message from the IFCB
 def on_started(*args, **kwargs):
+    global connection_lost
     rospy.loginfo('Established connection to the IFCB')
 
     # Clear the connection lost flag and allow any queued commands to proceed
-    connection_lost.clear()
+    connection_lost = False
     ifcb_ready.set()
 
 # Callback for when connection is lost
 def on_connection_lost(status_pub):
+    global connection_lost
     rospy.logwarn('IFCB connection lost, attempting to reconnect...')
-    connection_lost.set()
+    connection_lost = True
     ifcb_ready.clear()
 
     # Publish connection status
@@ -213,66 +217,67 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
 
 # Manages IFCB client creation, connection, and callback setup with automatic retry on failure.
 def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
-    global ifcb_client
+    global ifcb_client, connection_lost
     current_retry_interval = retry_interval
 
     while not rospy.is_shutdown():
+        if connection_lost or not ifcb_ready.is_set():
+            rospy.loginfo('Creating IFCB client and attempting connection...')
+            continue
         try:
-            if connection_lost.is_set() or not ifcb_ready.is_set():
-                rospy.loginfo('Creating IFCB client and attempting connection...')
+            try:
+                client = IFCBClient(
+                    f'ws://{rospy.get_param("~address")}'\
+                        f':{rospy.get_param("~port", 8092)}/ifcbHub',
+                    rospy.get_param('~serial'),
+                )
+            except Exception as client_error:
+                raise ConnectionError(f"Failed to create IFCB client: {client_error}")
 
-                # Create the client
-                try:
-                    client = IFCBClient(
-                        f'ws://{rospy.get_param("~address")}'\
-                            f':{rospy.get_param("~port", 8092)}/ifcbHub',
-                        rospy.get_param('~serial'),
-                    )
-                except Exception as client_error:
-                    raise ConnectionError(f"Failed to create IFCB client: {client_error}")
+            # Set up callbacks before connecting
+            client.hub_connection.on('messageRelayed',
+                functools.partial(on_any_message, publishers['rx']))
+            client.hub_connection.on('startedAsClient', on_started)
+            client.on(('triggerimage',),
+                        functools.partial(on_triggerimage, publishers['img']))
+            client.on(('triggercontent',),
+                        functools.partial(on_triggercontent, publishers['roi'], publishers['mkr']))
+            client.on(('triggerrois',),
+                        functools.partial(on_triggerrois, publishers['roi'], publishers['mkr']))
+            client.on(('valuechanged','interactive','stopped',),
+                        functools.partial(on_interactive_stopped, publishers['tx']))
 
-                # Set up callbacks before connecting
-                client.hub_connection.on('messageRelayed',
-                    functools.partial(on_any_message, publishers['rx']))
-                client.hub_connection.on('startedAsClient', on_started)
-                client.on(('triggerimage',),
-                          functools.partial(on_triggerimage, publishers['img']))
-                client.on(('triggercontent',),
-                          functools.partial(on_triggercontent, publishers['roi'], publishers['mkr']))
-                client.on(('triggerrois',),
-                          functools.partial(on_triggerrois, publishers['roi'], publishers['mkr']))
-                client.on(('valuechanged','interactive','stopped',),
-                          functools.partial(on_interactive_stopped, publishers['tx']))
+            # Try to connect
+            try:
+                client.connect()
+            except Exception as connect_error:
+                raise ConnectionError(f"Failed to initiate connection: {connect_error}")
 
-                # Try to connect
-                try:
-                    client.connect()
-                except Exception as connect_error:
-                    raise ConnectionError(f"Failed to initiate connection: {connect_error}")
+            # Wait a bit to see if connection establishes
+            time.sleep(2)
 
-                # Wait a bit to see if connection establishes
-                time.sleep(2)
-
-                # Check if we got the startedAsClient callback
-                if ifcb_ready.is_set() and not connection_lost.is_set():
-                    rospy.loginfo('IFCB connection successful')
-                    # Store the working client globally
-                    with client_lock:
-                        ifcb_client = client
-                    # Publish connection status after client is set
-                    publishers['status'].publish(Bool(data=True))
-                    current_retry_interval = retry_interval  # Reset retry interval on success
-                else:
-                    raise ConnectionError("Connection did not establish properly")
+            # Check if we got the startedAsClient callback
+            if ifcb_ready.is_set() and not connection_lost:
+                rospy.loginfo('IFCB connection successful')
+                # Store the working client globally
+                with client_lock:
+                    ifcb_client = client
+                # Publish connection status after client is set
+                publishers['status'].publish(Bool(data=True))
+                current_retry_interval = retry_interval  # Reset retry interval on success
+            else:
+                raise ConnectionError("Connection did not establish properly")
 
             # Connection monitoring - check every few seconds
             time.sleep(5)
 
-        except Exception:
+        except Exception as connect_error:
+            rospy.logwarn(f"Unable to establish connection to IFCB: {connect_error}")
+
             # Clear the failed client
             with client_lock:
                 ifcb_client = None
-            connection_lost.set()
+            connection_lost = True
             ifcb_ready.clear()
 
             # Publish disconnected status
@@ -330,7 +335,6 @@ def main():
 
     # Start connection manager in a separate thread
     # It will handle client creation, connection, and callback setup
-    connection_lost.set()  # Start in disconnected state to trigger initial connection
     connection_thread = threading.Thread(
         target=connection_manager,
         args=(publishers,),
