@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass
 from threading import Lock
-import math
 
 import actionlib
 from geopy.distance import distance as vincenty_distance
@@ -96,34 +95,35 @@ class ArmBase:
             last_fix = self._last_gps_fix
             last_fix_time = self._last_gps_fix_time
 
-        if last_fix is None or (current_time - (last_fix_time or 0) > 300): # 5 minutes expiry
+        # Check that we've had a fix in the last 5 minutes
+        no_recent_fix = last_fix is None or (current_time - (last_fix_time or 0) > 300)
+        if no_recent_fix:
             rospy.logwarn_throttle(60, f'{self.arm_name}: GPS fix is missing or expired.')
             if geofence_params.get('strict', False):
-                rospy.logwarn_throttle(5, f'{self.arm_name}: Strict mode enabled.')
+                rospy.loginfo_throttle(60, f'{self.arm_name}: Strict GPS lock enabled.')
                 return True # Pause due to strict mode and missing/expired GPS
             else:
-                rospy.logdebug(f'{self.arm_name}: Strict mode disabled.')
+                rospy.loginfo_throttle(60, f'{self.arm_name}: Strict GPS lock not enabled, proceeding with task.')
                 return False # Don't pause if not strict
-        else:
 
-            # Valid GPS fix, check deny zones
-            deny_zones = geofence_params.get('deny', [])
-            current_point = (last_fix.latitude, last_fix.longitude)
+        # Valid GPS fix, check deny zones
+        deny_zones = geofence_params.get('deny', [])
+        current_point = (last_fix.latitude, last_fix.longitude)
 
-            for zone in deny_zones:
-                zone_point = (zone.get('latitude'), zone.get('longitude'))
-                zone_radius = zone.get('radius')
+        for zone in deny_zones:
+            zone_point = (zone.get('latitude'), zone.get('longitude'))
+            zone_radius = zone.get('radius')
 
-                if None in zone_point or zone_radius is None:
-                    raise ValueError(f'{self.arm_name}: Invalid deny zone definition: {zone}')
+            if None in zone_point or zone_radius is None:
+                raise ValueError(f'{self.arm_name}: Invalid deny zone definition: {zone}')
 
-                distance = vincenty_distance(current_point, zone_point).m
+            distance = vincenty_distance(current_point, zone_point).m
 
-                if distance < zone_radius:
-                    rospy.logwarn_throttle(5, f'{self.arm_name}: Inside denied geofence zone ({distance:.1f}m < {zone_radius}m).')
-                    return True # Pause due to being in a denied zone
+            if distance < zone_radius:
+                rospy.logwarn_throttle(60, f'{self.arm_name}: Inside denied geofence zone ({distance:.1f}m < {zone_radius}m).')
+                return True # Pause due to being in a denied zone
 
-            return False 
+        return False
 
     def winch_busy(self):
         state = self.winch_client.get_state()
