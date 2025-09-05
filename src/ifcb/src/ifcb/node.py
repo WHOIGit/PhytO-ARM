@@ -221,10 +221,11 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
     current_retry_interval = retry_interval
 
     while not rospy.is_shutdown():
-        if connection_lost or not ifcb_ready.is_set():
-            rospy.loginfo('Creating IFCB client and attempting connection...')
+        if not connection_lost and ifcb_ready.is_set():
+            rospy.sleep(5)
             continue
         try:
+            rospy.loginfo('Creating IFCB client and attempting connection...')
             try:
                 client = IFCBClient(
                     f'ws://{rospy.get_param("~address")}'\
@@ -267,9 +268,6 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
                 current_retry_interval = retry_interval  # Reset retry interval on success
             else:
                 raise ConnectionError("Connection did not establish properly")
-
-            # Connection monitoring - check every few seconds
-            time.sleep(5)
 
         except Exception as connect_error:
             rospy.logwarn(f"Unable to establish connection to IFCB: {connect_error}")
