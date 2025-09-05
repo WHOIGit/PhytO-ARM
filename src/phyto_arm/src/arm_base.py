@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from threading import Lock
 
 import actionlib
-from geopy.distance import distance as vincenty_distance
 import rospy
+
+from geopy.distance import distance as vincenty_distance
 from sensor_msgs.msg import NavSatFix
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
