@@ -148,6 +148,17 @@ arm_ifcb:
         # Profile will only consider peaks that are at most this deep
         peak_max_depth: 10.0 # optional, m
 
+    geofence: #optional
+        # If true, arm will only run tasks where GPS positions allow
+        enabled: true
+        # If true, will pause tasks if last GPS fix is over 5 minutes old
+        strict: false 
+        # List of geofence zones to deny
+        deny:
+            - latitude: 32.7157
+              longitude: -117.2500
+              radius: 1000 # meters
+
     motor: #optional
         address: "192.168.13.3"
         port: 502
