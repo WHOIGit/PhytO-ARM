@@ -32,7 +32,14 @@ if [ -n "$1" ]; then
     CONFIG=$1
 fi
 
-docker run --rm -it \
+# Check if we're running in systemd (no TTY available)
+if [ -t 0 ]; then
+    DOCKER_FLAGS="--rm -it"
+else
+    DOCKER_FLAGS="--rm"
+fi
+
+docker run --rm $DOCKER_FLAGS \
     --name phyto-arm \
     --publish 9090:9090/tcp \
     --publish 8098:8098/tcp \
