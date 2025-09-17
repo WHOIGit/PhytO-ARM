@@ -40,6 +40,9 @@ RUN python3 -m pip install "Cython<3.1"
 COPY deps/python3-requirements.txt ./
 RUN python3 -m pip install -r python3-requirements.txt
 
+# Install additional dependencies for daemon
+RUN python3 -m pip install fastapi uvicorn[standard]
+
 
 # Clone third-party dependencies from VCS
 COPY deps/deps.rosinstall ./
@@ -91,7 +94,14 @@ RUN bash -c "source devel/setup.bash \
         rbr_maestro3_ctd \
 "
 
-# Copy the launch tool
+# Copy the launch tools
 ENV DONT_SCREEN=1
 ENV NO_VIRTUALENV=1
 COPY ./phyto-arm ./phyto-arm
+COPY ./phyto_arm_daemon.py ./phyto_arm_daemon.py
+
+# Expose web interface port
+EXPOSE 8080
+
+# Default command runs the daemon
+CMD ["python3", "./phyto_arm_daemon.py", "/configs/config.yaml"]
