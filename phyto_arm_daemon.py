@@ -160,6 +160,71 @@ class PhytoARMProcess:
         # Update running state if needed
         self.is_running()
         return self.info
+    
+    def get_logs(self, max_lines: int = 100, log_dir: str = None) -> List[str]:
+        """Get recent log lines from ROS log files"""
+        if not log_dir:
+            return ["No log directory configured"]
+            
+        try:
+            # Look for log files related to this process
+            latest_dir = os.path.join(log_dir, 'latest')
+            if not os.path.exists(latest_dir):
+                return ["Log directory not found"]
+            
+            # Find log files that match this process name
+            log_files = []
+            for filename in os.listdir(latest_dir):
+                match = False
+                
+                if self.name == 'roscore':
+                    # For roscore, look for master.log and rosout.log
+                    match = 'master.log' in filename or 'rosout.log' in filename
+                elif self.name == 'rosbag':
+                    # For rosbag, look for any rosbag-related logs
+                    match = 'rosbag' in filename.lower()
+                else:
+                    # For launch files (arm_ifcb, etc.), look for logs that start with the name
+                    # or contain the name as a prefix (e.g., arm_ifcb-arm-1.log)
+                    match = (filename.startswith(self.name + '-') or 
+                            filename.startswith(self.name + '.') or
+                            filename == self.name + '.log')
+                
+                if match:
+                    log_files.append(os.path.join(latest_dir, filename))
+            
+            if not log_files:
+                return [f"No log files found for {self.name} in {latest_dir}"]
+            
+            # Sort by modification time, most recent first
+            log_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+            
+            all_lines = []
+            all_lines.append(f"=== Found {len(log_files)} log file(s) for {self.name} ===")
+            
+            # Read from all matching log files, starting with most recent
+            for i, log_file in enumerate(log_files[:3]):  # Limit to 3 files to avoid too much output
+                filename = os.path.basename(log_file)
+                all_lines.append(f"\n--- {filename} ---")
+                
+                try:
+                    with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+                        lines = f.readlines()
+                        # Take fewer lines per file if multiple files
+                        lines_per_file = max(20, max_lines // len(log_files))
+                        recent_lines = [line.rstrip() for line in lines[-lines_per_file:]]
+                        all_lines.extend(recent_lines)
+                except Exception as e:
+                    all_lines.append(f"Error reading {filename}: {str(e)}")
+            
+            return all_lines
+                
+        except Exception as e:
+            return [f"Error reading logs: {str(e)}"]
+    
+    def _read_output(self):
+        """Legacy method - now unused since we read ROS log files directly"""
+        pass
 
 
 class PhytoARMDaemon:
@@ -325,11 +390,71 @@ class PhytoARMDaemon:
             status[name] = process.get_info()
         return status
     
+    def get_available_log_files(self) -> Dict:
+        """Get list of available log files"""
+        # Get log directory from config
+        log_dir = self.config.get('launch_args', {}).get('log_dir') if self.config else None
+        if not log_dir:
+            log_dir = os.environ.get('ROS_LOG_DIR', '/tmp')
+        
+        latest_dir = os.path.join(log_dir, 'latest')
+        
+        if not os.path.exists(latest_dir):
+            return {"error": f"Log directory not found: {latest_dir}", "files": []}
+        
+        try:
+            log_files = []
+            for filename in os.listdir(latest_dir):
+                if filename.endswith('.log'):
+                    file_path = os.path.join(latest_dir, filename)
+                    file_info = {
+                        "name": filename,
+                        "path": file_path,
+                        "size": os.path.getsize(file_path),
+                        "modified": os.path.getmtime(file_path)
+                    }
+                    log_files.append(file_info)
+            
+            # Sort by modification time, most recent first
+            log_files.sort(key=lambda x: x["modified"], reverse=True)
+            
+            return {"log_dir": latest_dir, "files": log_files}
+            
+        except Exception as e:
+            return {"error": f"Error reading log directory: {str(e)}", "files": []}
+    
+    def get_log_file_content(self, filename: str, max_lines: int = 100) -> Dict:
+        """Get content of a specific log file"""
+        # Get log directory from config
+        log_dir = self.config.get('launch_args', {}).get('log_dir') if self.config else None
+        if not log_dir:
+            log_dir = os.environ.get('ROS_LOG_DIR', '/tmp')
+        
+        file_path = os.path.join(log_dir, 'latest', filename)
+        
+        if not os.path.exists(file_path):
+            return {"error": f"Log file not found: {filename}", "lines": []}
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+                recent_lines = [line.rstrip() for line in lines[-max_lines:]]
+                
+            return {
+                "filename": filename,
+                "lines": recent_lines,
+                "total_lines": len(lines),
+                "file_size": os.path.getsize(file_path)
+            }
+        except Exception as e:
+            return {"error": f"Error reading file {filename}: {str(e)}", "lines": []}
+    
     async def _monitor_processes(self):
         """Background task to monitor process health"""
         while not self._shutdown:
             try:
                 for name, process in list(self.processes.items()):
+                    # Check if process failed
                     if not process.is_running() and process.info.state == ProcessState.FAILED:
                         logger.error(f"Process {name} has failed")
                         
@@ -431,6 +556,22 @@ async def get_dashboard():
             .btn:disabled { background: #bdc3c7; cursor: not-allowed; }
             .refresh-btn { position: fixed; top: 20px; right: 20px; z-index: 1000; }
             .logs { margin-top: 20px; background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+            .btn.logs { background: #3498db; color: white; }
+            .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+            .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 800px; max-height: 80%; overflow-y: auto; }
+            .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+            .close:hover { color: black; }
+            .log-output { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; max-height: 400px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+            .tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+            .tab { padding: 12px 24px; cursor: pointer; border: none; background: #f1f1f1; margin-right: 4px; border-radius: 4px 4px 0 0; }
+            .tab.active { background: #2c3e50; color: white; }
+            .tab-content { display: none; }
+            .tab-content.active { display: block; }
+            .log-file-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
+            .log-file-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 2px solid transparent; }
+            .log-file-card:hover { border-color: #3498db; }
+            .log-file-card.selected { border-color: #2c3e50; background: #ecf0f1; }
+            .log-viewer { background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 8px; height: 500px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
         </style>
     </head>
     <body>
@@ -439,11 +580,33 @@ async def get_dashboard():
         <div class="container">
             <div class="header">
                 <h1>🦠 PhytO-ARM Control Dashboard</h1>
-                <p>Autonomous oceanographic sensing platform control interface</p>
             </div>
             
-            <div id="processes" class="process-grid">
-                <!-- Processes will be loaded here -->
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('processes')">🔧 Processes</button>
+                <button class="tab" onclick="switchTab('logs')">📄 Logs</button>
+            </div>
+            
+            <!-- Processes Tab -->
+            <div id="processes-tab" class="tab-content active">
+                <div id="processes" class="process-grid">
+                    <!-- Processes will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Logs Tab -->
+            <div id="logs-tab" class="tab-content">
+                <div class="log-file-list" id="logFileList">
+                    <!-- Log files will be loaded here -->
+                </div>
+                <div id="logViewer" class="log-viewer">
+                    Select a log file above to view its contents
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn start" onclick="refreshLogContent()">🔄 Refresh Log</button>
+                    <button class="btn start" onclick="loadLogFiles()">📁 Refresh File List</button>
+                </div>
             </div>
         </div>
 
@@ -548,8 +711,124 @@ async def get_dashboard():
                 }
             }
             
-            // Auto-refresh every 5 seconds
-            setInterval(loadStatus, 5000);
+            // Tab switching
+            function switchTab(tabName) {
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                document.getElementById(tabName + '-tab').classList.add('active');
+                
+                // Add active class to clicked tab
+                event.target.classList.add('active');
+                
+                // Load log files when switching to logs tab
+                if (tabName === 'logs') {
+                    loadLogFiles();
+                }
+            }
+            
+            let currentLogFile = '';
+            
+            async function loadLogFiles() {
+                try {
+                    const response = await fetch('/api/log_files');
+                    const data = await response.json();
+                    
+                    const container = document.getElementById('logFileList');
+                    container.innerHTML = '';
+                    
+                    if (data.error) {
+                        container.innerHTML = `<div class="log-file-card"><h3>Error</h3><p>${data.error}</p></div>`;
+                        return;
+                    }
+                    
+                    if (data.files.length === 0) {
+                        container.innerHTML = '<div class="log-file-card"><h3>No Log Files</h3><p>No log files found</p></div>';
+                        return;
+                    }
+                    
+                    data.files.forEach(file => {
+                        const card = document.createElement('div');
+                        card.className = 'log-file-card';
+                        card.onclick = () => selectLogFile(file.name);
+                        
+                        const fileSize = (file.size / 1024).toFixed(1);
+                        const modDate = new Date(file.modified * 1000).toLocaleString();
+                        
+                        card.innerHTML = `
+                            <h4>${file.name}</h4>
+                            <p><strong>Size:</strong> ${fileSize} KB</p>
+                            <p><strong>Modified:</strong> ${modDate}</p>
+                        `;
+                        
+                        container.appendChild(card);
+                    });
+                    
+                } catch (error) {
+                    console.error('Failed to load log files:', error);
+                    document.getElementById('logFileList').innerHTML = 
+                        '<div class="log-file-card"><h3>Error</h3><p>Failed to load log files</p></div>';
+                }
+            }
+            
+            async function selectLogFile(filename) {
+                // Update selected state
+                document.querySelectorAll('.log-file-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                event.target.closest('.log-file-card').classList.add('selected');
+                
+                currentLogFile = filename;
+                await refreshLogContent();
+            }
+            
+            async function refreshLogContent() {
+                if (!currentLogFile) return;
+                
+                try {
+                    const response = await fetch(`/api/log_content/${currentLogFile}?max_lines=200`);
+                    const data = await response.json();
+                    
+                    const viewer = document.getElementById('logViewer');
+                    
+                    if (data.error) {
+                        viewer.textContent = `Error: ${data.error}`;
+                        return;
+                    }
+                    
+                    const header = `=== ${data.filename} ===\\n` +
+                                 `Total lines: ${data.total_lines} | File size: ${(data.file_size / 1024).toFixed(1)} KB\\n` +
+                                 `Showing last ${data.lines.length} lines\\n\\n`;
+                    
+                    viewer.textContent = header + data.lines.join('\\n');
+                    
+                    // Scroll to bottom
+                    viewer.scrollTop = viewer.scrollHeight;
+                    
+                } catch (error) {
+                    console.error('Failed to load log content:', error);
+                    document.getElementById('logViewer').textContent = 'Failed to load log content.';
+                }
+            }
+            
+            // Auto-refresh functionality
+            setInterval(loadStatus, 5000);  // Refresh processes every 5 seconds
+            
+            // Auto-refresh logs if a file is selected and logs tab is active
+            setInterval(() => {
+                const logsTabActive = document.getElementById('logs-tab').classList.contains('active');
+                if (logsTabActive && currentLogFile) {
+                    refreshLogContent();
+                }
+            }, 3000);  // Refresh logs every 3 seconds when viewing
             
             // Initial load
             async function initialize() {
@@ -580,6 +859,24 @@ async def api_launch_configs():
         raise HTTPException(status_code=500, detail="Daemon not initialized")
     
     return daemon.launch_configs
+
+
+@app.get("/api/log_files")
+async def api_get_log_files():
+    """Get list of available log files"""
+    if not daemon:
+        raise HTTPException(status_code=500, detail="Daemon not initialized")
+    
+    return daemon.get_available_log_files()
+
+
+@app.get("/api/log_content/{filename}")
+async def api_get_log_content(filename: str, max_lines: int = 100):
+    """Get content of a specific log file"""
+    if not daemon:
+        raise HTTPException(status_code=500, detail="Daemon not initialized")
+    
+    return daemon.get_log_file_content(filename, max_lines)
 
 
 @app.post("/api/start/{process_name}")
