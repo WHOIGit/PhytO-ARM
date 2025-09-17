@@ -1,0 +1,1133 @@
+[WARN] [1755887747.528491]: IFCB parsed message: ['syringetrack', 0.4]
+[WARN] [1755887748.536745]: IFCB parsed message: ['syringetrack', 0.39]
+[WARN] [1755887749.546774]: IFCB parsed message: ['syringetrack', 0.39]
+[WARN] [1755887750.558120]: IFCB parsed message: ['syringetrack', 0.39]
+[WARN] [1755887751.568179]: IFCB parsed message: ['syringetrack', 0.38]
+[WARN] [1755887752.388409]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887752.586805]: IFCB parsed message: ['syringetrack', 0.38]
+[WARN] [1755887753.610214]: IFCB parsed message: ['syringetrack', 0.37]
+[WARN] [1755887754.612867]: IFCB parsed message: ['syringetrack', 0.37]
+[WARN] [1755887755.623345]: IFCB parsed message: ['syringetrack', 0.36]
+[WARN] [1755887756.637090]: IFCB parsed message: ['syringetrack', 0.36]
+[WARN] [1755887757.391286]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887757.649657]: IFCB parsed message: ['syringetrack', 0.36]
+[WARN] [1755887758.665373]: IFCB parsed message: ['syringetrack', 0.35]
+[WARN] [1755887759.679477]: IFCB parsed message: ['syringetrack', 0.35]
+[WARN] [1755887760.687539]: IFCB parsed message: ['syringetrack', 0.34]
+[WARN] [1755887761.704621]: IFCB parsed message: ['syringetrack', 0.34]
+[WARN] [1755887762.389687]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887762.710068]: IFCB parsed message: ['syringetrack', 0.33]
+[WARN] [1755887763.725965]: IFCB parsed message: ['syringetrack', 0.33]
+[WARN] [1755887764.740879]: IFCB parsed message: ['syringetrack', 0.33]
+[WARN] [1755887765.753994]: IFCB parsed message: ['syringetrack', 0.32]
+[WARN] [1755887766.763407]: IFCB parsed message: ['syringetrack', 0.32]
+[WARN] [1755887767.389111]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887767.780560]: IFCB parsed message: ['syringetrack', 0.31]
+[WARN] [1755887768.789171]: IFCB parsed message: ['syringetrack', 0.31]
+[WARN] [1755887769.793730]: IFCB parsed message: ['syringetrack', 0.31]
+[WARN] [1755887770.807223]: IFCB parsed message: ['syringetrack', 0.3]
+[WARN] [1755887771.824433]: IFCB parsed message: ['syringetrack', 0.3]
+[WARN] [1755887772.390409]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887772.834642]: IFCB parsed message: ['syringetrack', 0.29]
+[WARN] [1755887773.851220]: IFCB parsed message: ['syringetrack', 0.29]
+[WARN] [1755887774.860567]: IFCB parsed message: ['syringetrack', 0.28]
+[WARN] [1755887775.867716]: IFCB parsed message: ['syringetrack', 0.28]
+[WARN] [1755887776.882095]: IFCB parsed message: ['syringetrack', 0.28]
+[WARN] [1755887777.390340]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887777.898295]: IFCB parsed message: ['syringetrack', 0.27]
+[WARN] [1755887778.911262]: IFCB parsed message: ['syringetrack', 0.27]
+[WARN] [1755887779.915889]: IFCB parsed message: ['syringetrack', 0.26]
+[WARN] [1755887780.938146]: IFCB parsed message: ['syringetrack', 0.26]
+[WARN] [1755887781.952041]: IFCB parsed message: ['syringetrack', 0.25]
+[WARN] [1755887782.389379]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887782.958434]: IFCB parsed message: ['syringetrack', 0.25]
+[WARN] [1755887783.971204]: IFCB parsed message: ['syringetrack', 0.25]
+[WARN] [1755887784.983995]: IFCB parsed message: ['syringetrack', 0.24]
+[WARN] [1755887785.988682]: IFCB parsed message: ['syringetrack', 0.24]
+[WARN] [1755887786.999663]: IFCB parsed message: ['syringetrack', 0.23]
+[WARN] [1755887787.391817]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887788.016380]: IFCB parsed message: ['syringetrack', 0.23]
+[WARN] [1755887789.036289]: IFCB parsed message: ['syringetrack', 0.23]
+[WARN] [1755887790.048706]: IFCB parsed message: ['syringetrack', 0.22]
+[WARN] [1755887791.060945]: IFCB parsed message: ['syringetrack', 0.22]
+[WARN] [1755887792.073343]: IFCB parsed message: ['syringetrack', 0.21]
+[WARN] [1755887792.390967]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887793.089991]: IFCB parsed message: ['syringetrack', 0.21]
+[WARN] [1755887794.104835]: IFCB parsed message: ['syringetrack', 0.2]
+[WARN] [1755887795.131748]: IFCB parsed message: ['syringetrack', 0.2]
+[WARN] [1755887796.147708]: IFCB parsed message: ['syringetrack', 0.2]
+[WARN] [1755887796.628191]: IFCB parsed message: ['graphchanged', 0.01285553, 0.05252123, 0.07046282, 0.054160953, 852, 270, 3, 0.45, 0.6, 0.13, 0.13
+, datetime.datetime(2025, 8, 22, 6, 36)]
+[WARN] [1755887796.633453]: IFCB parsed message: ['triggerchanged', 3, 'saved', 3, 0]
+[WARN] [1755887796.639552]: IFCB parsed message: ['triggerchanged', 3, 'processed', 1, 3, 2]
+[WARN] [1755887797.162690]: IFCB parsed message: ['syringetrack', 0.19]
+[WARN] [1755887797.391127]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.2]
+[WARN] [1755887798.172673]: IFCB parsed message: ['syringetrack', 0.19]
+[WARN] [1755887799.190424]: IFCB parsed message: ['syringetrack', 0.18]
+[WARN] [1755887800.210337]: IFCB parsed message: ['syringetrack', 0.18]
+[WARN] [1755887801.223226]: IFCB parsed message: ['syringetrack', 0.17]
+[WARN] [1755887802.234158]: IFCB parsed message: ['syringetrack', 0.17]
+[WARN] [1755887802.390975]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887803.264539]: IFCB parsed message: ['syringetrack', 0.17]
+[WARN] [1755887804.282517]: IFCB parsed message: ['syringetrack', 0.16]
+[WARN] [1755887805.293013]: IFCB parsed message: ['syringetrack', 0.16]
+[WARN] [1755887806.304981]: IFCB parsed message: ['syringetrack', 0.15]
+[WARN] [1755887807.319627]: IFCB parsed message: ['syringetrack', 0.15]
+[WARN] [1755887807.391818]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887808.336828]: IFCB parsed message: ['syringetrack', 0.14]
+[WARN] [1755887809.343332]: IFCB parsed message: ['syringetrack', 0.14]
+[WARN] [1755887810.349652]: IFCB parsed message: ['syringetrack', 0.14]
+[WARN] [1755887811.365702]: IFCB parsed message: ['syringetrack', 0.13]
+[WARN] [1755887812.376240]: IFCB parsed message: ['syringetrack', 0.13]
+[WARN] [1755887812.385458]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887813.397342]: IFCB parsed message: ['syringetrack', 0.12]
+[WARN] [1755887814.399344]: IFCB parsed message: ['syringetrack', 0.12]
+[WARN] [1755887815.406063]: IFCB parsed message: ['syringetrack', 0.12]
+[WARN] [1755887816.410063]: IFCB parsed message: ['syringetrack', 0.11]
+[WARN] [1755887817.392481]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887817.419171]: IFCB parsed message: ['syringetrack', 0.11]
+[WARN] [1755887818.423438]: IFCB parsed message: ['syringetrack', 0.1]
+[WARN] [1755887819.428618]: IFCB parsed message: ['syringetrack', 0.1]
+[WARN] [1755887820.432986]: IFCB parsed message: ['syringetrack', 0.09]
+[WARN] [1755887821.449207]: IFCB parsed message: ['syringetrack', 0.09]
+[WARN] [1755887822.386577]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887822.458778]: IFCB parsed message: ['syringetrack', 0.09]
+[WARN] [1755887823.478325]: IFCB parsed message: ['syringetrack', 0.08]
+[WARN] [1755887824.489527]: IFCB parsed message: ['syringetrack', 0.08]
+[WARN] [1755887825.495915]: IFCB parsed message: ['syringetrack', 0.07]
+[WARN] [1755887826.499505]: IFCB parsed message: ['syringetrack', 0.07]
+[WARN] [1755887827.389420]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887827.509021]: IFCB parsed message: ['syringetrack', 0.06]
+[WARN] [1755887828.520929]: IFCB parsed message: ['syringetrack', 0.06]
+[WARN] [1755887829.528744]: IFCB parsed message: ['syringetrack', 0.06]
+[WARN] [1755887830.535787]: IFCB parsed message: ['syringetrack', 0.05]
+[WARN] [1755887831.547555]: IFCB parsed message: ['syringetrack', 0.05]
+[WARN] [1755887832.392921]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887832.560100]: IFCB parsed message: ['syringetrack', 0.04]
+[WARN] [1755887833.570461]: IFCB parsed message: ['syringetrack', 0.04]
+[WARN] [1755887834.581894]: IFCB parsed message: ['syringetrack', 0.04]
+[WARN] [1755887835.589802]: IFCB parsed message: ['syringetrack', 0.03]
+[WARN] [1755887836.595443]: IFCB parsed message: ['syringetrack', 0.03]
+[WARN] [1755887837.391264]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887837.615023]: IFCB parsed message: ['syringetrack', 0.02]
+[WARN] [1755887838.615744]: IFCB parsed message: ['syringetrack', 0.02]
+[WARN] [1755887839.619511]: IFCB parsed message: ['syringetrack', 0.01]
+[WARN] [1755887840.627973]: IFCB parsed message: ['syringetrack', 0.01]
+[WARN] [1755887841.641750]: IFCB parsed message: ['syringetrack', 0.01]
+[WARN] [1755887842.392939]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755887842.654958]: IFCB parsed message: ['syringetrack', 0.0]
+[WARN] [1755887843.359180]: IFCB parsed message: ['syringetrack', 0.0]
+[WARN] [1755887843.513164]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,3],"value":{"StepType"
+:"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]}}\n']
+[WARN] [1755887843.519201]: IFCB marker - routine: runsample, kind: after, path: [5, 3]
+[WARN] [1755887843.666388]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,4],"value":{"StepType
+":"TriggerOnce"}}\n']
+[WARN] [1755887843.671913]: IFCB marker - routine: runsample, kind: before, path: [5, 4]
+[WARN] [1755887844.001881]: IFCB parsed message: ['graphchanged', 0.0126981735, 0.012493134, 0.070583224, 0.07020891, 0, 0, 4, 0.45, 0.6, 0.13, 0.13,
+ datetime.datetime(2025, 8, 22, 6, 37)]
+[WARN] [1755887844.006676]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,4],"value":{"StepType"
+:"TriggerOnce"}}\n']
+[WARN] [1755887844.012069]: IFCB marker - routine: runsample, kind: after, path: [5, 4]
+[WARN] [1755887844.018402]: IFCB parsed message: ['triggerchanged', 4, 'saved', 4, 0]
+[WARN] [1755887844.024774]: IFCB parsed message: ['triggerchanged', 4, 'processed', 0, 4, 2]
+[WARN] [1755887844.132488]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,5],"value":{"StepType
+":"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887844.139728]: IFCB marker - routine: runsample, kind: before, path: [5, 5]
+[WARN] [1755887844.286727]: IFCB parsed message: ['reportevent', 'Wait 1.0 seconds.\n']
+[WARN] [1755887845.440255]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,5],"value":{"StepType"
+:"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887845.448048]: IFCB marker - routine: runsample, kind: after, path: [5, 5]
+[WARN] [1755887845.592468]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,6],"value":{"StepType
+":"SwitchTriggering","Arguments":[false]}}\n']
+[WARN] [1755887845.600420]: IFCB marker - routine: runsample, kind: before, path: [5, 6]
+[WARN] [1755887846.758905]: IFCB parsed message: ['valuechanged', 'switchtriggering', True]
+[WARN] [1755887846.766754]: IFCB parsed message: ['reportevent', 'Triggering switched OFF.\n']
+[WARN] [1755887846.914981]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,6],"value":{"StepType"
+:"SwitchTriggering","Arguments":[false]}}\n']
+[WARN] [1755887846.920405]: IFCB marker - routine: runsample, kind: after, path: [5, 6]
+[WARN] [1755887847.066516]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,7],"value":{"StepType
+":"SaveFiles"}}\n']
+[WARN] [1755887847.074108]: IFCB marker - routine: runsample, kind: before, path: [5, 7]
+[WARN] [1755887847.225451]: IFCB parsed message: ['reportevent', 'D20250822T181721_IFCB149 saved.\n']
+[WARN] [1755887847.379496]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,7],"value":{"StepType"
+:"SaveFiles"}}\n']
+[WARN] [1755887847.386528]: IFCB marker - routine: runsample, kind: after, path: [5, 7]
+[WARN] [1755887847.533408]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,8],"value":{"StepType
+":"Report","Arguments":["Finished - Run sample."]}}\n']
+[WARN] [1755887847.540882]: IFCB marker - routine: runsample, kind: before, path: [5, 8]
+[WARN] [1755887847.687170]: IFCB parsed message: ['reportevent', 'Finished - Run sample.\n']
+[WARN] [1755887847.841269]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,8],"value":{"StepType"
+:"Report","Arguments":["Finished - Run sample."]}}\n']
+[WARN] [1755887847.846882]: IFCB marker - routine: runsample, kind: after, path: [5, 8]
+[WARN] [1755887847.995354]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"exit","routine":"runsample","path":[5],"value":{"Type":"Seque
+nce","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[true]},{"StepType":"DriveSyringe
+","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":"SwitchTriggering","Arguments"
+:[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}}\n']
+[WARN] [1755887848.001896]: IFCB marker - routine: runsample, kind: exit, path: [5]
+[WARN] [1755887848.147556]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[true]},{"StepType":"DriveSyring
+e","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":"SwitchTriggering","Arguments
+":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}}\n']
+[WARN] [1755887848.155387]: IFCB marker - routine: runsample, kind: after, path: [5]
+[WARN] [1755887848.302391]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"exit","routine":"runsample","path":[],"value":[{"Type":"Seque
+nce","Steps":[{"StepType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]},
+{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":[50
+00]}]},{"Type":"Sequence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpe
+ed","Arguments":[0.4]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments
+":["{#SampleVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[10
+00]},{"StepType":"ChangeSpeed","Arguments":["{#SamplingSpeed}"]}]},{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"Switc
+hAuxPower1","Arguments":[true]}]},{"Type":"Condition","Parameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeSpeed","Arguments":["{#Sampling
+FastSpeed}"]}]},{"Type":"Sequence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[tr
+ue]},{"StepType":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":
+"SwitchTriggering","Arguments":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}]}\n']
+[WARN] [1755887848.307524]: IFCB marker - routine: runsample, kind: exit, path: []
+[WARN] [1755887848.656404]: IFCB parsed message: ['client', 'enableroutines']
+[WARN] [1755887848.667324]: IFCB parsed message: ['valuechanged', 'interactive', 'stopped']
+[WARN] [1755887848.682709]: IFCB parsed message: ['valuechanged', 'setdatafolder', '/data/ifcbdata/mwra']
+[WARN] [1755887848.692246]: IFCB parsed message: ['reportevent', 'Data folder set to:\n/data/ifcbdata/mwra\n']
+[WARN] [1755887848.746352]: IFCB parsed message: ['valuechanged', 'setdatafolder', '/data/ifcbdata/mwra']
+[WARN] [1755887848.755507]: IFCB parsed message: ['reportevent', 'Data folder set to:\n/data/ifcbdata/mwra\n']
+[WARN] [1755887848.803116]: IFCB parsed message: ['valuechanged', 'interactive', 'load', {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Argum
+ents': ['$phyto-arm$0${"kind":"enter","routine":"debubble","path":[],"value":[{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Starting
+ - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"
+ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolume}"]},{"StepType":"MoveValve","Arguments":["needle","CCW
+"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]}
+,{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepTyp
+e":"DriveSyringe","Arguments":[0.0]}]},{"Type":"Condition","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","Arguments":["Refi
+ll after debubble."]},{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Argument
+s":[0.75]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Argume
+nts":["needle","CW"]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}]},{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments
+":["Finished - Debubble."]}]}]}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"d
+ebubble","path":[0],"value":{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepTy
+pe":"MoveValve","Arguments":["debubble","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"Driv
+eSyringe","Arguments":["{#DebubbleConeVolume}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepT
+ype":"DriveSyringe","Arguments":["{#DebubbleNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","C
+CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}']}]}, {'Ty
+pe': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"enter","routine":"debubble","path":[0],"value":{"Type":"Sequen
+ce","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","CW
+"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolum
+e}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#Debubbl
+eNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000]
+},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$
+0${"kind":"before","routine":"debubble","path":[0,0],"value":{"StepType":"Report","Arguments":["Starting - Debubble."]}}']}, {'StepType': 'Report', '
+Arguments': ['Starting - Debubble.']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,0],"value":{
+"StepType":"Report","Arguments":["Starting - Debubble."]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubbl
+e","path":[0,1],"value":{"StepType":"Initialize"}}']}, {'StepType': 'Initialize'}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after"
+,"routine":"debubble","path":[0,1],"value":{"StepType":"Initialize"}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routin
+e":"debubble","path":[0,2],"value":{"StepType":"MoveValve","Arguments":["debubble","CW"]}}']}, {'StepType': 'MoveValve', 'Arguments': ['debubble', 'C
+W']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,2],"value":{"StepType":"MoveValve","Arguments
+":["debubble","CW"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,3],"value":{"StepType":"
+Wait","Arguments":[1000]}}']}, {'StepType': 'Wait', 'Arguments': [1000]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine
+":"debubble","path":[0,3],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","ro
+utine":"debubble","path":[0,4],"value":{"StepType":"ChangeSpeed","Arguments":[0.25]}}']}, {'StepType': 'ChangeSpeed', 'Arguments': [0.25]}, {'StepTyp
+e': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,4],"value":{"StepType":"ChangeSpeed","Arguments":[0.25]}}']}
+, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,5],"value":{"StepType":"DriveSyringe","Arguments
+":["{#DebubbleConeVolume}"]}}']}, {'StepType': 'DriveSyringe', 'Arguments': ['{#DebubbleConeVolume}']}, {'StepType': 'Report', 'Arguments': ['$phyto-
+arm$0${"kind":"after","routine":"debubble","path":[0,5],"value":{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolume}"]}}']}, {'StepType': '
+Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,6],"value":{"StepType":"MoveValve","Arguments":["needle","CCW"]}
+}']}, {'StepType': 'MoveValve', 'Arguments': ['needle', 'CCW']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubb
+le","path":[0,6],"value":{"StepType":"MoveValve","Arguments":["needle","CCW"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"befor
+e","routine":"debubble","path":[0,7],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType': 'Wait', 'Arguments': [1000]}, {'StepType': 'Rep
+ort', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,7],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType':
+'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,8],"value":{"StepType":"DriveSyringe","Arguments":["{#DebubbleN
+eedleVolume}"]}}']}, {'StepType': 'DriveSyringe', 'Arguments': ['{#DebubbleNeedleVolume}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kin
+d":"after","routine":"debubble","path":[0,8],"value":{"StepType":"DriveSyringe","Arguments":["{#DebubbleNeedleVolume}"]}}']}, {'StepType': 'Report',
+'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,9],"value":{"StepType":"Wait","Arguments":[3000]}}']}, {'StepType': 'Wait
+', 'Arguments': [3000]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,9],"value":{"StepType":"Wa
+it","Arguments":[3000]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,10],"value":{"StepTyp
+e":"MoveValve","Arguments":["exhaust","CCW"]}}']}, {'StepType': 'MoveValve', 'Arguments': ['exhaust', 'CCW']}, {'StepType': 'Report', 'Arguments': ['
+$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,10],"value":{"StepType":"MoveValve","Arguments":["exhaust","CCW"]}}']}, {'StepType': 'Rep
+ort', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,11],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType'
+: 'Wait', 'Arguments': [1000]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,11],"value":{"StepT
+ype":"Wait","Arguments":[1000]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,12],"value":{
+"StepType":"ChangeSpeed","Arguments":[0.5]}}']}, {'StepType': 'ChangeSpeed', 'Arguments': [0.5]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0$
+{"kind":"after","routine":"debubble","path":[0,12],"value":{"StepType":"ChangeSpeed","Arguments":[0.5]}}']}, {'StepType': 'Report', 'Arguments': ['$p
+hyto-arm$0${"kind":"before","routine":"debubble","path":[0,13],"value":{"StepType":"DriveSyringe","Arguments":[0.0]}}']}, {'StepType': 'DriveSyringe'
+, 'Arguments': [0.0]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,13],"value":{"StepType":"Dri
+veSyringe","Arguments":[0.0]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"exit","routine":"debubble","path":[0],"value":{"Type":
+"Sequence","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubb
+le","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleCo
+neVolume}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#
+DebubbleNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments"
+:[1000]},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepTyp
+e': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[0],"value":{"Type":"Sequence","Steps":[{"StepType":"Report","A
+rguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","CW"]},{"StepType":"Wait","Arguments":[
+1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolume}"]},{"StepType":"MoveValve","Argum
+ents":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleNeedleVolume}"]},{"StepType":"Wait"
+,"Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Argumen
+ts":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${
+"kind":"before","routine":"debubble","path":[1],"value":{"Type":"Condition","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","
+Arguments":["Refill after debubble."]},{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"Chang
+eSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"M
+oveValve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}]}}']}]}, {'Type': 'Condition', 'Parameters':
+ ['{#RefillAfterDebubbleON}'], 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"enter","routine":"debubble","path":[1],"value":{
+"Type":"Condition","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","Arguments":["Refill after debubble."]},{"StepType":"MoveV
+alve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","A
+rguments":["{#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Drive
+Syringe","Arguments":["{#DebubbleLeftVolume}"]}]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path
+":[1,0],"value":{"StepType":"Report","Arguments":["Refill after debubble."]}}']}, {'StepType': 'Report', 'Arguments': ['Refill after debubble.']}, {'
+StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,0],"value":{"StepType":"Report","Arguments":["Refill
+after debubble."]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,1],"value":{"StepType":"Mo
+veValve","Arguments":["intake","CW"]}}']}, {'StepType': 'MoveValve', 'Arguments': ['intake', 'CW']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm
+$0${"kind":"after","routine":"debubble","path":[1,1],"value":{"StepType":"MoveValve","Arguments":["intake","CW"]}}']}, {'StepType': 'Report', 'Argume
+nts': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,2],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType': 'Wait', 'Arg
+uments': [1000]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,2],"value":{"StepType":"Wait","Ar
+guments":[1000]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,3],"value":{"StepType":"Chan
+geSpeed","Arguments":[0.75]}}']}, {'StepType': 'ChangeSpeed', 'Arguments': [0.75]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after
+","routine":"debubble","path":[1,3],"value":{"StepType":"ChangeSpeed","Arguments":[0.75]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"k
+ind":"before","routine":"debubble","path":[1,4],"value":{"StepType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]}}']}, {'StepType': 'DriveS
+yringe', 'Arguments': ['{#DebubbleRefillVolume}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[1
+,4],"value":{"StepType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"befo
+re","routine":"debubble","path":[1,5],"value":{"StepType":"Wait","Arguments":[2000]}}']}, {'StepType': 'Wait', 'Arguments': [2000]}, {'StepType': 'Re
+port', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,5],"value":{"StepType":"Wait","Arguments":[2000]}}']}, {'StepType':
+ 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,6],"value":{"StepType":"MoveValve","Arguments":["needle","CW"]
+}}']}, {'StepType': 'MoveValve', 'Arguments': ['needle', 'CW']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubb
+le","path":[1,6],"value":{"StepType":"MoveValve","Arguments":["needle","CW"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before
+","routine":"debubble","path":[1,7],"value":{"StepType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}}']}, {'StepType': 'DriveSyringe', 'Argu
+ments': ['{#DebubbleLeftVolume}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,7],"value":{"St
+epType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"exit","routine":"debub
+ble","path":[1],"value":{"Type":"Condition","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","Arguments":["Refill after debubb
+le."]},{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.75]},{"St
+epType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle",
+"CW"]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments':
+['$phyto-arm$0${"kind":"after","routine":"debubble","path":[1],"value":{"Type":"Condition","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepT
+ype":"Report","Arguments":["Refill after debubble."]},{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"S
+tepType":"ChangeSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]}
+,{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}]}}']}]}, {'Type': 'Sequence',
+ 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[2],"value":{"Type":"Sequence","Steps":[{"
+StepType":"Report","Arguments":["Finished - Debubble."]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${
+"kind":"enter","routine":"debubble","path":[2],"value":{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Finished - Debubble."]}]}}']},
+{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"debubble","path":[2,0],"value":{"StepType":"Report","Arguments":["Fini
+shed - Debubble."]}}']}, {'StepType': 'Report', 'Arguments': ['Finished - Debubble.']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"a
+fter","routine":"debubble","path":[2,0],"value":{"StepType":"Report","Arguments":["Finished - Debubble."]}}']}, {'StepType': 'Report', 'Arguments': [
+'$phyto-arm$0${"kind":"exit","routine":"debubble","path":[2],"value":{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Finished - Debubb
+le."]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"debubble","path":[2],"va
+lue":{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Finished - Debubble."]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Rep
+ort', 'Arguments': ['$phyto-arm$0${"kind":"exit","routine":"debubble","path":[],"value":[{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments"
+:["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","CW"]},{"StepType":"Wait","Arguments":[1000]},{"
+StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolume}"]},{"StepType":"MoveValve","Arguments":["n
+eedle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleNeedleVolume}"]},{"StepType":"Wait","Argumen
+ts":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.5]
+},{"StepType":"DriveSyringe","Arguments":[0.0]}]},{"Type":"Condition","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","Argume
+nts":["Refill after debubble."]},{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed
+","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveVal
+ve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}]},{"Type":"Sequence","Steps":[{"StepType":"Report"
+,"Arguments":["Finished - Debubble."]}]}]}']}]}]
+[WARN] [1755887848.817591]: IFCB parsed message: ['client', 'reset']
+[WARN] [1755887848.824771]: IFCB parsed message: ['valuechanged', 'interactive', 'started']
+[WARN] [1755887848.829793]: IFCB parsed message: ['client', 'disableroutines']
+[WARN] [1755887848.834545]: IFCB parsed message: ['client', 'reset']
+[WARN] [1755887848.839892]: IFCB parsed message: ['valuechanged', 'switchliveenv', True]
+[WARN] [1755887848.849035]: IFCB parsed message: ['reportevent', 'Live Env switched OFF.\n']
+[WARN] [1755887848.854610]: IFCB parsed message: ['valuechanged', 'interactive', 'save']
+[WARN] [1755887848.861342]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"enter","routine":"debubble","path":[],"value":[{"Type":"Seque
+nce","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","C
+W"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolu
+me}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#Debubb
+leNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000
+]},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]},{"Type":"Condition","Parameters":["{#RefillAfterDebub
+bleON}"],"Steps":[{"StepType":"Report","Arguments":["Refill after debubble."]},{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait
+","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]},{"StepType":"
+Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}]},{"
+Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Finished - Debubble."]}]}]}\n']
+[WARN] [1755887848.867594]: IFCB marker - routine: debubble, kind: enter, path: []
+[WARN] [1755887848.978598]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","
+CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVol
+ume}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#Debub
+bleNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[100
+0]},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}\n']
+[WARN] [1755887848.983231]: IFCB marker - routine: debubble, kind: before, path: [0]
+[WARN] [1755887849.128488]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"enter","routine":"debubble","path":[0],"value":{"Type":"Seque
+nce","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","C
+W"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolu
+me}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#Debubb
+leNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000
+]},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}\n']
+[WARN] [1755887849.135207]: IFCB marker - routine: debubble, kind: enter, path: [0]
+[WARN] [1755887849.284420]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,0],"value":{"StepType"
+:"Report","Arguments":["Starting - Debubble."]}}\n']
+[WARN] [1755887849.291033]: IFCB marker - routine: debubble, kind: before, path: [0, 0]
+[WARN] [1755887849.439153]: IFCB parsed message: ['reportevent', 'Starting - Debubble.\n']
+[WARN] [1755887849.593391]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,0],"value":{"StepType":
+"Report","Arguments":["Starting - Debubble."]}}\n']
+[WARN] [1755887849.599892]: IFCB marker - routine: debubble, kind: after, path: [0, 0]
+[WARN] [1755887849.746734]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,1],"value":{"StepType"
+:"Initialize"}}\n']
+[WARN] [1755887849.755684]: IFCB marker - routine: debubble, kind: before, path: [0, 1]
+[WARN] [1755887850.913607]: IFCB parsed message: ['valuechanged', 'switchtriggering', True]
+[WARN] [1755887850.919727]: IFCB parsed message: ['reportevent', 'Triggering switched OFF.\n']
+[WARN] [1755887851.501926]: IFCB parsed message: ['valuechanged', 'switchstirrer', True]
+[WARN] [1755887851.510120]: IFCB parsed message: ['reportevent', 'Stirrer switched OFF.\n']
+[WARN] [1755887851.517517]: IFCB parsed message: ['valuechanged', 'switchlaser', True]
+[WARN] [1755887851.522544]: IFCB parsed message: ['reportevent', 'Laser switched ON.\n']
+[WARN] [1755887851.531583]: IFCB parsed message: ['valuechanged', 'switchpump1', True]
+[WARN] [1755887851.537586]: IFCB parsed message: ['reportevent', 'Pump 1 switched OFF. \n']
+[WARN] [1755887851.548490]: IFCB parsed message: ['valuechanged', 'switchpump2', True]
+[WARN] [1755887851.555554]: IFCB parsed message: ['reportevent', 'Pump 2 switched ON.\n']
+[WARN] [1755887851.564484]: IFCB parsed message: ['valuechanged', 'switchviewimages', True]
+[WARN] [1755887851.570136]: IFCB parsed message: ['reportevent', 'View images switched ON.\n']
+[WARN] [1755887851.575478]: IFCB parsed message: ['valuechanged', 'switchliveenv', True]
+[WARN] [1755887851.581507]: IFCB parsed message: ['reportevent', 'Live Env switched OFF.\n']
+[WARN] [1755887851.589022]: IFCB parsed message: ['valuechanged', 'switchcontinuoustrigger', True]
+[WARN] [1755887851.596954]: IFCB parsed message: ['reportevent', 'Continuous trigger switched OFF.\n']
+[WARN] [1755887852.695940]: IFCB parsed message: ['reportevent', 'Initializing.\n']
+[WARN] [1755887853.107888]: IFCB parsed message: ['movevalvestarted', 'ccw', 'exhaust']
+[WARN] [1755887859.669403]: IFCB parsed message: ['movevalvefinished', 'exhaust']
+[WARN] [1755887862.685298]: IFCB parsed message: ['syringetrack', 0.15]
+[WARN] [1755887864.786711]: IFCB parsed message: ['syringetrack', 0.0]
+[WARN] [1755887864.794681]: IFCB parsed message: ['syringetrack', 0.0]
+[WARN] [1755887865.023924]: IFCB parsed message: ['reportevent', 'Initialized.\n']
+[WARN] [1755887865.180372]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,1],"value":{"StepType":
+"Initialize"}}\n']
+[WARN] [1755887865.187298]: IFCB marker - routine: debubble, kind: after, path: [0, 1]
+[WARN] [1755887865.333492]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,2],"value":{"StepType"
+:"MoveValve","Arguments":["debubble","CW"]}}\n']
+[WARN] [1755887865.338190]: IFCB marker - routine: debubble, kind: before, path: [0, 2]
+[WARN] [1755887865.488541]: IFCB parsed message: ['reportevent', 'Valve to debubble, CW.\n']
+[WARN] [1755887865.493081]: IFCB parsed message: ['movevalvestarted', 'cw', 'debubble']
+[WARN] [1755887875.540824]: IFCB parsed message: ['movevalvefinished', 'debubble']
+[WARN] [1755887875.548399]: IFCB parsed message: ['reportevent', 'Valve at debubble, CW.\n']
+[WARN] [1755887875.697047]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,2],"value":{"StepType":
+"MoveValve","Arguments":["debubble","CW"]}}\n']
+[WARN] [1755887875.701941]: IFCB marker - routine: debubble, kind: after, path: [0, 2]
+[WARN] [1755887875.849488]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,3],"value":{"StepType"
+:"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887875.855045]: IFCB marker - routine: debubble, kind: before, path: [0, 3]
+[WARN] [1755887876.002631]: IFCB parsed message: ['reportevent', 'Wait 1.0 seconds.\n']
+[WARN] [1755887877.158864]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,3],"value":{"StepType":
+"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887877.165024]: IFCB marker - routine: debubble, kind: after, path: [0, 3]
+[WARN] [1755887877.312518]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,4],"value":{"StepType"
+:"ChangeSpeed","Arguments":[0.25]}}\n']
+[WARN] [1755887877.319344]: IFCB marker - routine: debubble, kind: before, path: [0, 4]
+[WARN] [1755887877.693434]: IFCB parsed message: ['reportevent', 'Syringe speed set to 0.3 min/syr.\n']
+[WARN] [1755887877.848857]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,4],"value":{"StepType":
+"ChangeSpeed","Arguments":[0.25]}}\n']
+[WARN] [1755887877.856205]: IFCB marker - routine: debubble, kind: after, path: [0, 4]
+[WARN] [1755887878.001467]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,5],"value":{"StepType"
+:"DriveSyringe","Arguments":["{#DebubbleConeVolume}"]}}\n']
+[WARN] [1755887878.008620]: IFCB marker - routine: debubble, kind: before, path: [0, 5]
+[WARN] [1755887878.155360]: IFCB parsed message: ['reportevent', 'Syringe to 1.50 ml.\n']
+[WARN] [1755887879.321438]: IFCB parsed message: ['syringetrack', 0.18]
+[WARN] [1755887880.339405]: IFCB parsed message: ['syringetrack', 0.33]
+[WARN] [1755887881.363277]: IFCB parsed message: ['syringetrack', 0.58]
+[WARN] [1755887882.373690]: IFCB parsed message: ['syringetrack', 0.91]
+[WARN] [1755887883.389278]: IFCB parsed message: ['syringetrack', 1.21]
+[WARN] [1755887884.395260]: IFCB parsed message: ['syringetrack', 1.4]
+[WARN] [1755887885.409742]: IFCB parsed message: ['syringetrack', 1.49]
+[WARN] [1755887886.111931]: IFCB parsed message: ['syringetrack', 1.5]
+[WARN] [1755887886.266229]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,5],"value":{"StepType":
+"DriveSyringe","Arguments":["{#DebubbleConeVolume}"]}}\n']
+[WARN] [1755887886.272240]: IFCB marker - routine: debubble, kind: after, path: [0, 5]
+[WARN] [1755887886.418888]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,6],"value":{"StepType"
+:"MoveValve","Arguments":["needle","CCW"]}}\n']
+[WARN] [1755887886.426853]: IFCB marker - routine: debubble, kind: before, path: [0, 6]
+[WARN] [1755887886.570736]: IFCB parsed message: ['reportevent', 'Valve to needle, CCW.\n']
+[WARN] [1755887886.577503]: IFCB parsed message: ['movevalvestarted', 'ccw', 'needle']
+[WARN] [1755887891.162421]: IFCB parsed message: ['movevalvefinished', 'needle']
+[WARN] [1755887891.168350]: IFCB parsed message: ['reportevent', 'Valve at needle, CCW.\n']
+[WARN] [1755887891.320405]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,6],"value":{"StepType":
+"MoveValve","Arguments":["needle","CCW"]}}\n']
+[WARN] [1755887891.327783]: IFCB marker - routine: debubble, kind: after, path: [0, 6]
+[WARN] [1755887891.473681]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,7],"value":{"StepType"
+:"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887891.480306]: IFCB marker - routine: debubble, kind: before, path: [0, 7]
+[WARN] [1755887891.623220]: IFCB parsed message: ['reportevent', 'Wait 1.0 seconds.\n']
+[WARN] [1755887892.779151]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,7],"value":{"StepType":
+"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887892.786402]: IFCB marker - routine: debubble, kind: after, path: [0, 7]
+[WARN] [1755887892.932937]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,8],"value":{"StepType"
+:"DriveSyringe","Arguments":["{#DebubbleNeedleVolume}"]}}\n']
+[WARN] [1755887892.941143]: IFCB marker - routine: debubble, kind: before, path: [0, 8]
+[WARN] [1755887893.087349]: IFCB parsed message: ['reportevent', 'Syringe to 2.00 ml.\n']
+[WARN] [1755887894.261856]: IFCB parsed message: ['syringetrack', 1.55]
+[WARN] [1755887895.278810]: IFCB parsed message: ['syringetrack', 1.71]
+[WARN] [1755887896.301311]: IFCB parsed message: ['syringetrack', 1.9]
+[WARN] [1755887897.309236]: IFCB parsed message: ['syringetrack', 1.99]
+[WARN] [1755887898.013727]: IFCB parsed message: ['syringetrack', 2.0]
+[WARN] [1755887898.164856]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,8],"value":{"StepType":
+"DriveSyringe","Arguments":["{#DebubbleNeedleVolume}"]}}\n']
+[WARN] [1755887898.173365]: IFCB marker - routine: debubble, kind: after, path: [0, 8]
+[WARN] [1755887898.320715]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,9],"value":{"StepType"
+:"Wait","Arguments":[3000]}}\n']
+[WARN] [1755887898.326714]: IFCB marker - routine: debubble, kind: before, path: [0, 9]
+[WARN] [1755887898.473689]: IFCB parsed message: ['reportevent', 'Wait 3.0 seconds.\n']
+[WARN] [1755887901.628885]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,9],"value":{"StepType":
+"Wait","Arguments":[3000]}}\n']
+[WARN] [1755887901.634498]: IFCB marker - routine: debubble, kind: after, path: [0, 9]
+[WARN] [1755887901.784271]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,10],"value":{"StepType
+":"MoveValve","Arguments":["exhaust","CCW"]}}\n']
+[WARN] [1755887901.792267]: IFCB marker - routine: debubble, kind: before, path: [0, 10]
+[WARN] [1755887901.939778]: IFCB parsed message: ['reportevent', 'Valve to exhaust, CCW.\n']
+[WARN] [1755887901.945097]: IFCB parsed message: ['movevalvestarted', 'ccw', 'exhaust']
+[WARN] [1755887909.246133]: IFCB parsed message: ['movevalvefinished', 'exhaust']
+[WARN] [1755887909.253159]: IFCB parsed message: ['reportevent', 'Valve at exhaust, CCW.\n']
+[WARN] [1755887909.398467]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,10],"value":{"StepType"
+:"MoveValve","Arguments":["exhaust","CCW"]}}\n']
+[WARN] [1755887909.406528]: IFCB marker - routine: debubble, kind: after, path: [0, 10]
+[WARN] [1755887909.550564]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,11],"value":{"StepType
+":"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887909.559071]: IFCB marker - routine: debubble, kind: before, path: [0, 11]
+[WARN] [1755887909.702248]: IFCB parsed message: ['reportevent', 'Wait 1.0 seconds.\n']
+[WARN] [1755887910.860104]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,11],"value":{"StepType"
+:"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887910.867064]: IFCB marker - routine: debubble, kind: after, path: [0, 11]
+[WARN] [1755887911.011523]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,12],"value":{"StepType
+":"ChangeSpeed","Arguments":[0.5]}}\n']
+[WARN] [1755887911.019323]: IFCB marker - routine: debubble, kind: before, path: [0, 12]
+[WARN] [1755887911.397150]: IFCB parsed message: ['reportevent', 'Syringe speed set to 0.5 min/syr.\n']
+[WARN] [1755887911.550224]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,12],"value":{"StepType"
+:"ChangeSpeed","Arguments":[0.5]}}\n']
+[WARN] [1755887911.557755]: IFCB marker - routine: debubble, kind: after, path: [0, 12]
+[WARN] [1755887911.700298]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[0,13],"value":{"StepType
+":"DriveSyringe","Arguments":[0.0]}}\n']
+[WARN] [1755887911.706065]: IFCB marker - routine: debubble, kind: before, path: [0, 13]
+[WARN] [1755887911.852896]: IFCB parsed message: ['reportevent', 'Syringe to 0.00 ml.\n']
+[WARN] [1755887913.024976]: IFCB parsed message: ['syringetrack', 1.95]
+[WARN] [1755887914.048753]: IFCB parsed message: ['syringetrack', 1.8]
+[WARN] [1755887915.060928]: IFCB parsed message: ['syringetrack', 1.63]
+[WARN] [1755887916.075212]: IFCB parsed message: ['syringetrack', 1.46]
+[WARN] [1755887917.091236]: IFCB parsed message: ['syringetrack', 1.29]
+[WARN] [1755887918.100098]: IFCB parsed message: ['syringetrack', 1.12]
+[WARN] [1755887919.107781]: IFCB parsed message: ['syringetrack', 0.95]
+[WARN] [1755887920.118755]: IFCB parsed message: ['syringetrack', 0.78]
+[WARN] [1755887921.136249]: IFCB parsed message: ['syringetrack', 0.61]
+[WARN] [1755887922.148194]: IFCB parsed message: ['syringetrack', 0.45]
+[WARN] [1755887923.163622]: IFCB parsed message: ['syringetrack', 0.28]
+[WARN] [1755887924.179590]: IFCB parsed message: ['syringetrack', 0.11]
+[WARN] [1755887925.191696]: IFCB parsed message: ['syringetrack', 0.01]
+[WARN] [1755887925.965131]: IFCB parsed message: ['syringetrack', 0.0]
+[WARN] [1755887926.117695]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0,13],"value":{"StepType"
+:"DriveSyringe","Arguments":[0.0]}}\n']
+[WARN] [1755887926.124895]: IFCB marker - routine: debubble, kind: after, path: [0, 13]
+[WARN] [1755887926.273282]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"exit","routine":"debubble","path":[0],"value":{"Type":"Sequen
+ce","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","CW
+"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolum
+e}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#Debubbl
+eNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000]
+},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}\n']
+[WARN] [1755887926.280570]: IFCB marker - routine: debubble, kind: exit, path: [0]
+[WARN] [1755887926.427084]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[0],"value":{"Type":"Seque
+nce","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","C
+W"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolu
+me}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#Debubb
+leNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000
+]},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}\n']
+[WARN] [1755887926.432315]: IFCB marker - routine: debubble, kind: after, path: [0]
+[WARN] [1755887926.577501]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1],"value":{"Type":"Cond
+ition","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","Arguments":["Refill after debubble."]},{"StepType":"MoveValve","Argum
+ents":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["
+{#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Ar
+guments":["{#DebubbleLeftVolume}"]}]}}\n']
+[WARN] [1755887926.583609]: IFCB marker - routine: debubble, kind: before, path: [1]
+[WARN] [1755887926.735426]: IFCB parsed message: ['reportevent', 'Condition: True:\n']
+[WARN] [1755887926.740885]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"enter","routine":"debubble","path":[1],"value":{"Type":"Condi
+tion","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","Arguments":["Refill after debubble."]},{"StepType":"MoveValve","Argume
+nts":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["{
+#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Arg
+uments":["{#DebubbleLeftVolume}"]}]}}\n']
+[WARN] [1755887926.746068]: IFCB marker - routine: debubble, kind: enter, path: [1]
+[WARN] [1755887926.886614]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,0],"value":{"StepType"
+:"Report","Arguments":["Refill after debubble."]}}\n']
+[WARN] [1755887926.894579]: IFCB marker - routine: debubble, kind: before, path: [1, 0]
+[WARN] [1755887927.039227]: IFCB parsed message: ['reportevent', 'Refill after debubble.\n']
+[WARN] [1755887927.193607]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,0],"value":{"StepType":
+"Report","Arguments":["Refill after debubble."]}}\n']
+[WARN] [1755887927.198915]: IFCB marker - routine: debubble, kind: after, path: [1, 0]
+[WARN] [1755887927.344766]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,1],"value":{"StepType"
+:"MoveValve","Arguments":["intake","CW"]}}\n']
+[WARN] [1755887927.350797]: IFCB marker - routine: debubble, kind: before, path: [1, 1]
+[WARN] [1755887927.499810]: IFCB parsed message: ['reportevent', 'Valve to intake, CW.\n']
+[WARN] [1755887927.505898]: IFCB parsed message: ['movevalvestarted', 'cw', 'intake']
+[WARN] [1755887932.093487]: IFCB parsed message: ['movevalvefinished', 'intake']
+[WARN] [1755887932.102020]: IFCB parsed message: ['reportevent', 'Valve at intake, CW.\n']
+[WARN] [1755887932.251819]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,1],"value":{"StepType":
+"MoveValve","Arguments":["intake","CW"]}}\n']
+[WARN] [1755887932.258184]: IFCB marker - routine: debubble, kind: after, path: [1, 1]
+[WARN] [1755887932.403821]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,2],"value":{"StepType"
+:"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887932.409953]: IFCB marker - routine: debubble, kind: before, path: [1, 2]
+[WARN] [1755887932.559063]: IFCB parsed message: ['reportevent', 'Wait 1.0 seconds.\n']
+[WARN] [1755887933.713986]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,2],"value":{"StepType":
+"Wait","Arguments":[1000]}}\n']
+[WARN] [1755887933.718824]: IFCB marker - routine: debubble, kind: after, path: [1, 2]
+[WARN] [1755887933.866465]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,3],"value":{"StepType"
+:"ChangeSpeed","Arguments":[0.75]}}\n']
+[WARN] [1755887933.873110]: IFCB marker - routine: debubble, kind: before, path: [1, 3]
+[WARN] [1755887934.252869]: IFCB parsed message: ['reportevent', 'Syringe speed set to 0.8 min/syr.\n']
+[WARN] [1755887934.404427]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,3],"value":{"StepType":
+"ChangeSpeed","Arguments":[0.75]}}\n']
+[WARN] [1755887934.412083]: IFCB marker - routine: debubble, kind: after, path: [1, 3]
+[WARN] [1755887934.558811]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,4],"value":{"StepType"
+:"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]}}\n']
+[WARN] [1755887934.565148]: IFCB marker - routine: debubble, kind: before, path: [1, 4]
+[WARN] [1755887934.710364]: IFCB parsed message: ['reportevent', 'Syringe to 2.25 ml.\n']
+[WARN] [1755887935.876730]: IFCB parsed message: ['syringetrack', 0.05]
+[WARN] [1755887936.890383]: IFCB parsed message: ['syringetrack', 0.17]
+[WARN] [1755887937.896920]: IFCB parsed message: ['syringetrack', 0.28]
+[WARN] [1755887938.906700]: IFCB parsed message: ['syringetrack', 0.39]
+[WARN] [1755887939.909502]: IFCB parsed message: ['syringetrack', 0.5]
+[WARN] [1755887940.920997]: IFCB parsed message: ['syringetrack', 0.61]
+[WARN] [1755887941.943026]: IFCB parsed message: ['syringetrack', 0.73]
+[WARN] [1755887942.953271]: IFCB parsed message: ['syringetrack', 0.84]
+[WARN] [1755887943.958539]: IFCB parsed message: ['syringetrack', 0.95]
+[WARN] [1755887944.967434]: IFCB parsed message: ['syringetrack', 1.06]
+[WARN] [1755887945.979013]: IFCB parsed message: ['syringetrack', 1.18]
+[WARN] [1755887946.990342]: IFCB parsed message: ['syringetrack', 1.29]
+[WARN] [1755887948.000743]: IFCB parsed message: ['syringetrack', 1.4]
+[WARN] [1755887949.017752]: IFCB parsed message: ['syringetrack', 1.51]
+[WARN] [1755887950.028919]: IFCB parsed message: ['syringetrack', 1.63]
+[WARN] [1755887951.041794]: IFCB parsed message: ['syringetrack', 1.74]
+[WARN] [1755887952.057874]: IFCB parsed message: ['syringetrack', 1.85]
+[WARN] [1755887953.071923]: IFCB parsed message: ['syringetrack', 1.96]
+[WARN] [1755887954.084019]: IFCB parsed message: ['syringetrack', 2.08]
+[WARN] [1755887955.099215]: IFCB parsed message: ['syringetrack', 2.19]
+[WARN] [1755887956.118320]: IFCB parsed message: ['syringetrack', 2.25]
+[WARN] [1755887956.506241]: IFCB parsed message: ['syringetrack', 2.25]
+[WARN] [1755887956.656609]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,4],"value":{"StepType":
+"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]}}\n']
+[WARN] [1755887956.663746]: IFCB marker - routine: debubble, kind: after, path: [1, 4]
+[WARN] [1755887956.813051]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,5],"value":{"StepType"
+:"Wait","Arguments":[2000]}}\n']
+[WARN] [1755887956.821503]: IFCB marker - routine: debubble, kind: before, path: [1, 5]
+[WARN] [1755887956.967815]: IFCB parsed message: ['reportevent', 'Wait 2.0 seconds.\n']
+[WARN] [1755887959.122872]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,5],"value":{"StepType":
+"Wait","Arguments":[2000]}}\n']
+[WARN] [1755887959.130400]: IFCB marker - routine: debubble, kind: after, path: [1, 5]
+[WARN] [1755887959.277236]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,6],"value":{"StepType"
+:"MoveValve","Arguments":["needle","CW"]}}\n']
+[WARN] [1755887959.283074]: IFCB marker - routine: debubble, kind: before, path: [1, 6]
+[WARN] [1755887959.431585]: IFCB parsed message: ['reportevent', 'Valve to needle, CW.\n']
+[WARN] [1755887959.439352]: IFCB parsed message: ['movevalvestarted', 'cw', 'needle']
+[WARN] [1755887964.085714]: IFCB parsed message: ['movevalvefinished', 'needle']
+[WARN] [1755887964.091120]: IFCB parsed message: ['reportevent', 'Valve at needle, CW.\n']
+[WARN] [1755887964.242569]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,6],"value":{"StepType":
+"MoveValve","Arguments":["needle","CW"]}}\n']
+[WARN] [1755887964.247446]: IFCB marker - routine: debubble, kind: after, path: [1, 6]
+[WARN] [1755887964.396678]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[1,7],"value":{"StepType"
+:"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}}\n']
+[WARN] [1755887964.402885]: IFCB marker - routine: debubble, kind: before, path: [1, 7]
+[WARN] [1755887964.547853]: IFCB parsed message: ['reportevent', 'Syringe to 0.50 ml.\n']
+[WARN] [1755887965.721322]: IFCB parsed message: ['syringetrack', 2.2]
+[WARN] [1755887966.731800]: IFCB parsed message: ['syringetrack', 2.08]
+[WARN] [1755887967.746240]: IFCB parsed message: ['syringetrack', 1.97]
+[WARN] [1755887968.766141]: IFCB parsed message: ['syringetrack', 1.86]
+[WARN] [1755887969.785722]: IFCB parsed message: ['syringetrack', 1.74]
+[WARN] [1755887970.808429]: IFCB parsed message: ['syringetrack', 1.63]
+[WARN] [1755887971.823783]: IFCB parsed message: ['syringetrack', 1.52]
+[WARN] [1755887972.835577]: IFCB parsed message: ['syringetrack', 1.41]
+[WARN] [1755887973.841377]: IFCB parsed message: ['syringetrack', 1.29]
+[WARN] [1755887974.852505]: IFCB parsed message: ['syringetrack', 1.18]
+[WARN] [1755887975.870673]: IFCB parsed message: ['syringetrack', 1.07]
+[WARN] [1755887976.887028]: IFCB parsed message: ['syringetrack', 0.96]
+[WARN] [1755887977.898093]: IFCB parsed message: ['syringetrack', 0.84]
+[WARN] [1755887978.909678]: IFCB parsed message: ['syringetrack', 0.73]
+[WARN] [1755887979.922220]: IFCB parsed message: ['syringetrack', 0.62]
+[WARN] [1755887980.936939]: IFCB parsed message: ['syringetrack', 0.52]
+[WARN] [1755887981.795831]: IFCB parsed message: ['syringetrack', 0.5]
+[WARN] [1755887981.950586]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1,7],"value":{"StepType":
+"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}}\n']
+[WARN] [1755887981.956867]: IFCB marker - routine: debubble, kind: after, path: [1, 7]
+[WARN] [1755887982.103966]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"exit","routine":"debubble","path":[1],"value":{"Type":"Condit
+ion","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","Arguments":["Refill after debubble."]},{"StepType":"MoveValve","Argumen
+ts":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["{#
+DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Argu
+ments":["{#DebubbleLeftVolume}"]}]}}\n']
+[WARN] [1755887982.110527]: IFCB marker - routine: debubble, kind: exit, path: [1]
+[WARN] [1755887982.258715]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[1],"value":{"Type":"Condi
+tion","Parameters":["{#RefillAfterDebubbleON}"],"Steps":[{"StepType":"Report","Arguments":["Refill after debubble."]},{"StepType":"MoveValve","Argume
+nts":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["{
+#DebubbleRefillVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Arg
+uments":["{#DebubbleLeftVolume}"]}]}}\n']
+[WARN] [1755887982.264418]: IFCB marker - routine: debubble, kind: after, path: [1]
+[WARN] [1755887982.409642]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[2],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"Report","Arguments":["Finished - Debubble."]}]}}\n']
+[WARN] [1755887982.418487]: IFCB marker - routine: debubble, kind: before, path: [2]
+[WARN] [1755887982.564512]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"enter","routine":"debubble","path":[2],"value":{"Type":"Seque
+nce","Steps":[{"StepType":"Report","Arguments":["Finished - Debubble."]}]}}\n']
+[WARN] [1755887982.570274]: IFCB marker - routine: debubble, kind: enter, path: [2]
+[WARN] [1755887982.715484]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"debubble","path":[2,0],"value":{"StepType"
+:"Report","Arguments":["Finished - Debubble."]}}\n']
+[WARN] [1755887982.722215]: IFCB marker - routine: debubble, kind: before, path: [2, 0]
+[WARN] [1755887982.871685]: IFCB parsed message: ['reportevent', 'Finished - Debubble.\n']
+[WARN] [1755887983.023067]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[2,0],"value":{"StepType":
+"Report","Arguments":["Finished - Debubble."]}}\n']
+[WARN] [1755887983.031216]: IFCB marker - routine: debubble, kind: after, path: [2, 0]
+[WARN] [1755887983.174965]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"exit","routine":"debubble","path":[2],"value":{"Type":"Sequen
+ce","Steps":[{"StepType":"Report","Arguments":["Finished - Debubble."]}]}}\n']
+[WARN] [1755887983.181361]: IFCB marker - routine: debubble, kind: exit, path: [2]
+[WARN] [1755887983.330070]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"debubble","path":[2],"value":{"Type":"Seque
+nce","Steps":[{"StepType":"Report","Arguments":["Finished - Debubble."]}]}}\n']
+[WARN] [1755887983.336548]: IFCB marker - routine: debubble, kind: after, path: [2]
+[WARN] [1755887983.484433]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"exit","routine":"debubble","path":[],"value":[{"Type":"Sequen
+ce","Steps":[{"StepType":"Report","Arguments":["Starting - Debubble."]},{"StepType":"Initialize"},{"StepType":"MoveValve","Arguments":["debubble","CW
+"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.25]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleConeVolum
+e}"]},{"StepType":"MoveValve","Arguments":["needle","CCW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"DriveSyringe","Arguments":["{#Debubbl
+eNeedleVolume}"]},{"StepType":"Wait","Arguments":[3000]},{"StepType":"MoveValve","Arguments":["exhaust","CCW"]},{"StepType":"Wait","Arguments":[1000]
+},{"StepType":"ChangeSpeed","Arguments":[0.5]},{"StepType":"DriveSyringe","Arguments":[0.0]}]},{"Type":"Condition","Parameters":["{#RefillAfterDebubb
+leON}"],"Steps":[{"StepType":"Report","Arguments":["Refill after debubble."]},{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait"
+,"Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.75]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleRefillVolume}"]},{"StepType":"W
+ait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"DriveSyringe","Arguments":["{#DebubbleLeftVolume}"]}]},{"T
+ype":"Sequence","Steps":[{"StepType":"Report","Arguments":["Finished - Debubble."]}]}]}\n']
+[WARN] [1755887983.491781]: IFCB marker - routine: debubble, kind: exit, path: []
+[WARN] [1755887983.861151]: IFCB parsed message: ['client', 'enableroutines']
+[WARN] [1755887983.871198]: IFCB parsed message: ['valuechanged', 'interactive', 'stopped']
+[WARN] [1755887983.882803]: IFCB parsed message: ['valuechanged', 'setdatafolder', '/data/ifcbdata/mwra']
+[WARN] [1755887983.888084]: IFCB parsed message: ['reportevent', 'Data folder set to:\n/data/ifcbdata/mwra\n']
+[WARN] [1755887983.925712]: IFCB parsed message: ['valuechanged', 'setdatafolder', '/data/ifcbdata/mwra']
+[WARN] [1755887983.936203]: IFCB parsed message: ['reportevent', 'Data folder set to:\n/data/ifcbdata/mwra\n']
+[WARN] [1755887984.030093]: IFCB parsed message: ['valuechanged', 'interactive', 'load', {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Argum
+ents': ['$phyto-arm$0${"kind":"enter","routine":"runsample","path":[],"value":[{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Startin
+g - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]},{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"
+Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":[5000]}]},{"Type":"Sequence","Steps":[{"StepType":"MoveValv
+e","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.4]},{"StepType":"GrabGPSData"},{"Step
+Type":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"]},{"StepType":"Wait","Arguments":[2
+000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":["{#SamplingS
+peed}"]}]},{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[true]}]},{"Type":"Condition","P
+arameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeSpeed","Arguments":["{#SamplingFastSpeed}"]}]},{"Type":"Sequence","Steps":[{"StepType":
+"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[true]},{"StepType":"DriveSyringe","Arguments":["{#SampleVo
+lumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":"SwitchTriggering","Arguments":[false]},{"StepType":"Sav
+eFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}]}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['
+$phyto-arm$0${"kind":"before","routine":"runsample","path":[0],"value":{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Starting - Run
+sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Ar
+guments': ['$phyto-arm$0${"kind":"enter","routine":"runsample","path":[0],"value":{"Type":"Sequence","Steps":[{"StepType":"Report","Arguments":["Star
+ting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm
+$0${"kind":"before","routine":"runsample","path":[0,0],"value":{"StepType":"Report","Arguments":["Starting - Run sample."]}}']}, {'StepType': 'Report
+', 'Arguments': ['Starting - Run sample.']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[0,0],"v
+alue":{"StepType":"Report","Arguments":["Starting - Run sample."]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine"
+:"runsample","path":[0,1],"value":{"StepType":"Initialize"}}']}, {'StepType': 'Initialize'}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kin
+d":"after","routine":"runsample","path":[0,1],"value":{"StepType":"Initialize"}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"befo
+re","routine":"runsample","path":[0,2],"value":{"StepType":"DriveSyringe","Arguments":[0.0]}}']}, {'StepType': 'DriveSyringe', 'Arguments': [0.0]}, {
+'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[0,2],"value":{"StepType":"DriveSyringe","Arguments":[
+0.0]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"exit","routine":"runsample","path":[0],"value":{"Type":"Sequence","Steps":[{"S
+tepType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}']}]}, {'Type': '
+Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[0],"value":{"Type":"Sequence","
+Steps":[{"StepType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}']}]},
+ {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[1],"value":{"Type":
+"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":[5000]}]}}'
+]}]}, {'Type': 'Condition', 'Parameters': ['{#UvWithSampleON}'], 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"enter","routin
+e":"runsample","path":[1],"value":{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},
+{"StepType":"Wait","Arguments":[5000]}]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[1,0],
+"value":{"StepType":"SwitchAuxPower1","Arguments":[false]}}']}, {'StepType': 'SwitchAuxPower1', 'Arguments': [False]}, {'StepType': 'Report', 'Argume
+nts': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[1,0],"value":{"StepType":"SwitchAuxPower1","Arguments":[false]}}']}, {'StepType':
+'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[1,1],"value":{"StepType":"Wait","Arguments":[5000]}}']}, {'StepT
+ype': 'Wait', 'Arguments': [5000]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[1,1],"value":{"S
+tepType":"Wait","Arguments":[5000]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"exit","routine":"runsample","path":[1],"value":{
+"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":[500
+0]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[1],"valu
+e":{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":
+[5000]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[2],
+"value":{"Type":"Sequence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSp
+eed","Arguments":[0.4]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Argument
+s":["{#SampleVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1
+000]},{"StepType":"ChangeSpeed","Arguments":["{#SamplingSpeed}"]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyt
+o-arm$0${"kind":"enter","routine":"runsample","path":[2],"value":{"Type":"Sequence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"S
+tepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.4]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepTyp
+e":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Argu
+ments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":["{#SamplingSpeed}"]}]}}']}, {'StepType': 'Repor
+t', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,0],"value":{"StepType":"MoveValve","Arguments":["intake","CW"]}}']},
+ {'StepType': 'MoveValve', 'Arguments': ['intake', 'CW']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","
+path":[2,0],"value":{"StepType":"MoveValve","Arguments":["intake","CW"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","ro
+utine":"runsample","path":[2,1],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType': 'Wait', 'Arguments': [1000]}, {'StepType': 'Report',
+ 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,1],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType': 'Rep
+ort', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,2],"value":{"StepType":"ChangeSpeed","Arguments":[0.4]}}']}, {'Ste
+pType': 'ChangeSpeed', 'Arguments': [0.4]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,2],"va
+lue":{"StepType":"ChangeSpeed","Arguments":[0.4]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","pat
+h":[2,3],"value":{"StepType":"GrabGPSData"}}']}, {'StepType': 'GrabGPSData'}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","rou
+tine":"runsample","path":[2,3],"value":{"StepType":"GrabGPSData"}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":
+"runsample","path":[2,4],"value":{"StepType":"GrabPhytoArmData"}}']}, {'StepType': 'GrabPhytoArmData'}, {'StepType': 'Report', 'Arguments': ['$phyto-
+arm$0${"kind":"after","routine":"runsample","path":[2,4],"value":{"StepType":"GrabPhytoArmData"}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-ar
+m$0${"kind":"before","routine":"runsample","path":[2,5],"value":{"StepType":"GetEnvironment"}}']}, {'StepType': 'GetEnvironment'}, {'StepType': 'Repo
+rt', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,5],"value":{"StepType":"GetEnvironment"}}']}, {'StepType': 'Report',
+ 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,6],"value":{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"]}}
+']}, {'StepType': 'DriveSyringe', 'Arguments': ['{#SampleVolume}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"ru
+nsample","path":[2,6],"value":{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"k
+ind":"before","routine":"runsample","path":[2,7],"value":{"StepType":"Wait","Arguments":[2000]}}']}, {'StepType': 'Wait', 'Arguments': [2000]}, {'Ste
+pType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,7],"value":{"StepType":"Wait","Arguments":[2000]}}']},
+{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,8],"value":{"StepType":"MoveValve","Arguments":["
+needle","CW"]}}']}, {'StepType': 'MoveValve', 'Arguments': ['needle', 'CW']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","rou
+tine":"runsample","path":[2,8],"value":{"StepType":"MoveValve","Arguments":["needle","CW"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${
+"kind":"before","routine":"runsample","path":[2,9],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType': 'Wait', 'Arguments': [1000]}, {'S
+tepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,9],"value":{"StepType":"Wait","Arguments":[1000]}}']}
+, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,10],"value":{"StepType":"ChangeSpeed","Argument
+s":["{#SamplingSpeed}"]}}']}, {'StepType': 'ChangeSpeed', 'Arguments': ['{#SamplingSpeed}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"ki
+nd":"after","routine":"runsample","path":[2,10],"value":{"StepType":"ChangeSpeed","Arguments":["{#SamplingSpeed}"]}}']}, {'StepType': 'Report', 'Argu
+ments': ['$phyto-arm$0${"kind":"exit","routine":"runsample","path":[2],"value":{"Type":"Sequence","Steps":[{"StepType":"MoveValve","Arguments":["inta
+ke","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.4]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmDa
+ta"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"Mo
+veValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":["{#SamplingSpeed}"]}]}}']}]}, {'T
+ype': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[2],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.4
+]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"
+]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"Ch
+angeSpeed","Arguments":["{#SamplingSpeed}"]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"befo
+re","routine":"runsample","path":[3],"value":{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments
+":[true]}]}}']}]}, {'Type': 'Condition', 'Parameters': ['{#UvWithSampleON}'], 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"e
+nter","routine":"runsample","path":[3],"value":{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Argumen
+ts":[true]}]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[3,0],"value":{"StepType":"Switch
+AuxPower1","Arguments":[true]}}']}, {'StepType': 'SwitchAuxPower1', 'Arguments': [True]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":
+"after","routine":"runsample","path":[3,0],"value":{"StepType":"SwitchAuxPower1","Arguments":[true]}}']}, {'StepType': 'Report', 'Arguments': ['$phyt
+o-arm$0${"kind":"exit","routine":"runsample","path":[3],"value":{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAu
+xPower1","Arguments":[true]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"ru
+nsample","path":[3],"value":{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[true]}]}}']}]}
+, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[4],"value":{"Type"
+:"Condition","Parameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeSpeed","Arguments":["{#SamplingFastSpeed}"]}]}}']}]}, {'Type': 'Conditio
+n', 'Parameters': ['{#RunSampleFastON}'], 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"enter","routine":"runsample","path":[
+4],"value":{"Type":"Condition","Parameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeSpeed","Arguments":["{#SamplingFastSpeed}"]}]}}']}, {'
+StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[4,0],"value":{"StepType":"ChangeSpeed","Arguments":["
+{#SamplingFastSpeed}"]}}']}, {'StepType': 'ChangeSpeed', 'Arguments': ['{#SamplingFastSpeed}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${
+"kind":"after","routine":"runsample","path":[4,0],"value":{"StepType":"ChangeSpeed","Arguments":["{#SamplingFastSpeed}"]}}']}, {'StepType': 'Report',
+ 'Arguments': ['$phyto-arm$0${"kind":"exit","routine":"runsample","path":[4],"value":{"Type":"Condition","Parameters":["{#RunSampleFastON}"],"Steps":
+[{"StepType":"ChangeSpeed","Arguments":["{#SamplingFastSpeed}"]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto
+-arm$0${"kind":"after","routine":"runsample","path":[4],"value":{"Type":"Condition","Parameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeS
+peed","Arguments":["{#SamplingFastSpeed}"]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"befor
+e","routine":"runsample","path":[5],"value":{"Type":"Sequence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"Switc
+hTriggering","Arguments":[true]},{"StepType":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arg
+uments":[1000]},{"StepType":"SwitchTriggering","Arguments":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample
+."]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"enter","routine":"runsample","path":[5],"val
+ue":{"Type":"Sequence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[true]},{"StepT
+ype":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":"SwitchTrigg
+ering","Arguments":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}}']}, {'StepType': 'Report', 'Argu
+ments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,0],"value":{"StepType":"GrabFileName"}}']}, {'StepType': 'GrabFileName'}, {'S
+tepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,0],"value":{"StepType":"GrabFileName"}}']}, {'StepTyp
+e': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,1],"value":{"StepType":"AssignDaqNormal"}}']}, {'StepType'
+: 'AssignDaqNormal'}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,1],"value":{"StepType":"Assi
+gnDaqNormal"}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,2],"value":{"StepType":"Switch
+Triggering","Arguments":[true]}}']}, {'StepType': 'SwitchTriggering', 'Arguments': [True]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind
+":"after","routine":"runsample","path":[5,2],"value":{"StepType":"SwitchTriggering","Arguments":[true]}}']}, {'StepType': 'Report', 'Arguments': ['$p
+hyto-arm$0${"kind":"before","routine":"runsample","path":[5,3],"value":{"StepType":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]}}']}, {'StepT
+ype': 'DriveSyringe', 'Arguments': ['{#SampleVolumeToSkip}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsampl
+e","path":[5,3],"value":{"StepType":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"k
+ind":"before","routine":"runsample","path":[5,4],"value":{"StepType":"TriggerOnce"}}']}, {'StepType': 'TriggerOnce'}, {'StepType': 'Report', 'Argumen
+ts': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,4],"value":{"StepType":"TriggerOnce"}}']}, {'StepType': 'Report', 'Arguments': ['
+$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,5],"value":{"StepType":"Wait","Arguments":[1000]}}']}, {'StepType': 'Wait', 'Arguments'
+: [1000]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,5],"value":{"StepType":"Wait","Argument
+s":[1000]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,6],"value":{"StepType":"SwitchTri
+ggering","Arguments":[false]}}']}, {'StepType': 'SwitchTriggering', 'Arguments': [False]}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind"
+:"after","routine":"runsample","path":[5,6],"value":{"StepType":"SwitchTriggering","Arguments":[false]}}']}, {'StepType': 'Report', 'Arguments': ['$p
+hyto-arm$0${"kind":"before","routine":"runsample","path":[5,7],"value":{"StepType":"SaveFiles"}}']}, {'StepType': 'SaveFiles'}, {'StepType': 'Report'
+, 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,7],"value":{"StepType":"SaveFiles"}}']}, {'StepType': 'Report', 'Argume
+nts': ['$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,8],"value":{"StepType":"Report","Arguments":["Finished - Run sample."]}}']}, {'
+StepType': 'Report', 'Arguments': ['Finished - Run sample.']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsampl
+e","path":[5,8],"value":{"StepType":"Report","Arguments":["Finished - Run sample."]}}']}, {'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":
+"exit","routine":"runsample","path":[5],"value":{"Type":"Sequence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"S
+witchTriggering","Arguments":[true]},{"StepType":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait",
+"Arguments":[1000]},{"StepType":"SwitchTriggering","Arguments":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sa
+mple."]}]}}']}]}, {'Type': 'Sequence', 'Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"after","routine":"runsample","path":[5],
+"value":{"Type":"Sequence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[true]},{"S
+tepType":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":"SwitchT
+riggering","Arguments":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}}']}]}, {'Type': 'Sequence', '
+Steps': [{'StepType': 'Report', 'Arguments': ['$phyto-arm$0${"kind":"exit","routine":"runsample","path":[],"value":[{"Type":"Sequence","Steps":[{"Ste
+pType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]},{"Type":"Condition"
+,"Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":[5000]}]},{"Type":"Seq
+uence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.
+4]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}
+"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"C
+hangeSpeed","Arguments":["{#SamplingSpeed}"]}]},{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Argume
+nts":[true]}]},{"Type":"Condition","Parameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeSpeed","Arguments":["{#SamplingFastSpeed}"]}]},{"T
+ype":"Sequence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[true]},{"StepType":"D
+riveSyringe","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":"SwitchTriggering",
+"Arguments":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}]}']}]}]
+[WARN] [1755887984.038929]: IFCB parsed message: ['client', 'reset']
+[WARN] [1755887984.043938]: IFCB parsed message: ['valuechanged', 'interactive', 'started']
+[WARN] [1755887984.052826]: IFCB parsed message: ['client', 'disableroutines']
+[WARN] [1755887984.058917]: IFCB parsed message: ['client', 'reset']
+[WARN] [1755887984.064589]: IFCB parsed message: ['valuechanged', 'interactive', 'save']
+[WARN] [1755887984.071538]: IFCB parsed message: ['valuechanged', 'switchliveenv', True]
+[WARN] [1755887984.077343]: IFCB parsed message: ['reportevent', 'Live Env switched OFF.\n']
+[WARN] [1755887984.084519]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"enter","routine":"runsample","path":[],"value":[{"Type":"Sequ
+ence","Steps":[{"StepType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]}
+,{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":[5
+000]}]},{"Type":"Sequence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSp
+eed","Arguments":[0.4]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Argument
+s":["{#SampleVolume}"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1
+000]},{"StepType":"ChangeSpeed","Arguments":["{#SamplingSpeed}"]}]},{"Type":"Condition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"Swit
+chAuxPower1","Arguments":[true]}]},{"Type":"Condition","Parameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeSpeed","Arguments":["{#Samplin
+gFastSpeed}"]}]},{"Type":"Sequence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[t
+rue]},{"StepType":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType"
+:"SwitchTriggering","Arguments":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}]}\n']
+[WARN] [1755887984.090303]: IFCB marker - routine: runsample, kind: enter, path: []
+[WARN] [1755887984.212634]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[0],"value":{"Type":"Seq
+uence","Steps":[{"StepType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]
+}}\n']
+[WARN] [1755887984.219095]: IFCB marker - routine: runsample, kind: before, path: [0]
+[WARN] [1755887984.363400]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"enter","routine":"runsample","path":[0],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]}
+}\n']
+[WARN] [1755887984.370708]: IFCB marker - routine: runsample, kind: enter, path: [0]
+[WARN] [1755887984.515716]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[0,0],"value":{"StepType
+":"Report","Arguments":["Starting - Run sample."]}}\n']
+[WARN] [1755887984.522620]: IFCB marker - routine: runsample, kind: before, path: [0, 0]
+[WARN] [1755887984.670406]: IFCB parsed message: ['reportevent', 'Starting - Run sample.\n']
+[WARN] [1755887984.822552]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[0,0],"value":{"StepType"
+:"Report","Arguments":["Starting - Run sample."]}}\n']
+[WARN] [1755887984.829187]: IFCB marker - routine: runsample, kind: after, path: [0, 0]
+[WARN] [1755887984.977522]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[0,1],"value":{"StepType
+":"Initialize"}}\n']
+[WARN] [1755887984.983390]: IFCB marker - routine: runsample, kind: before, path: [0, 1]
+[WARN] [1755887986.143694]: IFCB parsed message: ['valuechanged', 'switchtriggering', True]
+[WARN] [1755887986.150506]: IFCB parsed message: ['reportevent', 'Triggering switched OFF.\n']
+[WARN] [1755887986.728339]: IFCB parsed message: ['valuechanged', 'switchstirrer', True]
+[WARN] [1755887986.733768]: IFCB parsed message: ['reportevent', 'Stirrer switched OFF.\n']
+[WARN] [1755887986.742685]: IFCB parsed message: ['valuechanged', 'switchlaser', True]
+[WARN] [1755887986.748056]: IFCB parsed message: ['reportevent', 'Laser switched ON.\n']
+[WARN] [1755887986.759581]: IFCB parsed message: ['valuechanged', 'switchpump1', True]
+[WARN] [1755887986.765868]: IFCB parsed message: ['reportevent', 'Pump 1 switched OFF. \n']
+[WARN] [1755887986.776906]: IFCB parsed message: ['valuechanged', 'switchpump2', True]
+[WARN] [1755887986.783581]: IFCB parsed message: ['reportevent', 'Pump 2 switched ON.\n']
+[WARN] [1755887986.791108]: IFCB parsed message: ['valuechanged', 'switchviewimages', True]
+[WARN] [1755887986.796726]: IFCB parsed message: ['reportevent', 'View images switched ON.\n']
+[WARN] [1755887986.802377]: IFCB parsed message: ['valuechanged', 'switchliveenv', True]
+[WARN] [1755887986.808729]: IFCB parsed message: ['reportevent', 'Live Env switched OFF.\n']
+[WARN] [1755887986.813742]: IFCB parsed message: ['valuechanged', 'switchcontinuoustrigger', True]
+[WARN] [1755887986.820103]: IFCB parsed message: ['reportevent', 'Continuous trigger switched OFF.\n']
+[WARN] [1755887987.922532]: IFCB parsed message: ['reportevent', 'Initializing.\n']
+[WARN] [1755887988.345438]: IFCB parsed message: ['movevalvestarted', 'ccw', 'exhaust']
+[WARN] [1755887994.948458]: IFCB parsed message: ['movevalvefinished', 'exhaust']
+[WARN] [1755887995.421907]: IFCB parsed message: ['syringetrack', 0.5]
+[WARN] [1755888001.408071]: IFCB parsed message: ['syringetrack', 0.0]
+[WARN] [1755888001.415231]: IFCB parsed message: ['syringetrack', 0.0]
+[WARN] [1755888001.647369]: IFCB parsed message: ['reportevent', 'Initialized.\n']
+[WARN] [1755888001.800845]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[0,1],"value":{"StepType"
+:"Initialize"}}\n']
+[WARN] [1755888001.806480]: IFCB marker - routine: runsample, kind: after, path: [0, 1]
+[WARN] [1755888001.954494]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[0,2],"value":{"StepType
+":"DriveSyringe","Arguments":[0.0]}}\n']
+[WARN] [1755888001.962728]: IFCB marker - routine: runsample, kind: before, path: [0, 2]
+[WARN] [1755888002.107553]: IFCB parsed message: ['reportevent', 'Syringe to 0.00 ml.\n']
+[WARN] [1755888003.261234]: IFCB parsed message: ['syringetrack', 0.07]
+[WARN] [1755888004.278173]: IFCB parsed message: ['syringetrack', 0.01]
+[WARN] [1755888004.899356]: IFCB parsed message: ['syringetrack', 0.0]
+[WARN] [1755888005.054702]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[0,2],"value":{"StepType"
+:"DriveSyringe","Arguments":[0.0]}}\n']
+[WARN] [1755888005.060936]: IFCB marker - routine: runsample, kind: after, path: [0, 2]
+[WARN] [1755888005.206479]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"exit","routine":"runsample","path":[0],"value":{"Type":"Seque
+nce","Steps":[{"StepType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]}}
+\n']
+[WARN] [1755888005.214490]: IFCB marker - routine: runsample, kind: exit, path: [0]
+[WARN] [1755888005.359553]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[0],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"Report","Arguments":["Starting - Run sample."]},{"StepType":"Initialize"},{"StepType":"DriveSyringe","Arguments":[0.0]}]}
+}\n']
+[WARN] [1755888005.368408]: IFCB marker - routine: runsample, kind: after, path: [0]
+[WARN] [1755888005.513663]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[1],"value":{"Type":"Con
+dition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":[5000]}]}}\n']
+[WARN] [1755888005.521248]: IFCB marker - routine: runsample, kind: before, path: [1]
+[WARN] [1755888005.667490]: IFCB parsed message: ['reportevent', 'Condition: False:\n']
+[WARN] [1755888005.674107]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[1],"value":{"Type":"Cond
+ition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[false]},{"StepType":"Wait","Arguments":[5000]}]}}\n']
+[WARN] [1755888005.679584]: IFCB marker - routine: runsample, kind: after, path: [1]
+[WARN] [1755888005.823102]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2],"value":{"Type":"Seq
+uence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.
+4]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}
+"]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"C
+hangeSpeed","Arguments":["{#SamplingSpeed}"]}]}}\n']
+[WARN] [1755888005.829834]: IFCB marker - routine: runsample, kind: before, path: [2]
+[WARN] [1755888005.975082]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"enter","routine":"runsample","path":[2],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.4
+]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"
+]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"Ch
+angeSpeed","Arguments":["{#SamplingSpeed}"]}]}}\n']
+[WARN] [1755888005.980754]: IFCB marker - routine: runsample, kind: enter, path: [2]
+[WARN] [1755888006.126782]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,0],"value":{"StepType
+":"MoveValve","Arguments":["intake","CW"]}}\n']
+[WARN] [1755888006.132960]: IFCB marker - routine: runsample, kind: before, path: [2, 0]
+[WARN] [1755888006.281327]: IFCB parsed message: ['reportevent', 'Valve to intake, CW.\n']
+[WARN] [1755888006.286889]: IFCB parsed message: ['movevalvestarted', 'cw', 'intake']
+[WARN] [1755888010.865087]: IFCB parsed message: ['movevalvefinished', 'intake']
+[WARN] [1755888010.870063]: IFCB parsed message: ['reportevent', 'Valve at intake, CW.\n']
+[WARN] [1755888011.015898]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,0],"value":{"StepType"
+:"MoveValve","Arguments":["intake","CW"]}}\n']
+[WARN] [1755888011.022499]: IFCB marker - routine: runsample, kind: after, path: [2, 0]
+[WARN] [1755888011.168713]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,1],"value":{"StepType
+":"Wait","Arguments":[1000]}}\n']
+[WARN] [1755888011.175773]: IFCB marker - routine: runsample, kind: before, path: [2, 1]
+[WARN] [1755888011.322708]: IFCB parsed message: ['reportevent', 'Wait 1.0 seconds.\n']
+[WARN] [1755888012.475133]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,1],"value":{"StepType"
+:"Wait","Arguments":[1000]}}\n']
+[WARN] [1755888012.482324]: IFCB marker - routine: runsample, kind: after, path: [2, 1]
+[WARN] [1755888012.630546]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,2],"value":{"StepType
+":"ChangeSpeed","Arguments":[0.4]}}\n']
+[WARN] [1755888012.638934]: IFCB marker - routine: runsample, kind: before, path: [2, 2]
+[WARN] [1755888013.014373]: IFCB parsed message: ['reportevent', 'Syringe speed set to 0.4 min/syr.\n']
+[WARN] [1755888013.165562]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,2],"value":{"StepType"
+:"ChangeSpeed","Arguments":[0.4]}}\n']
+[WARN] [1755888013.173670]: IFCB marker - routine: runsample, kind: after, path: [2, 2]
+[WARN] [1755888013.320080]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,3],"value":{"StepType
+":"GrabGPSData"}}\n']
+[WARN] [1755888013.325335]: IFCB marker - routine: runsample, kind: before, path: [2, 3]
+[WARN] [1755888013.473084]: IFCB parsed message: ['valuechanged', 'currentgpsposition', 'age: n/a lat: n/a lon: n/a']
+[WARN] [1755888013.479650]: IFCB parsed message: ['valuechanged', 'samplegpsposition', 'age: n/a lat: n/a lon: n/a']
+[WARN] [1755888013.629728]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,3],"value":{"StepType"
+:"GrabGPSData"}}\n']
+[WARN] [1755888013.636324]: IFCB marker - routine: runsample, kind: after, path: [2, 3]
+[WARN] [1755888013.783409]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,4],"value":{"StepType
+":"GrabPhytoArmData"}}\n']
+[WARN] [1755888013.788371]: IFCB marker - routine: runsample, kind: before, path: [2, 4]
+[WARN] [1755888014.097398]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,4],"value":{"StepType"
+:"GrabPhytoArmData"}}\n']
+[WARN] [1755888014.104484]: IFCB marker - routine: runsample, kind: after, path: [2, 4]
+[WARN] [1755888014.252721]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,5],"value":{"StepType
+":"GetEnvironment"}}\n']
+[WARN] [1755888014.258353]: IFCB marker - routine: runsample, kind: before, path: [2, 5]
+[WARN] [1755888014.417784]: IFCB parsed message: ['valuechanged', 'getenvironment', 38.214738689250034, 23.66601739528496]
+[WARN] [1755888014.571664]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,5],"value":{"StepType"
+:"GetEnvironment"}}\n']
+[WARN] [1755888014.578628]: IFCB marker - routine: runsample, kind: after, path: [2, 5]
+[WARN] [1755888014.725149]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,6],"value":{"StepType
+":"DriveSyringe","Arguments":["{#SampleVolume}"]}}\n']
+[WARN] [1755888014.730715]: IFCB marker - routine: runsample, kind: before, path: [2, 6]
+[WARN] [1755888014.877432]: IFCB parsed message: ['reportevent', 'Syringe to 5.00 ml.\n']
+[WARN] [1755888016.038659]: IFCB parsed message: ['syringetrack', 0.05]
+[WARN] [1755888017.045766]: IFCB parsed message: ['syringetrack', 0.2]
+[WARN] [1755888018.053585]: IFCB parsed message: ['syringetrack', 0.41]
+[WARN] [1755888019.073972]: IFCB parsed message: ['syringetrack', 0.63]
+[WARN] [1755888020.101979]: IFCB parsed message: ['syringetrack', 0.84]
+[WARN] [1755888021.113505]: IFCB parsed message: ['syringetrack', 1.05]
+[WARN] [1755888022.123159]: IFCB parsed message: ['syringetrack', 1.26]
+[WARN] [1755888023.139887]: IFCB parsed message: ['syringetrack', 1.47]
+[WARN] [1755888024.147272]: IFCB parsed message: ['syringetrack', 1.68]
+[WARN] [1755888025.165391]: IFCB parsed message: ['syringetrack', 1.89]
+[WARN] [1755888026.180007]: IFCB parsed message: ['syringetrack', 2.11]
+[WARN] [1755888027.188731]: IFCB parsed message: ['syringetrack', 2.32]
+[WARN] [1755888028.201235]: IFCB parsed message: ['syringetrack', 2.53]
+[WARN] [1755888029.210067]: IFCB parsed message: ['syringetrack', 2.74]
+[WARN] [1755888030.224367]: IFCB parsed message: ['syringetrack', 2.95]
+[WARN] [1755888031.235045]: IFCB parsed message: ['syringetrack', 3.16]
+[WARN] [1755888032.243777]: IFCB parsed message: ['syringetrack', 3.37]
+[WARN] [1755888033.259065]: IFCB parsed message: ['syringetrack', 3.58]
+[WARN] [1755888034.271365]: IFCB parsed message: ['syringetrack', 3.79]
+[WARN] [1755888035.285965]: IFCB parsed message: ['syringetrack', 4.0]
+[WARN] [1755888036.304971]: IFCB parsed message: ['syringetrack', 4.22]
+[WARN] [1755888037.318835]: IFCB parsed message: ['syringetrack', 4.43]
+[WARN] [1755888038.334768]: IFCB parsed message: ['syringetrack', 4.64]
+[WARN] [1755888039.350081]: IFCB parsed message: ['syringetrack', 4.84]
+[WARN] [1755888040.356981]: IFCB parsed message: ['syringetrack', 4.97]
+[WARN] [1755888041.435279]: IFCB parsed message: ['syringetrack', 5.0]
+[WARN] [1755888041.514658]: IFCB parsed message: ['syringetrack', 5.0]
+[WARN] [1755888041.668826]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,6],"value":{"StepType"
+:"DriveSyringe","Arguments":["{#SampleVolume}"]}}\n']
+[WARN] [1755888041.675112]: IFCB marker - routine: runsample, kind: after, path: [2, 6]
+[WARN] [1755888041.820498]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,7],"value":{"StepType
+":"Wait","Arguments":[2000]}}\n']
+[WARN] [1755888041.829148]: IFCB marker - routine: runsample, kind: before, path: [2, 7]
+[WARN] [1755888041.974867]: IFCB parsed message: ['reportevent', 'Wait 2.0 seconds.\n']
+[WARN] [1755888044.129411]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,7],"value":{"StepType"
+:"Wait","Arguments":[2000]}}\n']
+[WARN] [1755888044.136490]: IFCB marker - routine: runsample, kind: after, path: [2, 7]
+[WARN] [1755888044.283481]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,8],"value":{"StepType
+":"MoveValve","Arguments":["needle","CW"]}}\n']
+[WARN] [1755888044.289281]: IFCB marker - routine: runsample, kind: before, path: [2, 8]
+[WARN] [1755888044.438997]: IFCB parsed message: ['reportevent', 'Valve to needle, CW.\n']
+[WARN] [1755888044.445355]: IFCB parsed message: ['movevalvestarted', 'cw', 'needle']
+[WARN] [1755888049.009405]: IFCB parsed message: ['movevalvefinished', 'needle']
+[WARN] [1755888049.016767]: IFCB parsed message: ['reportevent', 'Valve at needle, CW.\n']
+[WARN] [1755888049.164579]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,8],"value":{"StepType"
+:"MoveValve","Arguments":["needle","CW"]}}\n']
+[WARN] [1755888049.172205]: IFCB marker - routine: runsample, kind: after, path: [2, 8]
+[WARN] [1755888049.317884]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,9],"value":{"StepType
+":"Wait","Arguments":[1000]}}\n']
+[WARN] [1755888049.323902]: IFCB marker - routine: runsample, kind: before, path: [2, 9]
+[WARN] [1755888049.469975]: IFCB parsed message: ['reportevent', 'Wait 1.0 seconds.\n']
+[WARN] [1755888050.625350]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,9],"value":{"StepType"
+:"Wait","Arguments":[1000]}}\n']
+[WARN] [1755888050.631983]: IFCB marker - routine: runsample, kind: after, path: [2, 9]
+[WARN] [1755888050.777801]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[2,10],"value":{"StepTyp
+e":"ChangeSpeed","Arguments":["{#SamplingSpeed}"]}}\n']
+[WARN] [1755888050.785783]: IFCB marker - routine: runsample, kind: before, path: [2, 10]
+[WARN] [1755888050.798066]: IFCB position hold release - marker value: {'StepType': 'ChangeSpeed', 'Arguments': ['{#SamplingSpeed}']}
+[WARN] [1755888050.831930]: No winch; running no_winch
+[WARN] [1755888051.162285]: IFCB parsed message: ['reportevent', 'Syringe speed set to 20.0 min/syr.\n']
+[WARN] [1755888051.317338]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2,10],"value":{"StepType
+":"ChangeSpeed","Arguments":["{#SamplingSpeed}"]}}\n']
+[WARN] [1755888051.324225]: IFCB marker - routine: runsample, kind: after, path: [2, 10]
+[WARN] [1755888051.468838]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"exit","routine":"runsample","path":[2],"value":{"Type":"Seque
+nce","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.4]
+},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"]
+},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"Cha
+ngeSpeed","Arguments":["{#SamplingSpeed}"]}]}}\n']
+[WARN] [1755888051.477688]: IFCB marker - routine: runsample, kind: exit, path: [2]
+[WARN] [1755888051.623174]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[2],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"MoveValve","Arguments":["intake","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"ChangeSpeed","Arguments":[0.4
+]},{"StepType":"GrabGPSData"},{"StepType":"GrabPhytoArmData"},{"StepType":"GetEnvironment"},{"StepType":"DriveSyringe","Arguments":["{#SampleVolume}"
+]},{"StepType":"Wait","Arguments":[2000]},{"StepType":"MoveValve","Arguments":["needle","CW"]},{"StepType":"Wait","Arguments":[1000]},{"StepType":"Ch
+angeSpeed","Arguments":["{#SamplingSpeed}"]}]}}\n']
+[WARN] [1755888051.628200]: IFCB marker - routine: runsample, kind: after, path: [2]
+[WARN] [1755888051.777134]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[3],"value":{"Type":"Con
+dition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[true]}]}}\n']
+[WARN] [1755888051.786228]: IFCB marker - routine: runsample, kind: before, path: [3]
+[WARN] [1755888051.933294]: IFCB parsed message: ['reportevent', 'Condition: False:\n']
+[WARN] [1755888051.938237]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[3],"value":{"Type":"Cond
+ition","Parameters":["{#UvWithSampleON}"],"Steps":[{"StepType":"SwitchAuxPower1","Arguments":[true]}]}}\n']
+[WARN] [1755888051.943325]: IFCB marker - routine: runsample, kind: after, path: [3]
+[WARN] [1755888052.086438]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[4],"value":{"Type":"Con
+dition","Parameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeSpeed","Arguments":["{#SamplingFastSpeed}"]}]}}\n']
+[WARN] [1755888052.094268]: IFCB marker - routine: runsample, kind: before, path: [4]
+[WARN] [1755888052.239234]: IFCB parsed message: ['reportevent', 'Condition: False:\n']
+[WARN] [1755888052.245769]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[4],"value":{"Type":"Cond
+ition","Parameters":["{#RunSampleFastON}"],"Steps":[{"StepType":"ChangeSpeed","Arguments":["{#SamplingFastSpeed}"]}]}}\n']
+[WARN] [1755888052.251029]: IFCB marker - routine: runsample, kind: after, path: [4]
+[WARN] [1755888052.394028]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5],"value":{"Type":"Seq
+uence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[true]},{"StepType":"DriveSyrin
+ge","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":"SwitchTriggering","Argument
+s":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}}\n']
+[WARN] [1755888052.400725]: IFCB marker - routine: runsample, kind: before, path: [5]
+[WARN] [1755888052.548213]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"enter","routine":"runsample","path":[5],"value":{"Type":"Sequ
+ence","Steps":[{"StepType":"GrabFileName"},{"StepType":"AssignDaqNormal"},{"StepType":"SwitchTriggering","Arguments":[true]},{"StepType":"DriveSyring
+e","Arguments":["{#SampleVolumeToSkip}"]},{"StepType":"TriggerOnce"},{"StepType":"Wait","Arguments":[1000]},{"StepType":"SwitchTriggering","Arguments
+":[false]},{"StepType":"SaveFiles"},{"StepType":"Report","Arguments":["Finished - Run sample."]}]}}\n']
+[WARN] [1755888052.555170]: IFCB marker - routine: runsample, kind: enter, path: [5]
+[WARN] [1755888052.701844]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,0],"value":{"StepType
+":"GrabFileName"}}\n']
+[WARN] [1755888052.706959]: IFCB marker - routine: runsample, kind: before, path: [5, 0]
+[WARN] [1755888052.853290]: IFCB parsed message: ['reportevent', 'Grab file: D20250822T184052_IFCB149.\n']
+[WARN] [1755888053.004848]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,0],"value":{"StepType"
+:"GrabFileName"}}\n']
+[WARN] [1755888053.011179]: IFCB marker - routine: runsample, kind: after, path: [5, 0]
+[WARN] [1755888053.157709]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,1],"value":{"StepType
+":"AssignDaqNormal"}}\n']
+[WARN] [1755888053.165525]: IFCB marker - routine: runsample, kind: before, path: [5, 1]
+[WARN] [1755888053.323281]: IFCB parsed message: ['reportevent', 'TrigA assigned 0.130V.\n']
+[WARN] [1755888053.334826]: IFCB parsed message: ['reportevent', 'TrigB assigned 0.130V.\n']
+[WARN] [1755888053.348217]: IFCB parsed message: ['reportevent', 'PMTA assigned 0.45V.\n']
+[WARN] [1755888053.363147]: IFCB parsed message: ['reportevent', 'PMTB assigned 0.60V.\n']
+[WARN] [1755888053.527899]: IFCB parsed message: ['reportevent', 'PMTA turned OFF.\n']
+[WARN] [1755888053.535473]: IFCB parsed message: ['reportevent', 'PMTB turned ON.\n']
+[WARN] [1755888053.696702]: IFCB parsed message: ['reportevent', 'Flash assigned 3.20V.\n']
+[WARN] [1755888053.707235]: IFCB parsed message: ['reportevent', 'Flash turned ON.\n']
+[WARN] [1755888053.862549]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,1],"value":{"StepType"
+:"AssignDaqNormal"}}\n']
+[WARN] [1755888053.869224]: IFCB marker - routine: runsample, kind: after, path: [5, 1]
+[WARN] [1755888054.017445]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,2],"value":{"StepType
+":"SwitchTriggering","Arguments":[true]}}\n']
+[WARN] [1755888054.023803]: IFCB marker - routine: runsample, kind: before, path: [5, 2]
+[WARN] [1755888054.225534]: IFCB parsed message: ['valuechanged', 'switchtriggering', True]
+[WARN] [1755888054.231505]: IFCB parsed message: ['reportevent', 'Triggering switched ON.\n']
+[WARN] [1755888054.371774]: IFCB parsed message: ['graphchanged', 0.0126981735, 0.012493134, 0.070583224, 0.07020891, 0, 0, 1, 0.45, 0.6, 0.13, 0.13,
+ datetime.datetime(2025, 8, 22, 6, 40)]
+[WARN] [1755888054.378078]: IFCB parsed message: ['triggerchanged', 1, 'saved', 1, 0]
+[WARN] [1755888054.384198]: IFCB parsed message: ['triggerchanged', 1, 'processed', 0, 1, 0]
+[WARN] [1755888054.392014]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"after","routine":"runsample","path":[5,2],"value":{"StepType"
+:"SwitchTriggering","Arguments":[true]}}\n']
+[WARN] [1755888054.397791]: IFCB marker - routine: runsample, kind: after, path: [5, 2]
+[WARN] [1755888054.534792]: IFCB parsed message: ['reportevent', '$phyto-arm$0${"kind":"before","routine":"runsample","path":[5,3],"value":{"StepType
+":"DriveSyringe","Arguments":["{#SampleVolumeToSkip}"]}}\n']
+[WARN] [1755888054.541477]: IFCB marker - routine: runsample, kind: before, path: [5, 3]
+[WARN] [1755888054.688050]: IFCB parsed message: ['reportevent', 'Syringe to 0.00 ml.\n']
+[WARN] [1755888055.856195]: IFCB parsed message: ['syringetrack', 5.0]
+[WARN] [1755888056.873755]: IFCB parsed message: ['syringetrack', 4.99]
+[WARN] [1755888057.883238]: IFCB parsed message: ['syringetrack', 4.99]
+[WARN] [1755888058.896018]: IFCB parsed message: ['syringetrack', 4.98]
+[WARN] [1755888059.193378]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.2]
+[WARN] [1755888059.905609]: IFCB parsed message: ['syringetrack', 4.98]
+[WARN] [1755888060.910905]: IFCB parsed message: ['syringetrack', 4.97]
+[WARN] [1755888061.928104]: IFCB parsed message: ['syringetrack', 4.97]
+[WARN] [1755888062.939835]: IFCB parsed message: ['syringetrack', 4.97]
+[WARN] [1755888063.950774]: IFCB parsed message: ['syringetrack', 4.96]
+[WARN] [1755888064.196981]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
+[WARN] [1755888064.959018]: IFCB parsed message: ['syringetrack', 4.96]
+[WARN] [1755888065.962889]: IFCB parsed message: ['syringetrack', 4.95]
+[WARN] [1755888066.968670]: IFCB parsed message: ['syringetrack', 4.95]
+[WARN] [1755888067.981476]: IFCB parsed message: ['syringetrack', 4.95]
+[WARN] [1755888068.998358]: IFCB parsed message: ['syringetrack', 4.94]
+[WARN] [1755888069.194159]: IFCB parsed message: ['valuechanged', 'fpsrate', 0.0]
