@@ -171,12 +171,13 @@ class PhytoARMProcess:
 class PhytoARMServer:
     """Main server class that manages all PhytO-ARM processes"""
 
-    def __init__(self, config_file: str, config_schema: str = None):
+    def __init__(self, config_file: Optional[str] = None, config_schema: str = None):
         self.config_file = config_file
         self.config_schema = config_schema or "./configs/example.yaml"
         self.config = None
         self.original_config = None  # Store original for reset
         self.env = None
+        self.config_loaded = False  # Track if config is properly loaded
 
         # Process registry
         self.processes: Dict[str, PhytoARMProcess] = {}
@@ -192,23 +193,17 @@ class PhytoARMServer:
         self.log_connections: List[WebSocket] = []
 
     async def initialize(self):
-        """Initialize the server - load config, setup environment"""
+        """Initialize the server - load config if provided, setup environment"""
         try:
-            # Validate config
-            logger.info(f"Validating config file {self.config_file}")
-            if not validate_config(self.config_file, self.config_schema):
-                raise ValueError("Config validation failed")
-
-            # Load config
-            with open(self.config_file, 'r') as f:
-                self.config = yaml.safe_load(f)
-                self.original_config = yaml.safe_load(yaml.dump(self.config))  # Deep copy
-
-            # Setup environment
-            self.env = self._prep_environment()
-
-            # Discover available launch files
-            self._discover_launch_files()
+            if self.config_file and os.path.exists(self.config_file):
+                # Load config if provided
+                logger.info(f"Loading config file {self.config_file}")
+                await self.load_config_from_file(self.config_file)
+            else:
+                if self.config_file:
+                    logger.warning(f"Config file {self.config_file} not found, starting without config")
+                else:
+                    logger.info("Starting server without config - config must be loaded via web interface")
 
             # Start monitoring
             self._monitor_task = asyncio.create_task(self._monitor_processes())
@@ -218,6 +213,82 @@ class PhytoARMServer:
         except Exception as e:
             logger.error(f"Failed to initialize server: {e}")
             raise
+
+    async def load_config_from_file(self, config_path: str):
+        """Load configuration from a file"""
+        try:
+            # Validate config
+            logger.info(f"Validating config file {config_path}")
+            if not validate_config(config_path, self.config_schema):
+                raise ValueError("Config validation failed")
+
+            # Load config
+            with open(config_path, 'r') as f:
+                self.config = yaml.safe_load(f)
+                self.original_config = yaml.safe_load(yaml.dump(self.config))  # Deep copy
+
+            self.config_file = config_path
+            self.config_loaded = True
+
+            # Setup environment
+            self.env = self._prep_environment()
+
+            # Discover available launch files
+            self._discover_launch_files()
+
+            logger.info(f"Config loaded successfully from {config_path}")
+
+        except Exception as e:
+            logger.error(f"Failed to load config from {config_path}: {e}")
+            raise
+
+    async def load_config_from_url(self, url: str) -> bool:
+        """Load configuration from a URL"""
+        try:
+            import urllib.request
+            import tempfile
+
+            logger.info(f"Downloading config from {url}")
+
+            # Download config
+            with urllib.request.urlopen(url) as response:
+                config_content = response.read().decode('utf-8')
+
+            # Write to temporary file for validation
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+                tmp.write(config_content)
+                tmp_path = tmp.name
+
+            try:
+                # Validate config
+                validation = self.validate_config_content(config_content)
+                if not validation.valid:
+                    logger.error(f"Config from URL {url} failed validation: {validation.errors}")
+                    return False
+
+                # Load the validated config
+                self.config = yaml.safe_load(config_content)
+                self.original_config = yaml.safe_load(yaml.dump(self.config))  # Deep copy
+                self.config_loaded = True
+
+                # Setup environment
+                self.env = self._prep_environment()
+
+                # Discover available launch files
+                self._discover_launch_files()
+
+                # Store the content for the editor (but don't overwrite local file)
+                self._remote_config_content = config_content
+
+                logger.info(f"Config loaded successfully from URL {url}")
+                return True
+
+            finally:
+                os.unlink(tmp_path)
+
+        except Exception as e:
+            logger.error(f"Failed to load config from URL {url}: {e}")
+            return False
 
     def _discover_launch_files(self):
         """Discover available launch files in the phyto_arm package"""
@@ -390,6 +461,11 @@ class PhytoARMServer:
 
     async def start_process(self, process_name: str) -> bool:
         """Start a specific process"""
+        # Check if config is loaded before starting processes
+        if not self.has_config():
+            logger.error("Cannot start processes - no config loaded")
+            return False
+
         if process_name in self.processes:
             return self.processes[process_name].start()
 
@@ -501,11 +577,23 @@ class PhytoARMServer:
     def get_config_content(self) -> str:
         """Get current config file content"""
         try:
-            with open(self.config_file, 'r') as f:
-                return f.read()
+            # If we loaded from URL, return that content
+            if hasattr(self, '_remote_config_content'):
+                return self._remote_config_content
+
+            # Otherwise read from file
+            if self.config_file and os.path.exists(self.config_file):
+                with open(self.config_file, 'r') as f:
+                    return f.read()
+            else:
+                return ""
         except Exception as e:
             logger.error(f"Failed to read config file: {e}")
             return ""
+
+    def has_config(self) -> bool:
+        """Check if a valid config is loaded"""
+        return self.config_loaded and self.config is not None
 
     def validate_config_content(self, content: str) -> ConfigValidationResult:
         """Validate config content"""
@@ -602,24 +690,57 @@ class PhytoARMServer:
                 logger.error(f"Error in process monitor: {e}")
                 await asyncio.sleep(5)
 
-    async def _send_alerts(self, process_name: str):
+    async def _send_alerts(self, process_name: str, test_mode: bool = False):
         """Send alerts when process fails - adapted from original"""
+        if not self.config:
+            logger.warning("No config loaded, cannot send alerts")
+            return
+
         alerts = self.config.get('alerts', [])
         deployment = self.config.get('name', 'unknown')
+
+        if not alerts:
+            logger.info("No alerts configured")
+            return
 
         for alert in alerts:
             if alert.get('type') == 'slack' and alert.get('url'):
                 try:
-                    message = {
-                        'text': f'*PhytO-ARM process failed*\n - Deployment: _{deployment}_\n - Process: _{process_name}_'
-                    }
+                    if test_mode:
+                        message = {
+                            'text': f'🧪 *PhytO-ARM Alert Test*\n - Deployment: _{deployment}_\n - Test Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n - Status: Alert system is working correctly!'
+                        }
+                    else:
+                        message = {
+                            'text': f'*PhytO-ARM process failed*\n - Deployment: _{deployment}_\n - Process: _{process_name}_'
+                        }
+
                     urllib.request.urlopen(
                         alert['url'],
                         json.dumps(message).encode()
                     )
-                    logger.info(f"Alert sent for {process_name}")
+
+                    if test_mode:
+                        logger.info("Test alert sent successfully")
+                    else:
+                        logger.info(f"Alert sent for {process_name}")
                 except Exception as e:
                     logger.error(f"Failed to send alert: {e}")
+
+    async def test_alerts(self) -> dict:
+        """Test alert system"""
+        if not self.has_config():
+            return {"success": False, "message": "No config loaded"}
+
+        alerts = self.config.get('alerts', [])
+        if not alerts:
+            return {"success": False, "message": "No alerts configured"}
+
+        try:
+            await self._send_alerts("test", test_mode=True)
+            return {"success": True, "message": "Test alert sent successfully"}
+        except Exception as e:
+            return {"success": False, "message": f"Failed to send test alert: {str(e)}"}
 
     async def add_log_connection(self, websocket: WebSocket):
         """Add a WebSocket connection for log streaming"""
@@ -670,7 +791,7 @@ server: Optional[PhytoARMServer] = None
 async def lifespan(app: FastAPI):
     # Startup
     global server
-    config_file = os.environ.get('PHYTO_ARM_CONFIG', '/configs/config.yaml')
+    config_file = os.environ.get('PHYTO_ARM_CONFIG')  # Optional now
     server = PhytoARMServer(config_file)
     await server.initialize()
 
@@ -833,6 +954,26 @@ async def get_dashboard():
                             </div>
                         </div>
 
+                        <!-- URL Loading Section -->
+                        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <h3 class="text-sm font-medium text-gray-800 mb-2">Load Config from URL</h3>
+                            <div class="flex space-x-2">
+                                <input
+                                    type="url"
+                                    id="config-url-input"
+                                    placeholder="https://example.com/config.yaml"
+                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                <button
+                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                                    onclick="loadConfigFromUrl()"
+                                >
+                                    📥 Load
+                                </button>
+                            </div>
+                            <div id="url-load-status" class="mt-2 hidden"></div>
+                        </div>
+
                         <!-- Status Message -->
                         <div id="config-status" class="mt-4 hidden"></div>
                     </div>
@@ -957,6 +1098,9 @@ async def get_dashboard():
                         statusDiv.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-lg';
                         statusDiv.innerHTML = '<p class="text-green-800">✅ Configuration applied successfully</p>';
                         setTimeout(clearConfigStatus, 3000);
+
+                        // Refresh processes to show updated state
+                        htmx.trigger('#processes-container', 'load');
                     } else {
                         statusDiv.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
                         statusDiv.innerHTML = `<p class="text-red-800"><strong>❌ Validation failed:</strong></p><ul class="list-disc list-inside mt-2">${data.errors.map(err => `<li>${err}</li>`).join('')}</ul>`;
@@ -965,6 +1109,55 @@ async def get_dashboard():
                 .catch(error => {
                     statusDiv.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
                     statusDiv.innerHTML = '<p class="text-red-800">❌ Error applying configuration</p>';
+                });
+            }
+
+            function loadConfigFromUrl() {
+                const urlInput = document.getElementById('config-url-input');
+                const statusDiv = document.getElementById('url-load-status');
+
+                if (!urlInput.value.trim()) {
+                    statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
+                    statusDiv.innerHTML = '<p class="text-red-800 text-sm">Please enter a URL</p>';
+                    statusDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // Show loading state
+                statusDiv.className = 'mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg';
+                statusDiv.innerHTML = '<p class="text-blue-800 text-sm">🔄 Loading config from URL...</p>';
+                statusDiv.classList.remove('hidden');
+
+                // Load config from URL
+                fetch('/api/config/load_url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: urlInput.value.trim() })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusDiv.className = 'mt-2 p-3 bg-green-50 border border-green-200 rounded-lg';
+                        statusDiv.innerHTML = '<p class="text-green-800 text-sm">✅ Config loaded successfully</p>';
+
+                        // Reload the config editor to show new content
+                        htmx.trigger('#config-editor', 'load');
+
+                        // Clear the input
+                        urlInput.value = '';
+
+                        // Hide status after 3 seconds
+                        setTimeout(() => statusDiv.classList.add('hidden'), 3000);
+                    } else {
+                        statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
+                        statusDiv.innerHTML = `<p class="text-red-800 text-sm">❌ ${data.message}</p>`;
+                    }
+                })
+                .catch(error => {
+                    statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
+                    statusDiv.innerHTML = '<p class="text-red-800 text-sm">❌ Error loading config from URL</p>';
                 });
             }
         </script>
@@ -1001,7 +1194,10 @@ async def api_status():
         raise HTTPException(status_code=500, detail="Server not initialized")
 
     status = await server.get_status()
-    return {name: info.dict() for name, info in status.items()}
+    return {
+        "processes": {name: info.dict() for name, info in status.items()},
+        "config_loaded": server.has_config()
+    }
 
 
 @app.get("/api/launch_configs")
@@ -1020,6 +1216,49 @@ async def api_render_processes():
         raise HTTPException(status_code=500, detail="Server not initialized")
 
     status = await server.get_status()
+    config_loaded = server.has_config()
+
+    # Build HTML for processes
+    html_parts = []
+
+    # Add config status banner if no config is loaded
+    if not config_loaded:
+        html_parts.append('''
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">No Configuration Loaded</h3>
+                    <p class="text-sm text-yellow-700 mt-1">
+                        Load a configuration file via the Config tab before starting processes.
+                    </p>
+                </div>
+            </div>
+        </div>
+        ''')
+
+    # Add alerts test button
+    alerts_disabled = "" if config_loaded else "disabled"
+    html_parts.append(f'''
+    <div class="mb-6 flex justify-between items-center">
+        <h2 class="text-xl font-semibold text-gray-800">Process Control</h2>
+        <button
+            class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+            hx-post="/api/alerts/test"
+            hx-target="#alert-result"
+            hx-swap="innerHTML"
+            {alerts_disabled}
+        >
+            <span class="mr-2">🧪</span>
+            Test Alerts
+        </button>
+    </div>
+    <div id="alert-result" class="mb-4"></div>
+    ''')
 
     # Get all available processes and their metadata
     all_processes = {}
@@ -1055,17 +1294,17 @@ async def api_render_processes():
 
     sorted_processes = sorted(all_processes.items(), key=sort_key)
 
-    # Build HTML for processes
-    html_parts = ['<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">']
+    # Add processes grid
+    html_parts.append('<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">')
 
     for name, data in sorted_processes:
-        html_parts.append(_render_process_card(data['info'], data['metadata']))
+        html_parts.append(_render_process_card(data['info'], data['metadata'], config_loaded))
 
     html_parts.append('</div>')
     return HTMLResponse(content=''.join(html_parts))
 
 
-def _render_process_card(process_info: ProcessInfo, metadata: dict) -> str:
+def _render_process_card(process_info: ProcessInfo, metadata: dict, config_loaded: bool = True) -> str:
     """Render a single process card"""
     state = process_info.state.value
 
@@ -1093,6 +1332,11 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict) -> str:
     is_running = state == 'running'
     is_transitioning = state in ['starting', 'stopping']
 
+    # Disable buttons if no config loaded
+    buttons_disabled = not config_loaded or is_transitioning
+    start_disabled = buttons_disabled or is_running
+    stop_disabled = buttons_disabled or not is_running
+
     # Format timestamps
     started_at = ''
     if process_info.started_at:
@@ -1111,6 +1355,11 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict) -> str:
     if metadata.get('type') == 'launch' and metadata.get('filename'):
         type_info = f'<p class="text-xs text-gray-500 mt-1">📄 {metadata["filename"]}</p>'
 
+    # Config warning if not loaded
+    config_warning = ''
+    if not config_loaded:
+        config_warning = '<p class="text-xs text-yellow-600 mt-1">⚠️ Config required</p>'
+
     return f"""
     <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 {category_class}">
         <div class="flex justify-between items-start mb-4">
@@ -1118,6 +1367,7 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict) -> str:
                 <h3 class="text-lg font-semibold text-gray-900">{process_info.name}</h3>
                 <p class="text-gray-600 text-sm mt-1">{metadata.get('description', 'No description')}</p>
                 {type_info}
+                {config_warning}
             </div>
             <div class="flex flex-col items-end space-y-1">
                 <span class="px-3 py-1 rounded-full text-xs font-medium border {state_class}">
@@ -1141,7 +1391,7 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict) -> str:
                 hx-post="/api/processes/{process_info.name}/start"
                 hx-target="#processes-container"
                 hx-swap="innerHTML"
-                {"disabled" if is_running or is_transitioning else ""}
+                {"disabled" if start_disabled else ""}
             >
                 ▶️ Start
             </button>
@@ -1150,7 +1400,7 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict) -> str:
                 hx-post="/api/processes/{process_info.name}/stop"
                 hx-target="#processes-container"
                 hx-swap="innerHTML"
-                {"disabled" if not is_running or is_transitioning else ""}
+                {"disabled" if stop_disabled else ""}
             >
                 ⏹️ Stop
             </button>
@@ -1319,6 +1569,67 @@ async def api_reset_config():
     """)
 
 
+@app.post("/api/config/load_url")
+async def api_load_config_from_url(request_data: dict):
+    """Load config from URL"""
+    if not server:
+        raise HTTPException(status_code=500, detail="Server not initialized")
+
+    url = request_data.get('url', '')
+    if not url:
+        return JSONResponse(content={
+            "success": False,
+            "message": "URL is required"
+        })
+
+    success = await server.load_config_from_url(url)
+
+    return JSONResponse(content={
+        "success": success,
+        "message": "Config loaded from URL successfully" if success else "Failed to load config from URL"
+    })
+
+
+@app.post("/api/alerts/test", response_class=HTMLResponse)
+async def api_test_alerts():
+    """Test alert system"""
+    if not server:
+        raise HTTPException(status_code=500, detail="Server not initialized")
+
+    result = await server.test_alerts()
+
+    if result["success"]:
+        return HTMLResponse(content=f'''
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-green-800">✅ {result["message"]}</p>
+                </div>
+            </div>
+        </div>
+        ''')
+    else:
+        return HTMLResponse(content=f'''
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-red-800">❌ {result["message"]}</p>
+                </div>
+            </div>
+        </div>
+        ''')
+
+
 @app.websocket("/ws/logs")
 async def websocket_logs(websocket: WebSocket):
     """WebSocket endpoint for real-time log streaming"""
@@ -1342,13 +1653,21 @@ async def websocket_logs(websocket: WebSocket):
 if __name__ == "__main__":
     import uvicorn
 
-    # Get config file from environment or command line
-    config_file = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('PHYTO_ARM_CONFIG', '/configs/config.yaml')
+    # Get config file from command line or environment (optional now)
+    config_file = None
+    if len(sys.argv) > 1:
+        config_file = sys.argv[1]
+    else:
+        config_file = os.environ.get('PHYTO_ARM_CONFIG')
 
-    # Set environment variable for app startup
-    os.environ['PHYTO_ARM_CONFIG'] = config_file
-
-    logger.info(f"Starting PhytO-ARM Control Server 2.0 with config: {config_file}")
+    # Set environment variable for app startup (can be None)
+    if config_file:
+        os.environ['PHYTO_ARM_CONFIG'] = config_file
+        logger.info(f"Starting PhytO-ARM Control Server 2.0 with config: {config_file}")
+    else:
+        # Remove the env var if it exists
+        os.environ.pop('PHYTO_ARM_CONFIG', None)
+        logger.info("Starting PhytO-ARM Control Server 2.0 without config - config must be loaded via web interface")
 
     uvicorn.run(
         app,
