@@ -26,6 +26,8 @@
         "source=${localWorkspaceFolder}/phyto-arm,target=/app/phyto-arm,type=bind",
         "source=${localWorkspaceFolder}/phyto_arm_daemon.py,target=/app/phyto_arm_daemon.py,type=bind",
         "source=${localWorkspaceFolder}/scripts,target=/app/scripts,type=bind",
+        "source=${localWorkspaceFolder}/server,target=/app/server,type=bind",
+        "source=${localWorkspaceFolder}/server.py,target=/app/server.py,type=bind"
         // "source=/home/ifcb/IFCBacquire/Host/Routines,target=/routines,type=bind",
         // "source=/mnt/data,target=/mnt/data,type=bind"
     ],
