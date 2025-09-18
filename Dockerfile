@@ -94,14 +94,15 @@ RUN bash -c "source devel/setup.bash \
         rbr_maestro3_ctd \
 "
 
-# Copy the launch tools
+# Copy the launch tools and server files
 ENV DONT_SCREEN=1
 ENV NO_VIRTUALENV=1
 COPY ./phyto-arm ./phyto-arm
-COPY ./phyto_arm_daemon.py ./phyto_arm_daemon.py
+COPY ./server.py ./server.py
+COPY ./server ./server
 
 # Expose web interface port
 EXPOSE 8080
 
-# Default command runs the daemon
-CMD ["python3", "./phyto_arm_daemon.py", "/configs/config.yaml"]
+# Default command runs the server
+CMD ["python3", "server.py"]
