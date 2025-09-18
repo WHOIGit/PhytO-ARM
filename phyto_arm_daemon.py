@@ -61,7 +61,7 @@ class ProcessInfo(BaseModel):
 
 class PhytoARMProcess:
     """Manages a single ROS process (roscore, rosbag, or launch file)"""
-    
+
     def __init__(self, name: str, command: str, env: Dict[str, str], 
                  dont_kill: bool = False, required: bool = True):
         self.name = name
@@ -69,20 +69,20 @@ class PhytoARMProcess:
         self.env = env
         self.dont_kill = dont_kill  # For rosbag - terminate but don't kill
         self.required = required
-        
+
         self.process: Optional[subprocess.Popen] = None
         self.info = ProcessInfo(name=name, state=ProcessState.STOPPED)
-        
+
     def start(self) -> bool:
         """Start the process"""
         if self.is_running():
             logger.warning(f"{self.name} is already running")
             return True
-            
+
         try:
             self.info.state = ProcessState.STARTING
             logger.info(f"Starting {self.name}: {self.command}")
-            
+
             self.process = subprocess.Popen(
                 self.command,
                 shell=True,
@@ -91,29 +91,29 @@ class PhytoARMProcess:
                 stderr=subprocess.STDOUT,
                 text=True
             )
-            
+
             self.info.pid = self.process.pid
             self.info.started_at = datetime.now()
             self.info.state = ProcessState.RUNNING
-            
+
             logger.info(f"{self.name} started with PID {self.info.pid}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to start {self.name}: {e}")
             self.info.state = ProcessState.FAILED
             return False
-    
+
     def stop(self) -> bool:
         """Stop the process"""
         if not self.is_running():
             logger.warning(f"{self.name} is not running")
             return True
-            
+
         try:
             self.info.state = ProcessState.STOPPING
             logger.info(f"Stopping {self.name} (PID {self.info.pid})")
-            
+
             self.process.terminate()
             try:
                 exit_code = self.process.wait(timeout=5.0)
@@ -126,24 +126,24 @@ class PhytoARMProcess:
                     self.process.kill()
                     exit_code = self.process.wait()
                     self.info.exit_code = exit_code
-            
+
             self.info.stopped_at = datetime.now()
             self.info.state = ProcessState.STOPPED
             self.process = None
-            
+
             logger.info(f"{self.name} stopped with exit code {self.info.exit_code}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to stop {self.name}: {e}")
             self.info.state = ProcessState.FAILED
             return False
-    
+
     def is_running(self) -> bool:
         """Check if process is currently running"""
         if self.process is None:
             return False
-        
+
         poll_result = self.process.poll()
         if poll_result is not None:
             # Process has terminated
@@ -152,76 +152,15 @@ class PhytoARMProcess:
             self.info.state = ProcessState.STOPPED if poll_result == 0 else ProcessState.FAILED
             self.process = None
             return False
-        
+
         return True
-    
+
     def get_info(self) -> ProcessInfo:
         """Get current process info"""
         # Update running state if needed
         self.is_running()
         return self.info
-    
-    def get_logs(self, max_lines: int = 100, log_dir: str = None) -> List[str]:
-        """Get recent log lines from ROS log files"""
-        if not log_dir:
-            return ["No log directory configured"]
-            
-        try:
-            # Look for log files related to this process
-            latest_dir = os.path.join(log_dir, 'latest')
-            if not os.path.exists(latest_dir):
-                return ["Log directory not found"]
-            
-            # Find log files that match this process name
-            log_files = []
-            for filename in os.listdir(latest_dir):
-                match = False
-                
-                if self.name == 'roscore':
-                    # For roscore, look for master.log and rosout.log
-                    match = 'master.log' in filename or 'rosout.log' in filename
-                elif self.name == 'rosbag':
-                    # For rosbag, look for any rosbag-related logs
-                    match = 'rosbag' in filename.lower()
-                else:
-                    # For launch files (arm_ifcb, etc.), look for logs that start with the name
-                    # or contain the name as a prefix (e.g., arm_ifcb-arm-1.log)
-                    match = (filename.startswith(self.name + '-') or 
-                            filename.startswith(self.name + '.') or
-                            filename == self.name + '.log')
-                
-                if match:
-                    log_files.append(os.path.join(latest_dir, filename))
-            
-            if not log_files:
-                return [f"No log files found for {self.name} in {latest_dir}"]
-            
-            # Sort by modification time, most recent first
-            log_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-            
-            all_lines = []
-            all_lines.append(f"=== Found {len(log_files)} log file(s) for {self.name} ===")
-            
-            # Read from all matching log files, starting with most recent
-            for i, log_file in enumerate(log_files[:3]):  # Limit to 3 files to avoid too much output
-                filename = os.path.basename(log_file)
-                all_lines.append(f"\n--- {filename} ---")
-                
-                try:
-                    with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-                        lines = f.readlines()
-                        # Take fewer lines per file if multiple files
-                        lines_per_file = max(20, max_lines // len(log_files))
-                        recent_lines = [line.rstrip() for line in lines[-lines_per_file:]]
-                        all_lines.extend(recent_lines)
-                except Exception as e:
-                    all_lines.append(f"Error reading {filename}: {str(e)}")
-            
-            return all_lines
-                
-        except Exception as e:
-            return [f"Error reading logs: {str(e)}"]
-    
+
     def _read_output(self):
         """Legacy method - now unused since we read ROS log files directly"""
         pass
@@ -229,23 +168,23 @@ class PhytoARMProcess:
 
 class PhytoARMDaemon:
     """Main daemon class that manages all PhytO-ARM processes"""
-    
+
     def __init__(self, config_file: str, config_schema: str = None):
         self.config_file = config_file
         self.config_schema = config_schema or "./configs/example.yaml"
         self.config = None
         self.env = None
-        
+
         # Process registry
         self.processes: Dict[str, PhytoARMProcess] = {}
-        
+
         # Available launch configurations (discovered at runtime)
         self.launch_configs = {}
-        
+
         # Background monitoring
         self._monitor_task = None
         self._shutdown = False
-        
+
     async def initialize(self):
         """Initialize the daemon - load config, setup environment"""
         try:
@@ -253,75 +192,75 @@ class PhytoARMDaemon:
             logger.info(f"Validating config file {self.config_file}")
             if not validate_config(self.config_file, self.config_schema):
                 raise ValueError("Config validation failed")
-            
+
             # Load config
             with open(self.config_file, 'r') as f:
                 self.config = yaml.safe_load(f)
-            
+
             # Setup environment
             self.env = self._prep_environment()
-            
+
             # Discover available launch files
             self._discover_launch_files()
-            
+
             # Start monitoring
             self._monitor_task = asyncio.create_task(self._monitor_processes())
-            
+
             logger.info("PhytO-ARM daemon initialized successfully")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize daemon: {e}")
             raise
-    
+
     def _discover_launch_files(self):
         """Discover available launch files in the phyto_arm package"""
         parent_dir = os.path.dirname(__file__)
         launch_dir = os.path.join(parent_dir, 'src', 'phyto_arm', 'launch')
-        
+
         if not os.path.exists(launch_dir):
             logger.warning(f"Launch directory not found: {launch_dir}")
             return
-            
+
         launch_files = glob.glob(os.path.join(launch_dir, '*.launch'))
-        
+
         for launch_file in launch_files:
             filename = os.path.basename(launch_file)
             name = os.path.splitext(filename)[0]
-            
+
             # Skip rosbag.launch as it's handled specially
             if name != 'rosbag':
                 self.launch_configs[name] = filename
                 logger.info(f"Discovered launch file: {name} -> {filename}")
-        
+
         logger.info(f"Found {len(self.launch_configs)} launch configurations")
-    
+
     def _prep_environment(self) -> Dict[str, str]:
         """Prepare ROS environment - adapted from original phyto-arm script"""
         parent_dir = os.path.dirname(__file__)
         setup_dir = os.path.abspath(os.path.join(parent_dir, 'devel'))
-        
+
         env = os.environ.copy()
         env['_CATKIN_SETUP_DIR'] = setup_dir
-        
+
         # Build command to load workspace
         command = f'. {shlex.quote(setup_dir)}/setup.sh && env'
-        
+
         if os.getenv('NO_VIRTUALENV') is None:
             command = f'. {shlex.quote(parent_dir)}/.venv/bin/activate && ' + command
-            
+
         # Get environment
         env_out = subprocess.check_output(command, shell=True, env=env)
         for line in env_out.rstrip().split(b'\n'):
             var, _, value = line.partition(b'=')
             env[var.decode()] = value.decode()
-        
+
         # Allow config to override log directory
         log_dir = self.config.get('launch_args', {}).get('log_dir')
         if log_dir:
             env['ROS_LOG_DIR'] = log_dir
-            
+
         return env
-    
+
     def _build_roslaunch_command(self, package: str, launchfile: str) -> str:
         """Build roslaunch command with config args"""
         rl_args = [
@@ -331,20 +270,20 @@ class PhytoARMDaemon:
             '--skip-log-check',
             package, launchfile
         ]
-        
+
         rl_args.append(f'config_file:={os.path.abspath(self.config_file)}')
-        
+
         for launch_arg, value in self.config.get('launch_args', {}).items():
             if launch_arg != 'launch_prefix':  # Handle separately
                 rl_args.append(f'{launch_arg}:={value}')
-        
+
         return ' '.join(shlex.quote(a) for a in rl_args)
-    
+
     async def start_process(self, process_name: str) -> bool:
         """Start a specific process"""
         if process_name in self.processes:
             return self.processes[process_name].start()
-            
+
         # Create new process based on name
         if process_name == "roscore":
             process = PhytoARMProcess(
@@ -371,37 +310,37 @@ class PhytoARMDaemon:
         else:
             logger.error(f"Unknown process: {process_name}")
             return False
-        
+
         self.processes[process_name] = process
         return process.start()
-    
+
     async def stop_process(self, process_name: str) -> bool:
         """Stop a specific process"""
         if process_name not in self.processes:
             logger.warning(f"Process {process_name} not found")
             return False
-        
+
         return self.processes[process_name].stop()
-    
+
     async def get_status(self) -> Dict[str, ProcessInfo]:
         """Get status of all processes"""
         status = {}
         for name, process in self.processes.items():
             status[name] = process.get_info()
         return status
-    
+
     def get_available_log_files(self) -> Dict:
         """Get list of available log files"""
         # Get log directory from config
         log_dir = self.config.get('launch_args', {}).get('log_dir') if self.config else None
         if not log_dir:
             log_dir = os.environ.get('ROS_LOG_DIR', '/tmp')
-        
+
         latest_dir = os.path.join(log_dir, 'latest')
-        
+
         if not os.path.exists(latest_dir):
             return {"error": f"Log directory not found: {latest_dir}", "files": []}
-        
+
         try:
             log_files = []
             for filename in os.listdir(latest_dir):
@@ -414,32 +353,32 @@ class PhytoARMDaemon:
                         "modified": os.path.getmtime(file_path)
                     }
                     log_files.append(file_info)
-            
+
             # Sort by modification time, most recent first
             log_files.sort(key=lambda x: x["modified"], reverse=True)
-            
+
             return {"log_dir": latest_dir, "files": log_files}
-            
+
         except Exception as e:
             return {"error": f"Error reading log directory: {str(e)}", "files": []}
-    
+
     def get_log_file_content(self, filename: str, max_lines: int = 100) -> Dict:
         """Get content of a specific log file"""
         # Get log directory from config
         log_dir = self.config.get('launch_args', {}).get('log_dir') if self.config else None
         if not log_dir:
             log_dir = os.environ.get('ROS_LOG_DIR', '/tmp')
-        
+
         file_path = os.path.join(log_dir, 'latest', filename)
-        
+
         if not os.path.exists(file_path):
             return {"error": f"Log file not found: {filename}", "lines": []}
-        
+
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 lines = f.readlines()
                 recent_lines = [line.rstrip() for line in lines[-max_lines:]]
-                
+
             return {
                 "filename": filename,
                 "lines": recent_lines,
@@ -448,7 +387,7 @@ class PhytoARMDaemon:
             }
         except Exception as e:
             return {"error": f"Error reading file {filename}: {str(e)}", "lines": []}
-    
+
     async def _monitor_processes(self):
         """Background task to monitor process health"""
         while not self._shutdown:
@@ -457,21 +396,21 @@ class PhytoARMDaemon:
                     # Check if process failed
                     if not process.is_running() and process.info.state == ProcessState.FAILED:
                         logger.error(f"Process {name} has failed")
-                        
+
                         # Send alerts if configured
                         await self._send_alerts(name)
-                        
+
                 await asyncio.sleep(5)  # Check every 5 seconds
-                
+
             except Exception as e:
                 logger.error(f"Error in process monitor: {e}")
                 await asyncio.sleep(5)
-    
+
     async def _send_alerts(self, process_name: str):
         """Send alerts when process fails - adapted from original"""
         alerts = self.config.get('alerts', [])
         deployment = self.config.get('name', 'unknown')
-        
+
         for alert in alerts:
             if alert.get('type') == 'slack' and alert.get('url'):
                 try:
@@ -485,22 +424,22 @@ class PhytoARMDaemon:
                     logger.info(f"Alert sent for {process_name}")
                 except Exception as e:
                     logger.error(f"Failed to send alert: {e}")
-    
+
     async def shutdown(self):
         """Gracefully shutdown all processes"""
         logger.info("Shutting down PhytO-ARM daemon")
         self._shutdown = True
-        
+
         if self._monitor_task:
             self._monitor_task.cancel()
-        
+
         # Stop all processes in reverse order (roscore last)
         stop_order = ["rosbag"] + [name for name in self.processes if name not in ["roscore", "rosbag"]] + ["roscore"]
-        
+
         for name in stop_order:
             if name in self.processes:
                 await self.stop_process(name)
-        
+
         logger.info("PhytO-ARM daemon shutdown complete")
 
 
@@ -515,9 +454,9 @@ async def lifespan(app: FastAPI):
     config_file = os.environ.get('PHYTO_ARM_CONFIG', '/configs/config.yaml')
     daemon = PhytoARMDaemon(config_file)
     await daemon.initialize()
-    
+
     yield
-    
+
     # Shutdown
     if daemon:
         await daemon.shutdown()
@@ -576,25 +515,25 @@ async def get_dashboard():
     </head>
     <body>
         <button class="btn start refresh-btn" onclick="location.reload()">🔄 Refresh</button>
-        
+
         <div class="container">
             <div class="header">
                 <h1>🦠 PhytO-ARM Control Dashboard</h1>
             </div>
-            
+
             <!-- Tabs -->
             <div class="tabs">
                 <button class="tab active" onclick="switchTab('processes')">🔧 Processes</button>
                 <button class="tab" onclick="switchTab('logs')">📄 Logs</button>
             </div>
-            
+
             <!-- Processes Tab -->
             <div id="processes-tab" class="tab-content active">
                 <div id="processes" class="process-grid">
                     <!-- Processes will be loaded here -->
                 </div>
             </div>
-            
+
             <!-- Logs Tab -->
             <div id="logs-tab" class="tab-content">
                 <div class="log-file-list" id="logFileList">
@@ -612,7 +551,7 @@ async def get_dashboard():
 
         <script>
             let launchConfigs = {};
-            
+
             async function loadLaunchConfigs() {
                 try {
                     const response = await fetch('/api/launch_configs');
@@ -621,15 +560,15 @@ async def get_dashboard():
                     console.error('Failed to load launch configs:', error);
                 }
             }
-            
+
             async function loadStatus() {
                 try {
                     const response = await fetch('/api/status');
                     const processes = await response.json();
-                    
+
                     const container = document.getElementById('processes');
                     container.innerHTML = '';
-                    
+
                     // Define process order and descriptions
                     const processOrder = ['roscore', 'rosbag'];
                     const processDescriptions = {
@@ -642,14 +581,14 @@ async def get_dashboard():
                         'mock_arm_ifcb': 'Mock IFCB Arm - Simulated IFCB missions',
                         'mock_arm_chanos': 'Mock Chanos Arm - Simulated Chanos missions'
                     };
-                    
+
                     // Add core processes first
                     processOrder.forEach(name => {
                         const process = processes[name] || {name: name, state: 'stopped'};
                         const card = createProcessCard(process, processDescriptions[name] || '');
                         container.appendChild(card);
                     });
-                    
+
                     // Add all discovered launch configs
                     Object.keys(launchConfigs).sort().forEach(name => {
                         const process = processes[name] || {name: name, state: 'stopped'};
@@ -657,19 +596,19 @@ async def get_dashboard():
                         const card = createProcessCard(process, description);
                         container.appendChild(card);
                     });
-                    
+
                 } catch (error) {
                     console.error('Failed to load status:', error);
                 }
             }
-            
+
             function createProcessCard(process, description) {
                 const card = document.createElement('div');
                 card.className = 'process-card';
-                
+
                 const isRunning = process.state === 'running';
                 const isTransitioning = process.state === 'starting' || process.state === 'stopping';
-                
+
                 card.innerHTML = `
                     <h3>${process.name}</h3>
                     <p>${description}</p>
@@ -677,7 +616,7 @@ async def get_dashboard():
                     ${process.pid ? `<p><strong>PID:</strong> ${process.pid}</p>` : ''}
                     ${process.started_at ? `<p><strong>Started:</strong> ${new Date(process.started_at).toLocaleString()}</p>` : ''}
                     ${process.restart_count > 0 ? `<p><strong>Restarts:</strong> ${process.restart_count}</p>` : ''}
-                    
+
                     <div class="controls">
                         <button class="btn start" ${isRunning || isTransitioning ? 'disabled' : ''} 
                                 onclick="startProcess('${process.name}')">▶️ Start</button>
@@ -685,10 +624,10 @@ async def get_dashboard():
                                 onclick="stopProcess('${process.name}')">⏹️ Stop</button>
                     </div>
                 `;
-                
+
                 return card;
             }
-            
+
             async function startProcess(name) {
                 try {
                     const response = await fetch(`/api/start/${name}`, { method: 'POST' });
@@ -699,7 +638,7 @@ async def get_dashboard():
                     console.error('Failed to start process:', error);
                 }
             }
-            
+
             async function stopProcess(name) {
                 try {
                     const response = await fetch(`/api/stop/${name}`, { method: 'POST' });  
@@ -710,118 +649,118 @@ async def get_dashboard():
                     console.error('Failed to stop process:', error);
                 }
             }
-            
+
             // Tab switching
             function switchTab(tabName) {
                 // Hide all tab contents
                 document.querySelectorAll('.tab-content').forEach(content => {
                     content.classList.remove('active');
                 });
-                
+
                 // Remove active class from all tabs
                 document.querySelectorAll('.tab').forEach(tab => {
                     tab.classList.remove('active');
                 });
-                
+
                 // Show selected tab content
                 document.getElementById(tabName + '-tab').classList.add('active');
-                
+
                 // Add active class to clicked tab
                 event.target.classList.add('active');
-                
+
                 // Load log files when switching to logs tab
                 if (tabName === 'logs') {
                     loadLogFiles();
                 }
             }
-            
+
             let currentLogFile = '';
-            
+
             async function loadLogFiles() {
                 try {
                     const response = await fetch('/api/log_files');
                     const data = await response.json();
-                    
+
                     const container = document.getElementById('logFileList');
                     container.innerHTML = '';
-                    
+
                     if (data.error) {
                         container.innerHTML = `<div class="log-file-card"><h3>Error</h3><p>${data.error}</p></div>`;
                         return;
                     }
-                    
+
                     if (data.files.length === 0) {
                         container.innerHTML = '<div class="log-file-card"><h3>No Log Files</h3><p>No log files found</p></div>';
                         return;
                     }
-                    
+
                     data.files.forEach(file => {
                         const card = document.createElement('div');
                         card.className = 'log-file-card';
                         card.onclick = () => selectLogFile(file.name);
-                        
+
                         const fileSize = (file.size / 1024).toFixed(1);
                         const modDate = new Date(file.modified * 1000).toLocaleString();
-                        
+
                         card.innerHTML = `
                             <h4>${file.name}</h4>
                             <p><strong>Size:</strong> ${fileSize} KB</p>
                             <p><strong>Modified:</strong> ${modDate}</p>
                         `;
-                        
+
                         container.appendChild(card);
                     });
-                    
+
                 } catch (error) {
                     console.error('Failed to load log files:', error);
                     document.getElementById('logFileList').innerHTML = 
                         '<div class="log-file-card"><h3>Error</h3><p>Failed to load log files</p></div>';
                 }
             }
-            
+
             async function selectLogFile(filename) {
                 // Update selected state
                 document.querySelectorAll('.log-file-card').forEach(card => {
                     card.classList.remove('selected');
                 });
                 event.target.closest('.log-file-card').classList.add('selected');
-                
+
                 currentLogFile = filename;
                 await refreshLogContent();
             }
-            
+
             async function refreshLogContent() {
                 if (!currentLogFile) return;
-                
+
                 try {
                     const response = await fetch(`/api/log_content/${currentLogFile}?max_lines=200`);
                     const data = await response.json();
-                    
+
                     const viewer = document.getElementById('logViewer');
-                    
+
                     if (data.error) {
                         viewer.textContent = `Error: ${data.error}`;
                         return;
                     }
-                    
+
                     const header = `=== ${data.filename} ===\\n` +
                                  `Total lines: ${data.total_lines} | File size: ${(data.file_size / 1024).toFixed(1)} KB\\n` +
                                  `Showing last ${data.lines.length} lines\\n\\n`;
-                    
+
                     viewer.textContent = header + data.lines.join('\\n');
-                    
+
                     // Scroll to bottom
                     viewer.scrollTop = viewer.scrollHeight;
-                    
+
                 } catch (error) {
                     console.error('Failed to load log content:', error);
                     document.getElementById('logViewer').textContent = 'Failed to load log content.';
                 }
             }
-            
+
             // Auto-refresh functionality
             setInterval(loadStatus, 5000);  // Refresh processes every 5 seconds
-            
+
             // Auto-refresh logs if a file is selected and logs tab is active
             setInterval(() => {
                 const logsTabActive = document.getElementById('logs-tab').classList.contains('active');
@@ -829,7 +768,7 @@ async def get_dashboard():
                     refreshLogContent();
                 }
             }, 3000);  // Refresh logs every 3 seconds when viewing
-            
+
             // Initial load
             async function initialize() {
                 await loadLaunchConfigs();
@@ -847,7 +786,7 @@ async def api_status():
     """Get status of all processes"""
     if not daemon:
         raise HTTPException(status_code=500, detail="Daemon not initialized")
-    
+
     status = await daemon.get_status()
     return {name: info.dict() for name, info in status.items()}
 
@@ -857,7 +796,7 @@ async def api_launch_configs():
     """Get available launch configurations"""
     if not daemon:
         raise HTTPException(status_code=500, detail="Daemon not initialized")
-    
+
     return daemon.launch_configs
 
 
@@ -866,7 +805,7 @@ async def api_get_log_files():
     """Get list of available log files"""
     if not daemon:
         raise HTTPException(status_code=500, detail="Daemon not initialized")
-    
+
     return daemon.get_available_log_files()
 
 
@@ -875,7 +814,7 @@ async def api_get_log_content(filename: str, max_lines: int = 100):
     """Get content of a specific log file"""
     if not daemon:
         raise HTTPException(status_code=500, detail="Daemon not initialized")
-    
+
     return daemon.get_log_file_content(filename, max_lines)
 
 
@@ -884,11 +823,11 @@ async def api_start_process(process_name: str):
     """Start a specific process"""
     if not daemon:
         raise HTTPException(status_code=500, detail="Daemon not initialized")
-    
+
     success = await daemon.start_process(process_name)
     if not success:
         raise HTTPException(status_code=500, detail=f"Failed to start {process_name}")
-    
+
     return {"message": f"Started {process_name}"}
 
 
@@ -897,25 +836,25 @@ async def api_stop_process(process_name: str):
     """Stop a specific process"""
     if not daemon:
         raise HTTPException(status_code=500, detail="Daemon not initialized")
-    
+
     success = await daemon.stop_process(process_name)
     if not success:
         raise HTTPException(status_code=500, detail=f"Failed to stop {process_name}")
-    
+
     return {"message": f"Stopped {process_name}"}
 
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     # Get config file from environment or command line
     config_file = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('PHYTO_ARM_CONFIG', '/configs/config.yaml')
-    
+
     # Set environment variable for app startup
     os.environ['PHYTO_ARM_CONFIG'] = config_file
-    
+
     logger.info(f"Starting PhytO-ARM daemon with config: {config_file}")
-    
+
     uvicorn.run(
         app,
         host="0.0.0.0",
