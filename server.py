@@ -23,7 +23,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, Tuple
 import glob
 
 import yaml
@@ -39,6 +39,238 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Check if ROS tools are available
+try:
+    # Test if rosparam command is available
+    result = subprocess.run(['which', 'rosparam'], capture_output=True, text=True)
+    ROS_TOOLS_AVAILABLE = result.returncode == 0
+    if ROS_TOOLS_AVAILABLE:
+        logger.info("ROS tools (rosparam) available")
+    else:
+        logger.warning("ROS tools not found in PATH")
+except Exception as e:
+    ROS_TOOLS_AVAILABLE = False
+    logger.warning(f"Failed to check for ROS tools: {e}")
+
+
+def _set_ros_parameter_via_cli(param_path: str, value: Any) -> Tuple[bool, str]:
+    """Set a single ROS parameter using rosparam CLI"""
+    if not ROS_TOOLS_AVAILABLE:
+        return False, "ROS tools not available"
+
+    try:
+        # Convert value appropriately for rosparam
+        if isinstance(value, bool):
+            # Boolean values need to be lowercase strings
+            cmd_value = 'true' if value else 'false'
+        elif isinstance(value, (int, float)):
+            # Numeric values as strings
+            cmd_value = str(value)
+        elif isinstance(value, str):
+            # String values - quote if they contain spaces or special chars
+            if ' ' in value or any(c in value for c in ['-', ':', '[', ']', '{', '}']):
+                cmd_value = f"'{value}'"
+            else:
+                cmd_value = value
+        elif isinstance(value, (dict, list)):
+            # Complex structures as YAML - use rosparam load instead for these
+            return _set_complex_ros_parameter(param_path, value)
+        else:
+            cmd_value = str(value)
+
+        # Use rosparam set command
+        cmd = ['rosparam', 'set', param_path, cmd_value]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+
+        if result.returncode == 0:
+            logger.debug(f"Set ROS parameter: {param_path} = {value}")
+            return True, ""
+        else:
+            error_msg = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+            logger.debug(f"rosparam set command failed: {' '.join(cmd)}")
+            logger.debug(f"Error: {error_msg}")
+            return False, f"rosparam set failed: {error_msg}"
+
+    except subprocess.TimeoutExpired:
+        return False, "rosparam command timed out"
+    except Exception as e:
+        return False, str(e)
+
+
+def _set_complex_ros_parameter(param_path: str, value: Any) -> Tuple[bool, str]:
+    """Set complex ROS parameters (dicts/lists) using temporary YAML file"""
+    if not ROS_TOOLS_AVAILABLE:
+        return False, "ROS tools not available"
+
+    import tempfile
+    try:
+        # Create temporary YAML file with the parameter
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+            # Create YAML structure with the parameter path
+            param_data = {}
+
+            # Handle nested parameter paths like /foo/bar/baz
+            parts = param_path.strip('/').split('/')
+            current = param_data
+            for part in parts[:-1]:
+                current[part] = {}
+                current = current[part]
+            current[parts[-1]] = value
+
+            yaml.dump(param_data, tmp)
+            tmp_path = tmp.name
+
+        try:
+            # Use rosparam load to set the complex parameter
+            cmd = ['rosparam', 'load', tmp_path]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+
+            if result.returncode == 0:
+                logger.debug(f"Set complex ROS parameter: {param_path} = {value}")
+                return True, ""
+            else:
+                error_msg = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+                return False, f"rosparam load failed: {error_msg}"
+
+        finally:
+            # Clean up temporary file
+            os.unlink(tmp_path)
+
+    except subprocess.TimeoutExpired:
+        return False, "rosparam load timed out"
+    except Exception as e:
+        return False, str(e)
+
+
+def _set_ros_parameters_recursive(param_dict: dict, namespace: str = ""):
+    """Recursively set ROS parameters from a dictionary using rosparam CLI"""
+    if not ROS_TOOLS_AVAILABLE:
+        return False, "ROS tools not available"
+
+    try:
+        for key, value in param_dict.items():
+            param_path = f"{namespace}/{key}" if namespace else f"/{key}"
+
+            if isinstance(value, dict):
+                # Recursively set nested parameters
+                success, error = _set_ros_parameters_recursive(value, param_path)
+                if not success:
+                    return False, error
+            else:
+                # Set the parameter using CLI
+                success, error = _set_ros_parameter_via_cli(param_path, value)
+                if not success:
+                    return False, error
+
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def _is_roscore_running() -> bool:
+    """Check if roscore is running by trying to connect to the parameter server"""
+    if not ROS_TOOLS_AVAILABLE:
+        return False
+
+    try:
+        # Try to list parameters - this will fail if roscore isn't running
+        result = subprocess.run(['rosparam', 'list'], capture_output=True, text=True, timeout=5)
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        logger.debug("rosparam list timed out - roscore likely not running")
+        return False
+    except Exception as e:
+        logger.debug(f"ROS parameter server not available: {e}")
+        return False
+
+
+def _get_ros_status() -> dict:
+    """Get detailed ROS status information"""
+    status = {
+        "ros_tools_available": ROS_TOOLS_AVAILABLE,
+        "roscore_running": False,
+        "master_uri": None,
+        "error": None
+    }
+
+    if not ROS_TOOLS_AVAILABLE:
+        status["error"] = "ROS tools not available"
+        return status
+
+    try:
+        status["master_uri"] = os.environ.get('ROS_MASTER_URI', 'http://localhost:11311')
+        status["roscore_running"] = _is_roscore_running()
+    except Exception as e:
+        status["error"] = str(e)
+
+    return status
+
+
+def _update_ros_parameters(config: dict) -> Tuple[bool, str]:
+    """Update ROS parameters with the entire config using rosparam CLI"""
+    if not ROS_TOOLS_AVAILABLE:
+        return False, "ROS tools not available"
+
+    if not _is_roscore_running():
+        return False, "ROS core is not running"
+
+    import tempfile
+    try:
+        # Create temporary YAML file with all config parameters
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+            yaml.dump(config, tmp)
+            tmp_path = tmp.name
+
+        try:
+            # Use rosparam load to set all parameters at once
+            cmd = ['rosparam', 'load', tmp_path]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode == 0:
+                logger.info("Successfully updated ROS parameters via rosparam load")
+                return True, "Parameters updated successfully"
+            else:
+                error_msg = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+                logger.error(f"rosparam load failed: {error_msg}")
+                return False, f"Failed to load parameters: {error_msg}"
+
+        finally:
+            # Clean up temporary file
+            os.unlink(tmp_path)
+
+    except subprocess.TimeoutExpired:
+        return False, "rosparam load timed out"
+    except Exception as e:
+        logger.error(f"Error updating ROS parameters: {e}")
+        return False, f"Error updating parameters: {str(e)}"
+
+
+async def _wait_for_roscore_and_apply_config(server_instance, max_wait_seconds: int = 30):
+    """Wait for roscore to be ready and then apply current config"""
+    if not ROS_TOOLS_AVAILABLE:
+        logger.warning("ROS tools not available - skipping config application")
+        return
+
+    logger.info("Waiting for roscore to be ready...")
+
+    for attempt in range(max_wait_seconds):
+        if _is_roscore_running():
+            logger.info("Roscore is ready, applying configuration...")
+
+            if server_instance.config:
+                success, message = _update_ros_parameters(server_instance.config)
+                if success:
+                    logger.info("Configuration applied to ROS parameter server after roscore startup")
+                else:
+                    logger.warning(f"Failed to apply config to ROS parameter server: {message}")
+            else:
+                logger.warning("No config loaded to apply to ROS parameter server")
+            return
+
+        await asyncio.sleep(1)
+
+    logger.warning(f"Roscore did not become ready within {max_wait_seconds} seconds")
 
 
 class ProcessState(Enum):
@@ -196,6 +428,12 @@ class PhytoARMServer:
         self.log_file_monitors: Dict[str, asyncio.Task] = {}
         self.log_file_positions: Dict[str, int] = {}
 
+    def _is_process_running(self, process_name: str) -> bool:
+        """Check if a process is currently running"""
+        if process_name in self.processes:
+            return self.processes[process_name].is_running()
+        return False
+
     async def initialize(self):
         """Initialize the server - load config if provided, setup environment"""
         try:
@@ -245,6 +483,12 @@ class PhytoARMServer:
 
             logger.info(f"Config loaded successfully from {config_path}")
 
+            # Optionally auto-start roscore when config is loaded
+            auto_start_roscore = self.config.get('launch_args', {}).get('auto_start_roscore', False)
+            if auto_start_roscore and not self._is_process_running("roscore"):
+                logger.info("Auto-starting roscore because auto_start_roscore is enabled")
+                await self.start_process("roscore")
+
         except Exception as e:
             logger.error(f"Failed to load config from {config_path}: {e}")
             raise
@@ -280,6 +524,13 @@ class PhytoARMServer:
             self._discover_launch_files()
 
             logger.info(f"Config loaded successfully from URL {url}")
+
+            # Optionally auto-start roscore when config is loaded
+            auto_start_roscore = self.config.get('launch_args', {}).get('auto_start_roscore', False)
+            if auto_start_roscore and not self._is_process_running("roscore"):
+                logger.info("Auto-starting roscore because auto_start_roscore is enabled")
+                await self.start_process("roscore")
+
             return True
 
         except Exception as e:
@@ -443,6 +694,29 @@ class PhytoARMServer:
             return self.config_file
         return None
 
+    def _create_temp_config_file(self) -> Optional[str]:
+        """Create temporary config file from in-memory config for roslaunch"""
+        if not self.config:
+            return None
+
+        import tempfile
+        try:
+            # Create temporary file with current config
+            fd, temp_path = tempfile.mkstemp(suffix='.yaml', prefix='phyto_arm_launch_')
+            with os.fdopen(fd, 'w') as f:
+                # Use preserved formatting if available, otherwise dump current config
+                if self.config_content:
+                    f.write(self.config_content)
+                else:
+                    yaml.dump(self.config, f)
+
+            logger.debug(f"Created temporary config file for launch: {temp_path}")
+            return temp_path
+
+        except Exception as e:
+            logger.error(f"Failed to create temporary config file: {e}")
+            return None
+
     def _build_roslaunch_command(self, package: str, launchfile: str) -> str:
         """Build roslaunch command with config args"""
         rl_args = [
@@ -453,12 +727,17 @@ class PhytoARMServer:
             package, launchfile
         ]
 
-        # Only pass config_file if we have a real file (not remote content)
-        config_file_path = self._get_config_file_path()
-        if config_file_path:
-            rl_args.append(f'config_file:={os.path.abspath(config_file_path)}')
+        # Always create temp file with current in-memory config for consistency
+        if self.config:
+            temp_config_path = self._create_temp_config_file()
+            if temp_config_path:
+                rl_args.append(f'config_file:={os.path.abspath(temp_config_path)}')
+                # Store path for cleanup later
+                if not hasattr(self, '_temp_launch_configs'):
+                    self._temp_launch_configs = set()
+                self._temp_launch_configs.add(temp_config_path)
 
-        # Pass launch args directly for remote configs or to override file params
+        # Pass launch args directly (these override file params)
         for launch_arg, value in self.config.get('launch_args', {}).items():
             if launch_arg != 'launch_prefix':  # Handle separately
                 rl_args.append(f'{launch_arg}:={value}')
@@ -504,7 +783,14 @@ class PhytoARMServer:
             return False
 
         self.processes[process_name] = process
-        return process.start()
+        success = process.start()
+
+        # If roscore was started successfully, apply config after it's ready
+        if success and process_name == "roscore":
+            # Start background task to wait for roscore and apply config
+            asyncio.create_task(_wait_for_roscore_and_apply_config(self))
+
+        return success
 
     async def stop_process(self, process_name: str) -> bool:
         """Stop a specific process"""
@@ -614,10 +900,14 @@ class PhytoARMServer:
                     errors=["Config must be a YAML dictionary"]
                 )
 
-            # For now, just do basic YAML validation
-            # The original validation required file paths and is complex to refactor
-            # In-memory validation can be enhanced later if needed
-            return ConfigValidationResult(valid=True)
+            # Basic validation passed, but add warnings about ROS connectivity
+            warnings = []
+            if not ROS_TOOLS_AVAILABLE:
+                warnings.append("ROS tools not available - parameters cannot be updated")
+            elif not _is_roscore_running():
+                warnings.append("ROS core is not running - parameters will be applied when roscore starts")
+
+            return ConfigValidationResult(valid=True, warnings=warnings)
 
         except yaml.YAMLError as e:
             return ConfigValidationResult(
@@ -630,13 +920,13 @@ class PhytoARMServer:
                 errors=[f"Validation error: {str(e)}"]
             )
 
-    async def apply_config_changes(self, content: str) -> bool:
+    async def apply_config_changes(self, content: str) -> Tuple[bool, str]:
         """Apply config changes to memory and update ROS parameters (no file changes)"""
         try:
             # Validate first
             validation = self.validate_config_content(content)
             if not validation.valid:
-                return False
+                return False, f"Validation failed: {', '.join(validation.errors)}"
 
             # Parse new config
             new_config = yaml.safe_load(content)
@@ -644,18 +934,32 @@ class PhytoARMServer:
             # Update internal config (in-memory only)
             self.config = new_config
             self.config_content = content  # Preserve formatting
+            self.config_loaded = True  # Mark config as properly loaded
+
+            # Set original config for reset functionality if not already set
+            if not self.original_config:
+                self.original_config = yaml.safe_load(content)  # Parse fresh copy
+                self.original_config_content = content
 
             # Update environment if needed
             self.env = self._prep_environment()
 
-            # TODO: Update ROS parameters if roscore is running
-            # This would require rospy or similar ROS client
-            logger.info("Config changes applied to memory successfully (no file changes)")
-            return True
+            # Discover available launch files
+            self._discover_launch_files()
+
+            # Update ROS parameters if roscore is running
+            ros_success, ros_message = _update_ros_parameters(new_config)
+
+            if ros_success:
+                logger.info("Config changes applied to memory and ROS parameter server successfully")
+                return True, "Configuration applied successfully to memory and ROS parameters"
+            else:
+                logger.warning(f"Config applied to memory but ROS update failed: {ros_message}")
+                return True, f"Configuration applied to memory. ROS parameters: {ros_message}"
 
         except Exception as e:
             logger.error(f"Failed to apply config changes: {e}")
-            return False
+            return False, f"Failed to apply configuration: {str(e)}"
 
     def reset_config_to_original(self) -> str:
         """Reset config to original state (in memory only)"""
@@ -844,6 +1148,15 @@ class PhytoARMServer:
             if name in self.processes:
                 await self.stop_process(name)
 
+        # Clean up temporary config files
+        if hasattr(self, '_temp_launch_configs'):
+            for temp_file in self._temp_launch_configs:
+                try:
+                    if os.path.exists(temp_file):
+                        os.unlink(temp_file)
+                        logger.debug(f"Cleaned up temporary config file: {temp_file}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up temporary config file {temp_file}: {e}")
 
         logger.info("PhytO-ARM server shutdown complete")
 
@@ -868,7 +1181,7 @@ async def lifespan(app: FastAPI):
 
 
 # FastAPI app
-app = FastAPI(title="PhytO-ARM Control Interface 2.0", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="PhytO-ARM Control Interface", version="2.0.0", lifespan=lifespan)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -912,7 +1225,8 @@ async def api_status():
     status = await server.get_status()
     return {
         "processes": {name: info.dict() for name, info in status.items()},
-        "config_loaded": server.has_config()
+        "config_loaded": server.has_config(),
+        "ros_status": _get_ros_status()
     }
 
 
@@ -1251,11 +1565,12 @@ async def api_apply_config(request_data: dict):
         })
 
     # Apply changes
-    success = await server.apply_config_changes(content)
+    success, message = await server.apply_config_changes(content)
 
     return JSONResponse(content={
         "success": success,
-        "errors": [] if success else ["Failed to apply configuration"],
+        "message": message,
+        "errors": [] if success else [message],
         "warnings": []
     })
 
@@ -1396,11 +1711,11 @@ if __name__ == "__main__":
     # Set environment variable for app startup (can be None)
     if config_file:
         os.environ['PHYTO_ARM_CONFIG'] = config_file
-        logger.info(f"Starting PhytO-ARM Control Server 2.0 with config: {config_file}")
+        logger.info(f"Starting PhytO-ARM Control Server with config: {config_file}")
     else:
         # Remove the env var if it exists
         os.environ.pop('PHYTO_ARM_CONFIG', None)
-        logger.info("Starting PhytO-ARM Control Server 2.0 without config - config must be loaded via web interface")
+        logger.info("Starting PhytO-ARM Control Server without config - config must be loaded via web interface")
 
     uvicorn.run(
         app,
