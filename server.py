@@ -191,6 +191,8 @@ class PhytoARMServer:
 
         # WebSocket connections for log streaming
         self.log_connections: List[WebSocket] = []
+        self.log_file_monitors: Dict[str, asyncio.Task] = {}
+        self.log_file_positions: Dict[str, int] = {}
 
     async def initialize(self):
         """Initialize the server - load config if provided, setup environment"""
@@ -441,6 +443,20 @@ class PhytoARMServer:
 
         return env
 
+    def _get_config_file_path(self) -> Optional[str]:
+        """Get path to config file, creating temp file if loaded from URL"""
+        if self.config_file and os.path.exists(self.config_file):
+            return self.config_file
+        elif hasattr(self, '_remote_config_content') and self._remote_config_content:
+            # Create temporary config file for remote content
+            import tempfile
+            if not hasattr(self, '_temp_config_file'):
+                fd, self._temp_config_file = tempfile.mkstemp(suffix='.yaml', prefix='phyto_arm_config_')
+                with os.fdopen(fd, 'w') as f:
+                    f.write(self._remote_config_content)
+            return self._temp_config_file
+        return None
+
     def _build_roslaunch_command(self, package: str, launchfile: str) -> str:
         """Build roslaunch command with config args"""
         rl_args = [
@@ -451,7 +467,10 @@ class PhytoARMServer:
             package, launchfile
         ]
 
-        rl_args.append(f'config_file:={os.path.abspath(self.config_file)}')
+        # Handle config file path - create temp file if loaded from URL
+        config_file_path = self._get_config_file_path()
+        if config_file_path:
+            rl_args.append(f'config_file:={os.path.abspath(config_file_path)}')
 
         for launch_arg, value in self.config.get('launch_args', {}).items():
             if launch_arg != 'launch_prefix':  # Handle separately
@@ -742,22 +761,80 @@ class PhytoARMServer:
         except Exception as e:
             return {"success": False, "message": f"Failed to send test alert: {str(e)}"}
 
-    async def add_log_connection(self, websocket: WebSocket):
+    async def add_log_connection(self, websocket: WebSocket, log_filename: str = None):
         """Add a WebSocket connection for log streaming"""
         self.log_connections.append(websocket)
+
+        # Start monitoring the specific log file if provided
+        if log_filename:
+            await self.start_log_file_monitor(log_filename)
 
     async def remove_log_connection(self, websocket: WebSocket):
         """Remove a WebSocket connection"""
         if websocket in self.log_connections:
             self.log_connections.remove(websocket)
 
-    async def broadcast_log_update(self, log_data: str):
+    async def start_log_file_monitor(self, filename: str):
+        """Start monitoring a specific log file for changes"""
+        if filename in self.log_file_monitors:
+            return  # Already monitoring
+
+        log_dir = self.config.get('launch_args', {}).get('log_dir') if self.config else None
+        if not log_dir:
+            log_dir = os.environ.get('ROS_LOG_DIR', '/tmp')
+
+        file_path = os.path.join(log_dir, 'latest', filename)
+
+        if os.path.exists(file_path):
+            # Start from end of file
+            self.log_file_positions[filename] = os.path.getsize(file_path)
+
+            # Create monitoring task
+            task = asyncio.create_task(self._monitor_log_file(filename, file_path))
+            self.log_file_monitors[filename] = task
+
+    async def _monitor_log_file(self, filename: str, file_path: str):
+        """Monitor a log file for new content and broadcast updates"""
+        try:
+            while not self._shutdown:
+                if os.path.exists(file_path):
+                    current_size = os.path.getsize(file_path)
+                    last_position = self.log_file_positions.get(filename, 0)
+
+                    if current_size > last_position:
+                        # Read new content
+                        try:
+                            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                f.seek(last_position)
+                                new_content = f.read()
+
+                                if new_content.strip():
+                                    # Broadcast new content to WebSocket clients
+                                    await self.broadcast_log_update({
+                                        'type': 'log_update',
+                                        'filename': filename,
+                                        'content': new_content
+                                    })
+
+                                self.log_file_positions[filename] = current_size
+                        except Exception as e:
+                            logger.warning(f"Error reading log file {filename}: {e}")
+
+                await asyncio.sleep(1)  # Check every second
+
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Error monitoring log file {filename}: {e}")
+
+    async def broadcast_log_update(self, log_data: dict):
         """Broadcast log updates to all connected WebSocket clients"""
         if self.log_connections:
+            message = json.dumps(log_data)
             disconnected = []
             for websocket in self.log_connections:
                 try:
-                    await websocket.send_text(log_data)
+                    await websocket.send_text(message)
                 except:
                     disconnected.append(websocket)
 
@@ -773,12 +850,24 @@ class PhytoARMServer:
         if self._monitor_task:
             self._monitor_task.cancel()
 
+        # Cancel all log file monitoring tasks
+        for filename, task in self.log_file_monitors.items():
+            task.cancel()
+        self.log_file_monitors.clear()
+
         # Stop all processes in reverse order (roscore last)
         stop_order = ["rosbag"] + [name for name in self.processes if name not in ["roscore", "rosbag"]] + ["roscore"]
 
         for name in stop_order:
             if name in self.processes:
                 await self.stop_process(name)
+
+        # Clean up temporary config file if it exists
+        if hasattr(self, '_temp_config_file') and os.path.exists(self._temp_config_file):
+            try:
+                os.unlink(self._temp_config_file)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temporary config file: {e}")
 
         logger.info("PhytO-ARM server shutdown complete")
 
@@ -809,361 +898,12 @@ app = FastAPI(title="PhytO-ARM Control Interface 2.0", version="2.0.0", lifespan
 @app.get("/", response_class=HTMLResponse)
 async def get_dashboard():
     """Main dashboard page with Tailwind CSS and HTMX"""
-    return HTMLResponse(content="""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>PhytO-ARM Control Dashboard 2.0</title>
-        <script src="/static/tailwind-3.4.17.js"></script>
-        <script src="/static/htmx-2.0.7.min.js"></script>
-        <script src="/static/htmx-ext-ws-2.0.3.js"></script>
-        <style>
-            .tab-content { display: none; }
-            .tab-content.active { display: block; }
-            .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
-            .htmx-request .htmx-indicator { opacity: 1; }
-            .htmx-request.htmx-indicator { opacity: 1; }
-        </style>
-    </head>
-    <body class="bg-gray-100 font-sans">
-        <!-- Header -->
-        <header class="bg-blue-900 text-white p-6 shadow-lg">
-            <div class="container mx-auto flex justify-between items-center">
-                <h1 class="text-3xl font-bold flex items-center">
-                    <span class="mr-3">🦠</span>
-                    PhytO-ARM Control Dashboard 2.0
-                </h1>
-                <button
-                    class="bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-lg transition-colors flex items-center"
-                    onclick="location.reload()"
-                >
-                    <span class="mr-2">🔄</span>
-                    Refresh
-                </button>
-            </div>
-        </header>
-
-        <!-- Main Container -->
-        <div class="container mx-auto p-6">
-            <!-- Tab Navigation -->
-            <nav class="flex space-x-1 bg-white rounded-lg shadow-md p-2 mb-6">
-                <button
-                    class="tab-btn flex-1 px-6 py-3 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white"
-                    onclick="switchTab('processes')"
-                    id="processes-tab-btn"
-                >
-                    🔧 Processes
-                </button>
-                <button
-                    class="tab-btn flex-1 px-6 py-3 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900"
-                    onclick="switchTab('logs')"
-                    id="logs-tab-btn"
-                >
-                    📄 Logs
-                </button>
-                <button
-                    class="tab-btn flex-1 px-6 py-3 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900"
-                    onclick="switchTab('config')"
-                    id="config-tab-btn"
-                >
-                    ⚙️ Config
-                </button>
-            </nav>
-
-            <!-- Tab Contents -->
-
-            <!-- Processes Tab -->
-            <div id="processes-tab" class="tab-content active">
-                <div
-                    id="processes-container"
-                    hx-get="/api/processes/render"
-                    hx-trigger="load, every 5s"
-                    hx-target="#processes-container"
-                    hx-swap="innerHTML"
-                    class="min-h-96"
-                >
-                    <div class="flex justify-center items-center h-96">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Logs Tab -->
-            <div id="logs-tab" class="tab-content">
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold text-gray-800">Log Files</h2>
-                        <button
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                            hx-get="/api/logs/files"
-                            hx-target="#log-files-container"
-                            hx-swap="innerHTML"
-                        >
-                            🔄 Refresh Files
-                        </button>
-                    </div>
-
-                    <div
-                        id="log-files-container"
-                        hx-get="/api/logs/files"
-                        hx-trigger="load"
-                        hx-target="#log-files-container"
-                        hx-swap="innerHTML"
-                    >
-                        <div class="animate-pulse space-y-4">
-                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-                        </div>
-                    </div>
-
-                    <!-- Log Viewer -->
-                    <div class="mt-6">
-                        <div id="log-viewer" class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm h-96 overflow-y-auto">
-                            <div class="text-gray-500">Select a log file to view its contents</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Config Tab -->
-            <div id="config-tab" class="tab-content">
-                <div class="bg-white rounded-lg shadow-md">
-                    <div class="p-6 border-b border-gray-200">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-xl font-semibold text-gray-800">Configuration Editor</h2>
-                            <div class="flex space-x-2">
-                                <button
-                                    id="config-reset-btn"
-                                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
-                                    hx-post="/api/config/reset"
-                                    hx-target="#config-editor"
-                                    hx-swap="innerHTML"
-                                    onclick="clearConfigStatus()"
-                                >
-                                    🔄 Reset
-                                </button>
-                                <button
-                                    id="config-apply-btn"
-                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-                                    onclick="applyConfig()"
-                                >
-                                    ✅ Apply Changes
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- URL Loading Section -->
-                        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                            <h3 class="text-sm font-medium text-gray-800 mb-2">Load Config from URL</h3>
-                            <div class="flex space-x-2">
-                                <input
-                                    type="url"
-                                    id="config-url-input"
-                                    placeholder="https://example.com/config.yaml"
-                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                <button
-                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                                    onclick="loadConfigFromUrl()"
-                                >
-                                    📥 Load
-                                </button>
-                            </div>
-                            <div id="url-load-status" class="mt-2 hidden"></div>
-                        </div>
-
-                        <!-- Status Message -->
-                        <div id="config-status" class="mt-4 hidden"></div>
-                    </div>
-
-                    <div class="p-6">
-                        <div
-                            id="config-editor"
-                            hx-get="/api/config/content"
-                            hx-trigger="load"
-                            hx-target="#config-editor"
-                            hx-swap="innerHTML"
-                        >
-                            <div class="animate-pulse">
-                                <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                                <div class="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
-                                <div class="h-4 bg-gray-200 rounded w-4/6"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <script>
-            let originalConfigContent = '';
-            let currentConfigContent = '';
-
-            function switchTab(tabName) {
-                // Hide all tab contents
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-
-                // Remove active class from all tab buttons
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.classList.remove('bg-blue-600', 'text-white');
-                    btn.classList.add('text-gray-600', 'hover:text-gray-900');
-                });
-
-                // Show selected tab content
-                document.getElementById(tabName + '-tab').classList.add('active');
-
-                // Add active class to clicked tab button
-                const activeBtn = document.getElementById(tabName + '-tab-btn');
-                activeBtn.classList.remove('text-gray-600', 'hover:text-gray-900');
-                activeBtn.classList.add('bg-blue-600', 'text-white');
-
-                // Load logs when switching to logs tab
-                if (tabName === 'logs') {
-                    htmx.trigger('#log-files-container', 'load');
-                }
-            }
-
-            function selectLogFile(filename) {
-                // Update selected state
-                document.querySelectorAll('.log-file-card').forEach(card => {
-                    card.classList.remove('ring-2', 'ring-blue-500');
-                });
-                event.target.closest('.log-file-card').classList.add('ring-2', 'ring-blue-500');
-
-                // Load log content
-                htmx.ajax('GET', `/api/logs/content/${filename}?max_lines=200`, '#log-viewer');
-            }
-
-            function onConfigContentLoaded(content) {
-                originalConfigContent = content;
-                currentConfigContent = content;
-                clearConfigStatus();
-            }
-
-            function onConfigChange() {
-                const textarea = document.getElementById('config-textarea');
-                if (textarea) {
-                    currentConfigContent = textarea.value;
-                    updateConfigStatus();
-                }
-            }
-
-            function updateConfigStatus() {
-                const hasChanges = currentConfigContent !== originalConfigContent;
-                const statusDiv = document.getElementById('config-status');
-
-                if (hasChanges) {
-                    statusDiv.className = 'mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg';
-                    statusDiv.innerHTML = '<p class="text-yellow-800"><strong>⚠️ Unsaved changes</strong> - Changes have not been applied to the system</p>';
-                    statusDiv.classList.remove('hidden');
-                } else {
-                    statusDiv.classList.add('hidden');
-                }
-            }
-
-            function clearConfigStatus() {
-                const statusDiv = document.getElementById('config-status');
-                statusDiv.classList.add('hidden');
-            }
-
-            function applyConfig() {
-                const textarea = document.getElementById('config-textarea');
-                if (!textarea) return;
-
-                const content = textarea.value;
-
-                // Show loading state
-                const statusDiv = document.getElementById('config-status');
-                statusDiv.className = 'mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg';
-                statusDiv.innerHTML = '<p class="text-blue-800">🔄 Validating and applying changes...</p>';
-                statusDiv.classList.remove('hidden');
-
-                // Apply changes via API
-                fetch('/api/config/apply', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ content: content })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        originalConfigContent = content;
-                        currentConfigContent = content;
-                        statusDiv.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-lg';
-                        statusDiv.innerHTML = '<p class="text-green-800">✅ Configuration applied successfully</p>';
-                        setTimeout(clearConfigStatus, 3000);
-
-                        // Refresh processes to show updated state
-                        htmx.trigger('#processes-container', 'load');
-                    } else {
-                        statusDiv.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
-                        statusDiv.innerHTML = `<p class="text-red-800"><strong>❌ Validation failed:</strong></p><ul class="list-disc list-inside mt-2">${data.errors.map(err => `<li>${err}</li>`).join('')}</ul>`;
-                    }
-                })
-                .catch(error => {
-                    statusDiv.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
-                    statusDiv.innerHTML = '<p class="text-red-800">❌ Error applying configuration</p>';
-                });
-            }
-
-            function loadConfigFromUrl() {
-                const urlInput = document.getElementById('config-url-input');
-                const statusDiv = document.getElementById('url-load-status');
-
-                if (!urlInput.value.trim()) {
-                    statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
-                    statusDiv.innerHTML = '<p class="text-red-800 text-sm">Please enter a URL</p>';
-                    statusDiv.classList.remove('hidden');
-                    return;
-                }
-
-                // Show loading state
-                statusDiv.className = 'mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg';
-                statusDiv.innerHTML = '<p class="text-blue-800 text-sm">🔄 Loading config from URL...</p>';
-                statusDiv.classList.remove('hidden');
-
-                // Load config from URL
-                fetch('/api/config/load_url', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ url: urlInput.value.trim() })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        statusDiv.className = 'mt-2 p-3 bg-green-50 border border-green-200 rounded-lg';
-                        statusDiv.innerHTML = '<p class="text-green-800 text-sm">✅ Config loaded successfully</p>';
-
-                        // Reload the config editor to show new content
-                        htmx.trigger('#config-editor', 'load');
-
-                        // Clear the input
-                        urlInput.value = '';
-
-                        // Hide status after 3 seconds
-                        setTimeout(() => statusDiv.classList.add('hidden'), 3000);
-                    } else {
-                        statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
-                        statusDiv.innerHTML = `<p class="text-red-800 text-sm">❌ ${data.message}</p>`;
-                    }
-                })
-                .catch(error => {
-                    statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
-                    statusDiv.innerHTML = '<p class="text-red-800 text-sm">❌ Error loading config from URL</p>';
-                });
-            }
-        </script>
-    </body>
-    </html>
-    """)
+    try:
+        with open("server/dashboard.html", "r") as f:
+            content = f.read()
+        return HTMLResponse(content=content)
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Dashboard template not found</h1>", status_code=500)
 
 
 # Static file serving for JS libraries
@@ -1179,9 +919,9 @@ async def get_htmx():
         return HTMLResponse(content=f.read(), media_type="application/javascript")
 
 
-@app.get("/static/htmx-ext-ws-2.0.3.js")
+@app.get("/static/htmx-ext-ws-2.0.2.js")
 async def get_htmx_ws():
-    with open("server/htmx-ext-ws-2.0.3.js", "r") as f:
+    with open("server/htmx-ext-ws-2.0.2.js", "r") as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
 
 
@@ -1643,9 +1383,26 @@ async def websocket_logs(websocket: WebSocket):
 
     try:
         while True:
-            # Keep connection alive and listen for client messages
+            # Listen for client messages (log file selection)
             message = await websocket.receive_text()
-            # Could handle log file selection here
+            try:
+                data = json.loads(message)
+                if data.get('type') == 'select_log_file':
+                    filename = data.get('filename')
+                    if filename:
+                        # Start monitoring this log file
+                        await server.start_log_file_monitor(filename)
+
+                        # Send initial content
+                        log_data = server.get_log_file_content(filename, max_lines=200)
+                        if not log_data.get('error'):
+                            await websocket.send_text(json.dumps({
+                                'type': 'initial_content',
+                                'filename': filename,
+                                'content': '\n'.join(log_data['lines'])
+                            }))
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid JSON message from WebSocket: {message}")
     except WebSocketDisconnect:
         await server.remove_log_connection(websocket)
 
