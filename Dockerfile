@@ -104,5 +104,5 @@ COPY ./server ./server
 # Expose web interface port
 EXPOSE 8080
 
-# Default command runs the server
-CMD ["python3", "server.py"]
+# Default command runs the server with ROS environment sourced
+CMD ["bash", "-c", "source /opt/ros/${ROS_DISTRO}/setup.bash && source devel/setup.bash && python3 server.py"]
