@@ -104,13 +104,14 @@ async def _wait_for_roscore_and_apply_config(server_instance, max_wait_seconds: 
 class PhytoARMServer:
     """Main server class that manages all PhytO-ARM processes"""
 
-    def __init__(self, config_file_path: Optional[str] = None, config_schema: str = None):
+    def __init__(self, config_file_path: Optional[str] = None, config_schema: str = None, auto_start_processes: Optional[str] = None):
         self.config_file = config_file_path
         self.config_schema = config_schema or "./configs/example.yaml"
         self.config = None
         self.config_content = None  # Store YAML text with formatting
         self.env = None
         self.config_loaded = False  # Track if config is properly loaded
+        self.auto_start_processes = auto_start_processes  # Comma-separated list of processes to auto-start
 
         # Process registry
         self.processes: Dict[str, PhytoARMProcess] = {}
@@ -178,6 +179,10 @@ class PhytoARMServer:
             # Start monitoring
             self._monitor_task = asyncio.create_task(self._monitor_processes())
 
+            # Auto-start processes if specified
+            if self.auto_start_processes:
+                await self._auto_start_processes()
+
             logger.info("PhytO-ARM server initialized successfully")
 
         except (OSError, yaml.YAMLError, ValueError) as e:
@@ -244,6 +249,55 @@ class PhytoARMServer:
         except (OSError, urllib.error.URLError, yaml.YAMLError, ValueError) as e:
             logger.error("Failed to load config from URL %s: %s", url, e)
             return False
+
+    async def _auto_start_processes(self):
+        """Auto-start specified processes"""
+        if not self.auto_start_processes:
+            return
+
+        process_names = [name.strip() for name in self.auto_start_processes.split(',')]
+        logger.info("Auto-starting processes: %s", process_names)
+
+        for process_name in process_names:
+            if not process_name:
+                continue
+
+            # Check if process is already running
+            if self._is_process_running(process_name):
+                logger.info("Process %s is already running, skipping auto-start", process_name)
+                continue
+
+            # Check if process is available
+            if process_name not in ['roscore', 'rosbag'] and process_name not in self.launch_configs:
+                logger.warning("Process %s not found in available configurations, skipping", process_name)
+                continue
+
+            # Special handling for roscore - start it first and wait
+            if process_name == 'roscore':
+                logger.info("Auto-starting roscore...")
+                success = await self.start_process('roscore')
+                if success:
+                    # Wait a bit for roscore to be ready before starting other processes
+                    await asyncio.sleep(2)
+                    logger.info("Roscore auto-started successfully")
+                else:
+                    logger.error("Failed to auto-start roscore")
+                continue
+
+            # For other processes, check if roscore is running (required for most ROS processes)
+            if not self._is_process_running('roscore'):
+                logger.warning("Roscore is not running, cannot auto-start %s", process_name)
+                continue
+
+            # Start the process
+            logger.info("Auto-starting %s...", process_name)
+            success = await self.start_process(process_name)
+            if success:
+                logger.info("Process %s auto-started successfully", process_name)
+                # Small delay between process starts to avoid overwhelming the system
+                await asyncio.sleep(1)
+            else:
+                logger.error("Failed to auto-start process %s", process_name)
 
     def _discover_launch_files(self):
         """Discover available launch files in the phyto_arm package"""
