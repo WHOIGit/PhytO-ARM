@@ -15,8 +15,11 @@ import logging
 import os
 import shlex
 import subprocess
+import re
 import sys
+import tempfile
 import urllib.request
+import urllib.error
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
@@ -26,7 +29,10 @@ import glob
 import yaml
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
-from pydantic import BaseModel
+try:
+    from pydantic.v1 import BaseModel
+except ImportError:
+    from pydantic import BaseModel
 
 from scripts.config_validation import validate_config
 
@@ -40,15 +46,15 @@ logger = logging.getLogger(__name__)
 # Check if ROS tools are available
 try:
     # Test if rosparam command is available
-    result = subprocess.run(['which', 'rosparam'], capture_output=True, text=True)
+    result = subprocess.run(['which', 'rosparam'], capture_output=True, text=True, check=False)
     ROS_TOOLS_AVAILABLE = result.returncode == 0
     if ROS_TOOLS_AVAILABLE:
         logger.info("ROS tools (rosparam) available")
     else:
         logger.warning("ROS tools not found in PATH")
-except Exception as e:
+except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
     ROS_TOOLS_AVAILABLE = False
-    logger.warning(f"Failed to check for ROS tools: {e}")
+    logger.warning("Failed to check for ROS tools: %s", e)
 
 
 def _is_roscore_running() -> bool:
@@ -58,13 +64,13 @@ def _is_roscore_running() -> bool:
 
     try:
         # Try to list parameters - this will fail if roscore isn't running
-        result = subprocess.run(['rosparam', 'list'], capture_output=True, text=True, timeout=5)
-        return result.returncode == 0
+        cmd_result = subprocess.run(['rosparam', 'list'], capture_output=True, text=True, timeout=5, check=False)
+        return cmd_result.returncode == 0
     except subprocess.TimeoutExpired:
         logger.debug("rosparam list timed out - roscore likely not running")
         return False
-    except Exception as e:
-        logger.debug(f"ROS parameter server not available: {e}")
+    except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+        logger.debug("ROS parameter server not available: %s", e)
         return False
 
 
@@ -84,7 +90,7 @@ def _get_ros_status() -> dict:
     try:
         status["master_uri"] = os.environ.get('ROS_MASTER_URI', 'http://localhost:11311')
         status["roscore_running"] = _is_roscore_running()
-    except Exception as e:
+    except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
         status["error"] = str(e)
 
     return status
@@ -98,7 +104,6 @@ def _update_ros_parameters(config: dict) -> Tuple[bool, str]:
     if not _is_roscore_running():
         return False, "ROS core is not running"
 
-    import tempfile
     try:
         # Create temporary YAML file with all config parameters
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
@@ -108,14 +113,14 @@ def _update_ros_parameters(config: dict) -> Tuple[bool, str]:
         try:
             # Use rosparam load to set all parameters at once
             cmd = ['rosparam', 'load', tmp_path]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            cmd_result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
 
-            if result.returncode == 0:
+            if cmd_result.returncode == 0:
                 logger.info("Successfully updated ROS parameters via rosparam load")
                 return True, "Parameters updated successfully"
             else:
-                error_msg = result.stderr.strip() or result.stdout.strip() or "Unknown error"
-                logger.error(f"rosparam load failed: {error_msg}")
+                error_msg = cmd_result.stderr.strip() or cmd_result.stdout.strip() or "Unknown error"
+                logger.error("rosparam load failed: %s", error_msg)
                 return False, f"Failed to load parameters: {error_msg}"
 
         finally:
@@ -124,8 +129,8 @@ def _update_ros_parameters(config: dict) -> Tuple[bool, str]:
 
     except subprocess.TimeoutExpired:
         return False, "rosparam load timed out"
-    except Exception as e:
-        logger.error(f"Error updating ROS parameters: {e}")
+    except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+        logger.error("Error updating ROS parameters: %s", e)
         return False, f"Error updating parameters: {str(e)}"
 
 
@@ -137,7 +142,7 @@ async def _wait_for_roscore_and_apply_config(server_instance, max_wait_seconds: 
 
     logger.info("Waiting for roscore to be ready...")
 
-    for attempt in range(max_wait_seconds):
+    for _ in range(max_wait_seconds):
         if _is_roscore_running():
             logger.info("Roscore is ready, applying configuration...")
 
@@ -146,14 +151,14 @@ async def _wait_for_roscore_and_apply_config(server_instance, max_wait_seconds: 
                 if success:
                     logger.info("Configuration applied to ROS parameter server after roscore startup")
                 else:
-                    logger.warning(f"Failed to apply config to ROS parameter server: {message}")
+                    logger.warning("Failed to apply config to ROS parameter server: %s", message)
             else:
                 logger.warning("No config loaded to apply to ROS parameter server")
             return
 
         await asyncio.sleep(1)
 
-    logger.warning(f"Roscore did not become ready within {max_wait_seconds} seconds")
+    logger.warning("Roscore did not become ready within %d seconds", max_wait_seconds)
 
 
 class ProcessState(Enum):
@@ -197,12 +202,12 @@ class PhytoARMProcess:
     def start(self) -> bool:
         """Start the process"""
         if self.is_running():
-            logger.warning(f"{self.name} is already running")
+            logger.warning("%s is already running", self.name)
             return True
 
         try:
             self.info.state = ProcessState.STARTING
-            logger.info(f"Starting {self.name}: {self.command}")
+            logger.info("Starting %s: %s", self.name, self.command)
 
             self.process = subprocess.Popen(
                 self.command,
@@ -217,23 +222,23 @@ class PhytoARMProcess:
             self.info.started_at = datetime.now()
             self.info.state = ProcessState.RUNNING
 
-            logger.info(f"{self.name} started with PID {self.info.pid}")
+            logger.info("%s started with PID %s", self.name, self.info.pid)
             return True
 
-        except Exception as e:
-            logger.error(f"Failed to start {self.name}: {e}")
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.error("Failed to start %s: %s", self.name, e)
             self.info.state = ProcessState.FAILED
             return False
 
     def stop(self) -> bool:
         """Stop the process"""
         if not self.is_running():
-            logger.warning(f"{self.name} is not running")
+            logger.warning("%s is not running", self.name)
             return True
 
         try:
             self.info.state = ProcessState.STOPPING
-            logger.info(f"Stopping {self.name} (PID {self.info.pid})")
+            logger.info("Stopping %s (PID %s)", self.name, self.info.pid)
 
             self.process.terminate()
             try:
@@ -241,9 +246,9 @@ class PhytoARMProcess:
                 self.info.exit_code = exit_code
             except subprocess.TimeoutExpired:
                 if self.dont_kill:
-                    logger.warning(f"Failed to terminate {self.name}, but refusing to kill")
+                    logger.warning("Failed to terminate %s, but refusing to kill", self.name)
                 else:
-                    logger.warning(f"Failed to terminate {self.name}, killing")
+                    logger.warning("Failed to terminate %s, killing", self.name)
                     self.process.kill()
                     exit_code = self.process.wait()
                     self.info.exit_code = exit_code
@@ -252,11 +257,11 @@ class PhytoARMProcess:
             self.info.state = ProcessState.STOPPED
             self.process = None
 
-            logger.info(f"{self.name} stopped with exit code {self.info.exit_code}")
+            logger.info("%s stopped with exit code %s", self.name, self.info.exit_code)
             return True
 
-        except Exception as e:
-            logger.error(f"Failed to stop {self.name}: {e}")
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.error("Failed to stop %s: %s", self.name, e)
             self.info.state = ProcessState.FAILED
             return False
 
@@ -286,8 +291,8 @@ class PhytoARMProcess:
 class PhytoARMServer:
     """Main server class that manages all PhytO-ARM processes"""
 
-    def __init__(self, config_file: Optional[str] = None, config_schema: str = None):
-        self.config_file = config_file
+    def __init__(self, config_file_path: Optional[str] = None, config_schema: str = None):
+        self.config_file = config_file_path
         self.config_schema = config_schema or "./configs/example.yaml"
         self.config = None
         self.original_config = None  # Store original for reset
@@ -311,6 +316,9 @@ class PhytoARMServer:
         self.log_file_monitors: Dict[str, asyncio.Task] = {}
         self.log_file_positions: Dict[str, int] = {}
 
+        # Temporary launch configs for cleanup
+        self._temp_launch_configs: set = set()
+
     def _is_process_running(self, process_name: str) -> bool:
         """Check if a process is currently running"""
         if process_name in self.processes:
@@ -322,11 +330,11 @@ class PhytoARMServer:
         try:
             if self.config_file and os.path.exists(self.config_file):
                 # Load config if provided
-                logger.info(f"Loading config file {self.config_file}")
+                logger.info("Loading config file %s", self.config_file)
                 await self.load_config_from_file(self.config_file)
             else:
                 if self.config_file:
-                    logger.warning(f"Config file {self.config_file} not found, starting without config")
+                    logger.warning("Config file %s not found, starting without config", self.config_file)
                 else:
                     logger.info("Starting server without config - config must be loaded via web interface")
 
@@ -335,8 +343,8 @@ class PhytoARMServer:
 
             logger.info("PhytO-ARM server initialized successfully")
 
-        except Exception as e:
-            logger.error(f"Failed to initialize server: {e}")
+        except (OSError, yaml.YAMLError, ValueError) as e:
+            logger.error("Failed to initialize server: %s", e)
             raise
 
     async def _apply_loaded_config(self, config_content: str, source: str, config_path: str = None):
@@ -359,7 +367,7 @@ class PhytoARMServer:
             # Discover available launch files
             self._discover_launch_files()
 
-            logger.info(f"Config loaded successfully from {source}")
+            logger.info("Config loaded successfully from %s", source)
 
             # Optionally auto-start roscore when config is loaded
             auto_start_roscore = self.config.get('launch_args', {}).get('auto_start_roscore', False)
@@ -367,33 +375,33 @@ class PhytoARMServer:
                 logger.info("Auto-starting roscore because auto_start_roscore is enabled")
                 await self.start_process("roscore")
 
-        except Exception as e:
-            logger.error(f"Failed to apply config from {source}: {e}")
+        except (OSError, yaml.YAMLError, ValueError) as e:
+            logger.error("Failed to apply config from %s: %s", source, e)
             raise
 
     async def load_config_from_file(self, config_path: str):
         """Load configuration from a file"""
         try:
             # Validate config
-            logger.info(f"Validating config file {config_path}")
+            logger.info("Validating config file %s", config_path)
             if not validate_config(config_path, self.config_schema):
                 raise ValueError("Config validation failed")
 
             # Load config content
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config_content = f.read()
 
             # Apply the config
             await self._apply_loaded_config(config_content, config_path, config_path)
 
-        except Exception as e:
-            logger.error(f"Failed to load config from {config_path}: {e}")
+        except (OSError, yaml.YAMLError, ValueError) as e:
+            logger.error("Failed to load config from %s: %s", config_path, e)
             raise
 
     async def load_config_from_url(self, url: str) -> bool:
         """Load configuration from a URL"""
         try:
-            logger.info(f"Downloading config from {url}")
+            logger.info("Downloading config from %s", url)
 
             # Download config
             with urllib.request.urlopen(url) as response:
@@ -402,15 +410,15 @@ class PhytoARMServer:
             # Validate config
             validation = self.validate_config_content(config_content)
             if not validation.valid:
-                logger.error(f"Config from URL {url} failed validation: {validation.errors}")
+                logger.error("Config from URL %s failed validation: %s", url, validation.errors)
                 return False
 
             # Apply the config
             await self._apply_loaded_config(config_content, f"URL {url}")
             return True
 
-        except Exception as e:
-            logger.error(f"Failed to load config from URL {url}: {e}")
+        except (OSError, urllib.error.URLError, yaml.YAMLError, ValueError) as e:
+            logger.error("Failed to load config from URL %s: %s", url, e)
             return False
 
     def _discover_launch_files(self):
@@ -419,7 +427,7 @@ class PhytoARMServer:
         launch_dir = os.path.join(parent_dir, 'src', 'phyto_arm', 'launch')
 
         if not os.path.exists(launch_dir):
-            logger.warning(f"Launch directory not found: {launch_dir}")
+            logger.warning("Launch directory not found: %s", launch_dir)
             return
 
         launch_files = glob.glob(os.path.join(launch_dir, '*.launch'))
@@ -436,18 +444,16 @@ class PhytoARMServer:
                     'description': description,
                     'path': launch_file
                 }
-                logger.info(f"Discovered launch file: {name} -> {filename}")
+                logger.info("Discovered launch file: %s -> %s", name, filename)
 
-        logger.info(f"Found {len(self.launch_configs)} launch configurations")
+        logger.info("Found %d launch configurations", len(self.launch_configs))
 
     def _extract_launch_description(self, launch_file_path: str) -> str:
         """Extract description from launch file comments or XML"""
         try:
-            with open(launch_file_path, 'r') as f:
+            with open(launch_file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Look for description in XML comments
-            import re
 
             # Try to find description in comment at top of file
             comment_pattern = r'<!--\s*(.*?)\s*-->'
@@ -475,8 +481,8 @@ class PhytoARMServer:
             name = os.path.splitext(filename)[0]
             return f"Launch configuration: {name}"
 
-        except Exception as e:
-            logger.warning(f"Failed to extract description from {launch_file_path}: {e}")
+        except (OSError, IOError) as e:
+            logger.warning("Failed to extract description from %s: %s", launch_file_path, e)
             filename = os.path.basename(launch_file_path)
             name = os.path.splitext(filename)[0]
             return f"Launch configuration: {name}"
@@ -570,7 +576,6 @@ class PhytoARMServer:
         if not self.config:
             return None
 
-        import tempfile
         try:
             # Create temporary file with current config
             fd, temp_path = tempfile.mkstemp(suffix='.yaml', prefix='phyto_arm_launch_')
@@ -581,11 +586,11 @@ class PhytoARMServer:
                 else:
                     yaml.dump(self.config, f)
 
-            logger.debug(f"Created temporary config file for launch: {temp_path}")
+            logger.debug("Created temporary config file for launch: %s", temp_path)
             return temp_path
 
-        except Exception as e:
-            logger.error(f"Failed to create temporary config file: {e}")
+        except (OSError, IOError) as e:
+            logger.error("Failed to create temporary config file: %s", e)
             return None
 
     def _build_roslaunch_command(self, package: str, launchfile: str) -> str:
@@ -604,8 +609,6 @@ class PhytoARMServer:
             if temp_config_path:
                 rl_args.append(f'config_file:={os.path.abspath(temp_config_path)}')
                 # Store path for cleanup later
-                if not hasattr(self, '_temp_launch_configs'):
-                    self._temp_launch_configs = set()
                 self._temp_launch_configs.add(temp_config_path)
 
         # Pass launch args directly (these override file params)
@@ -650,7 +653,7 @@ class PhytoARMServer:
                 env=self.env
             )
         else:
-            logger.error(f"Unknown process: {process_name}")
+            logger.error("Unknown process: %s", process_name)
             return False
 
         self.processes[process_name] = process
@@ -666,7 +669,7 @@ class PhytoARMServer:
     async def stop_process(self, process_name: str) -> bool:
         """Stop a specific process"""
         if process_name not in self.processes:
-            logger.warning(f"Process {process_name} not found")
+            logger.warning("Process %s not found", process_name)
             return False
 
         return self.processes[process_name].stop()
@@ -708,7 +711,7 @@ class PhytoARMServer:
 
             return {"log_dir": latest_dir, "files": log_files}
 
-        except Exception as e:
+        except (OSError, IOError) as e:
             return {"error": f"Error reading log directory: {str(e)}", "files": []}
 
     def get_log_file_content(self, filename: str, max_lines: int = 100) -> Dict:
@@ -734,7 +737,7 @@ class PhytoARMServer:
                 "total_lines": len(lines),
                 "file_size": os.path.getsize(file_path)
             }
-        except Exception as e:
+        except (OSError, IOError) as e:
             return {"error": f"Error reading file {filename}: {str(e)}", "lines": []}
 
     def get_config_content(self) -> str:
@@ -746,12 +749,12 @@ class PhytoARMServer:
 
             # Fallback: read from file if no content stored
             if self.config_file and os.path.exists(self.config_file):
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
                     return f.read()
             else:
                 return ""
-        except Exception as e:
-            logger.error(f"Failed to get config content: {e}")
+        except (OSError, IOError) as e:
+            logger.error("Failed to get config content: %s", e)
             return ""
 
     def has_config(self) -> bool:
@@ -785,7 +788,7 @@ class PhytoARMServer:
                 valid=False,
                 errors=[f"YAML syntax error: {str(e)}"]
             )
-        except Exception as e:
+        except (TypeError, AttributeError) as e:
             return ConfigValidationResult(
                 valid=False,
                 errors=[f"Validation error: {str(e)}"]
@@ -825,11 +828,11 @@ class PhytoARMServer:
                 logger.info("Config changes applied to memory and ROS parameter server successfully")
                 return True, "Configuration applied successfully to memory and ROS parameters"
             else:
-                logger.warning(f"Config applied to memory but ROS update failed: {ros_message}")
+                logger.warning("Config applied to memory but ROS update failed: %s", ros_message)
                 return True, f"Configuration applied to memory. ROS parameters: {ros_message}"
 
-        except Exception as e:
-            logger.error(f"Failed to apply config changes: {e}")
+        except (yaml.YAMLError, TypeError, AttributeError, OSError) as e:
+            logger.error("Failed to apply config changes: %s", e)
             return False, f"Failed to apply configuration: {str(e)}"
 
     def reset_config_to_original(self) -> str:
@@ -844,8 +847,8 @@ class PhytoARMServer:
 
             # Return original content with preserved formatting
             return self.original_config_content
-        except Exception as e:
-            logger.error(f"Failed to reset config: {e}")
+        except (yaml.YAMLError, TypeError, AttributeError) as e:
+            logger.error("Failed to reset config: %s", e)
             return ""
 
     async def _monitor_processes(self):
@@ -855,15 +858,15 @@ class PhytoARMServer:
                 for name, process in list(self.processes.items()):
                     # Check if process failed
                     if not process.is_running() and process.info.state == ProcessState.FAILED:
-                        logger.error(f"Process {name} has failed")
+                        logger.error("Process %s has failed", name)
 
                         # Send alerts if configured
                         await self._send_alerts(name)
 
                 await asyncio.sleep(5)  # Check every 5 seconds
 
-            except Exception as e:
-                logger.error(f"Error in process monitor: {e}")
+            except (OSError, asyncio.CancelledError) as e:
+                logger.error("Error in process monitor: %s", e)
                 await asyncio.sleep(5)
 
     async def _send_alerts(self, process_name: str, test_mode: bool = False):
@@ -882,13 +885,15 @@ class PhytoARMServer:
         for alert in alerts:
             if alert.get('type') == 'slack' and alert.get('url'):
                 try:
+                    deploy_str = f"Deployment: _{deployment}_"
                     if test_mode:
+                        time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         message = {
-                            'text': f'🧪 *PhytO-ARM Alert Test*\n - Deployment: _{deployment}_\n - Test Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n - Status: Alert system is working correctly!'
+                            'text': f'🧪 *PhytO-ARM Alert Test*\n - {deploy_str}\n - Test Time: {time_str}'
                         }
                     else:
                         message = {
-                            'text': f'*PhytO-ARM process failed*\n - Deployment: _{deployment}_\n - Process: _{process_name}_'
+                            'text': f'*PhytO-ARM process failed*\n - {deploy_str}\n - Process: _{process_name}_'
                         }
 
                     urllib.request.urlopen(
@@ -899,9 +904,9 @@ class PhytoARMServer:
                     if test_mode:
                         logger.info("Test alert sent successfully")
                     else:
-                        logger.info(f"Alert sent for {process_name}")
-                except Exception as e:
-                    logger.error(f"Failed to send alert: {e}")
+                        logger.info("Alert sent for %s", process_name)
+                except (urllib.error.URLError, OSError, ValueError) as e:
+                    logger.error("Failed to send alert: %s", e)
 
     async def test_alerts(self) -> dict:
         """Test alert system"""
@@ -915,7 +920,7 @@ class PhytoARMServer:
         try:
             await self._send_alerts("test", test_mode=True)
             return {"success": True, "message": "Test alert sent successfully"}
-        except Exception as e:
+        except (urllib.error.URLError, OSError, ValueError) as e:
             return {"success": False, "message": f"Failed to send test alert: {str(e)}"}
 
     async def add_log_connection(self, websocket: WebSocket, log_filename: str = None):
@@ -974,15 +979,15 @@ class PhytoARMServer:
                                     })
 
                                 self.log_file_positions[filename] = current_size
-                        except Exception as e:
-                            logger.warning(f"Error reading log file {filename}: {e}")
+                        except (OSError, IOError) as e:
+                            logger.warning("Error reading log file %s: %s", filename, e)
 
                 await asyncio.sleep(1)  # Check every second
 
         except asyncio.CancelledError:
             pass
-        except Exception as e:
-            logger.error(f"Error monitoring log file {filename}: {e}")
+        except (OSError, IOError) as e:
+            logger.error("Error monitoring log file %s: %s", filename, e)
 
     async def broadcast_log_update(self, log_data: dict):
         """Broadcast log updates to all connected WebSocket clients"""
@@ -992,7 +997,7 @@ class PhytoARMServer:
             for websocket in self.log_connections:
                 try:
                     await websocket.send_text(message)
-                except:
+                except (WebSocketDisconnect, ConnectionResetError, OSError):
                     disconnected.append(websocket)
 
             # Clean up disconnected clients
@@ -1008,7 +1013,7 @@ class PhytoARMServer:
             self._monitor_task.cancel()
 
         # Cancel all log file monitoring tasks
-        for filename, task in self.log_file_monitors.items():
+        for _, task in self.log_file_monitors.items():
             task.cancel()
         self.log_file_monitors.clear()
 
@@ -1025,9 +1030,9 @@ class PhytoARMServer:
                 try:
                     if os.path.exists(temp_file):
                         os.unlink(temp_file)
-                        logger.debug(f"Cleaned up temporary config file: {temp_file}")
-                except Exception as e:
-                    logger.warning(f"Failed to clean up temporary config file {temp_file}: {e}")
+                        logger.debug("Cleaned up temporary config file: %s", temp_file)
+                except (OSError, IOError) as e:
+                    logger.warning("Failed to clean up temporary config file %s: %s", temp_file, e)
 
         logger.info("PhytO-ARM server shutdown complete")
 
@@ -1037,11 +1042,11 @@ server: Optional[PhytoARMServer] = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(fastapi_app: FastAPI):
     # Startup
     global server
-    config_file = os.environ.get('PHYTO_ARM_CONFIG')  # Optional now
-    server = PhytoARMServer(config_file)
+    config_file_path = os.environ.get('PHYTO_ARM_CONFIG')  # Optional now
+    server = PhytoARMServer(config_file_path)
     await server.initialize()
 
     yield
@@ -1059,7 +1064,7 @@ app = FastAPI(title="PhytO-ARM Control Interface", version="2.0.0", lifespan=lif
 async def get_dashboard():
     """Main dashboard page with Tailwind CSS and HTMX"""
     try:
-        with open("server/templates/dashboard.html", "r") as f:
+        with open("server/templates/dashboard.html", "r", encoding='utf-8') as f:
             content = f.read()
         return HTMLResponse(content=content)
     except FileNotFoundError:
@@ -1069,19 +1074,19 @@ async def get_dashboard():
 # Static file serving for JS libraries
 @app.get("/static/tailwind-3.4.17.js")
 async def get_tailwind():
-    with open("server/tailwind-3.4.17.js", "r") as f:
+    with open("server/tailwind-3.4.17.js", "r", encoding='utf-8') as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
 
 
 @app.get("/static/htmx-2.0.7.min.js")
 async def get_htmx():
-    with open("server/htmx-2.0.7.min.js", "r") as f:
+    with open("server/htmx-2.0.7.min.js", "r", encoding='utf-8') as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
 
 
 @app.get("/static/htmx-ext-ws-2.0.2.js")
 async def get_htmx_ws():
-    with open("server/htmx-ext-ws-2.0.2.js", "r") as f:
+    with open("server/htmx-ext-ws-2.0.2.js", "r", encoding='utf-8') as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
 
 
@@ -1159,7 +1164,7 @@ async def api_render_processes():
         }
 
     # Add discovered launch configs
-    for name in server.launch_configs.keys():
+    for name in server.launch_configs:
         process_info = status.get(name, ProcessInfo(name=name, state=ProcessState.STOPPED))
         metadata = server.get_process_metadata(name)
         all_processes[name] = {
@@ -1192,10 +1197,10 @@ async def api_render_processes():
 def _load_template(template_name: str) -> str:
     """Load HTML template from file"""
     try:
-        with open(f"server/templates/{template_name}", "r") as f:
+        with open(f"server/templates/{template_name}", "r", encoding='utf-8') as f:
             return f.read()
     except FileNotFoundError:
-        logger.error(f"Template {template_name} not found")
+        logger.error("Template %s not found", template_name)
         return f"<div>Template {template_name} not found</div>"
 
 
@@ -1235,7 +1240,8 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict, config_loade
     # Format timestamps
     started_at = ''
     if process_info.started_at:
-        started_at = f'<p class="text-sm text-gray-600 mt-2"><strong>Started:</strong> {process_info.started_at.strftime("%Y-%m-%d %H:%M:%S")}</p>'
+        time_str = process_info.started_at.strftime("%Y-%m-%d %H:%M:%S")
+        started_at = f'<p class="text-sm text-gray-600 mt-2"><strong>Started:</strong>{time_str}</p>'
 
     restart_info = ''
     if process_info.restart_count > 0:
@@ -1462,9 +1468,9 @@ async def api_test_alerts():
     if not server:
         raise HTTPException(status_code=500, detail="Server not initialized")
 
-    result = await server.test_alerts()
+    test_result = await server.test_alerts()
 
-    if result["success"]:
+    if test_result["success"]:
         return HTMLResponse(content=f'''
         <div class="bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-center">
@@ -1474,7 +1480,7 @@ async def api_test_alerts():
                     </svg>
                 </div>
                 <div class="ml-3">
-                    <p class="text-sm text-green-800">✅ {result["message"]}</p>
+                    <p class="text-sm text-green-800">✅ {test_result["message"]}</p>
                 </div>
             </div>
         </div>
@@ -1489,7 +1495,7 @@ async def api_test_alerts():
                     </svg>
                 </div>
                 <div class="ml-3">
-                    <p class="text-sm text-red-800">❌ {result["message"]}</p>
+                    <p class="text-sm text-red-800">❌ {test_result["message"]}</p>
                 </div>
             </div>
         </div>
@@ -1528,7 +1534,7 @@ async def websocket_logs(websocket: WebSocket):
                                 'content': '\n'.join(log_data['lines'])
                             }))
             except json.JSONDecodeError:
-                logger.warning(f"Invalid JSON message from WebSocket: {message}")
+                logger.warning("Invalid JSON message from WebSocket: %s", message)
     except WebSocketDisconnect:
         await server.remove_log_connection(websocket)
 
@@ -1537,16 +1543,16 @@ if __name__ == "__main__":
     import uvicorn
 
     # Get config file from command line or environment (optional now)
-    config_file = None
+    main_config_file = None
     if len(sys.argv) > 1:
-        config_file = sys.argv[1]
+        main_config_file = sys.argv[1]
     else:
-        config_file = os.environ.get('PHYTO_ARM_CONFIG')
+        main_config_file = os.environ.get('PHYTO_ARM_CONFIG')
 
     # Set environment variable for app startup (can be None)
-    if config_file:
-        os.environ['PHYTO_ARM_CONFIG'] = config_file
-        logger.info(f"Starting PhytO-ARM Control Server with config: {config_file}")
+    if main_config_file:
+        os.environ['PHYTO_ARM_CONFIG'] = main_config_file
+        logger.info("Starting PhytO-ARM Control Server with config: %s", main_config_file)
     else:
         # Remove the env var if it exists
         os.environ.pop('PHYTO_ARM_CONFIG', None)
