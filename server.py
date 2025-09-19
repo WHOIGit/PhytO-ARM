@@ -16,14 +16,11 @@ import os
 import shlex
 import subprocess
 import sys
-import threading
-import time
 import urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
-from typing import Dict, Optional, List, Any, Tuple
+from typing import Dict, Optional, List, Tuple
 import glob
 
 import yaml
@@ -52,120 +49,6 @@ try:
 except Exception as e:
     ROS_TOOLS_AVAILABLE = False
     logger.warning(f"Failed to check for ROS tools: {e}")
-
-
-def _set_ros_parameter_via_cli(param_path: str, value: Any) -> Tuple[bool, str]:
-    """Set a single ROS parameter using rosparam CLI"""
-    if not ROS_TOOLS_AVAILABLE:
-        return False, "ROS tools not available"
-
-    try:
-        # Convert value appropriately for rosparam
-        if isinstance(value, bool):
-            # Boolean values need to be lowercase strings
-            cmd_value = 'true' if value else 'false'
-        elif isinstance(value, (int, float)):
-            # Numeric values as strings
-            cmd_value = str(value)
-        elif isinstance(value, str):
-            # String values - quote if they contain spaces or special chars
-            if ' ' in value or any(c in value for c in ['-', ':', '[', ']', '{', '}']):
-                cmd_value = f"'{value}'"
-            else:
-                cmd_value = value
-        elif isinstance(value, (dict, list)):
-            # Complex structures as YAML - use rosparam load instead for these
-            return _set_complex_ros_parameter(param_path, value)
-        else:
-            cmd_value = str(value)
-
-        # Use rosparam set command
-        cmd = ['rosparam', 'set', param_path, cmd_value]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-
-        if result.returncode == 0:
-            logger.debug(f"Set ROS parameter: {param_path} = {value}")
-            return True, ""
-        else:
-            error_msg = result.stderr.strip() or result.stdout.strip() or "Unknown error"
-            logger.debug(f"rosparam set command failed: {' '.join(cmd)}")
-            logger.debug(f"Error: {error_msg}")
-            return False, f"rosparam set failed: {error_msg}"
-
-    except subprocess.TimeoutExpired:
-        return False, "rosparam command timed out"
-    except Exception as e:
-        return False, str(e)
-
-
-def _set_complex_ros_parameter(param_path: str, value: Any) -> Tuple[bool, str]:
-    """Set complex ROS parameters (dicts/lists) using temporary YAML file"""
-    if not ROS_TOOLS_AVAILABLE:
-        return False, "ROS tools not available"
-
-    import tempfile
-    try:
-        # Create temporary YAML file with the parameter
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
-            # Create YAML structure with the parameter path
-            param_data = {}
-
-            # Handle nested parameter paths like /foo/bar/baz
-            parts = param_path.strip('/').split('/')
-            current = param_data
-            for part in parts[:-1]:
-                current[part] = {}
-                current = current[part]
-            current[parts[-1]] = value
-
-            yaml.dump(param_data, tmp)
-            tmp_path = tmp.name
-
-        try:
-            # Use rosparam load to set the complex parameter
-            cmd = ['rosparam', 'load', tmp_path]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-
-            if result.returncode == 0:
-                logger.debug(f"Set complex ROS parameter: {param_path} = {value}")
-                return True, ""
-            else:
-                error_msg = result.stderr.strip() or result.stdout.strip() or "Unknown error"
-                return False, f"rosparam load failed: {error_msg}"
-
-        finally:
-            # Clean up temporary file
-            os.unlink(tmp_path)
-
-    except subprocess.TimeoutExpired:
-        return False, "rosparam load timed out"
-    except Exception as e:
-        return False, str(e)
-
-
-def _set_ros_parameters_recursive(param_dict: dict, namespace: str = ""):
-    """Recursively set ROS parameters from a dictionary using rosparam CLI"""
-    if not ROS_TOOLS_AVAILABLE:
-        return False, "ROS tools not available"
-
-    try:
-        for key, value in param_dict.items():
-            param_path = f"{namespace}/{key}" if namespace else f"/{key}"
-
-            if isinstance(value, dict):
-                # Recursively set nested parameters
-                success, error = _set_ros_parameters_recursive(value, param_path)
-                if not success:
-                    return False, error
-            else:
-                # Set the parameter using CLI
-                success, error = _set_ros_parameter_via_cli(param_path, value)
-                if not success:
-                    return False, error
-
-        return True, None
-    except Exception as e:
-        return False, str(e)
 
 
 def _is_roscore_running() -> bool:
@@ -456,24 +339,19 @@ class PhytoARMServer:
             logger.error(f"Failed to initialize server: {e}")
             raise
 
-    async def load_config_from_file(self, config_path: str):
-        """Load configuration from a file"""
+    async def _apply_loaded_config(self, config_content: str, source: str, config_path: str = None):
+        """Apply loaded config content - common logic for file and URL loading"""
         try:
-            # Validate config
-            logger.info(f"Validating config file {config_path}")
-            if not validate_config(config_path, self.config_schema):
-                raise ValueError("Config validation failed")
-
-            # Load config
-            with open(config_path, 'r') as f:
-                config_content = f.read()
-                self.config = yaml.safe_load(config_content)
-                self.config_content = config_content
-                self.original_config = yaml.safe_load(config_content)  # Parse fresh copy
-                self.original_config_content = config_content
-
-            self.config_file = config_path
+            # Load the validated config
+            self.config = yaml.safe_load(config_content)
+            self.config_content = config_content
+            self.original_config = yaml.safe_load(config_content)  # Parse fresh copy
+            self.original_config_content = config_content
             self.config_loaded = True
+
+            # Set config file path if provided
+            if config_path:
+                self.config_file = config_path
 
             # Setup environment
             self.env = self._prep_environment()
@@ -481,7 +359,7 @@ class PhytoARMServer:
             # Discover available launch files
             self._discover_launch_files()
 
-            logger.info(f"Config loaded successfully from {config_path}")
+            logger.info(f"Config loaded successfully from {source}")
 
             # Optionally auto-start roscore when config is loaded
             auto_start_roscore = self.config.get('launch_args', {}).get('auto_start_roscore', False)
@@ -490,14 +368,31 @@ class PhytoARMServer:
                 await self.start_process("roscore")
 
         except Exception as e:
+            logger.error(f"Failed to apply config from {source}: {e}")
+            raise
+
+    async def load_config_from_file(self, config_path: str):
+        """Load configuration from a file"""
+        try:
+            # Validate config
+            logger.info(f"Validating config file {config_path}")
+            if not validate_config(config_path, self.config_schema):
+                raise ValueError("Config validation failed")
+
+            # Load config content
+            with open(config_path, 'r') as f:
+                config_content = f.read()
+
+            # Apply the config
+            await self._apply_loaded_config(config_content, config_path, config_path)
+
+        except Exception as e:
             logger.error(f"Failed to load config from {config_path}: {e}")
             raise
 
     async def load_config_from_url(self, url: str) -> bool:
         """Load configuration from a URL"""
         try:
-            import urllib.request
-
             logger.info(f"Downloading config from {url}")
 
             # Download config
@@ -510,27 +405,8 @@ class PhytoARMServer:
                 logger.error(f"Config from URL {url} failed validation: {validation.errors}")
                 return False
 
-            # Load the validated config
-            self.config = yaml.safe_load(config_content)
-            self.config_content = config_content
-            self.original_config = yaml.safe_load(config_content)  # Parse fresh copy
-            self.original_config_content = config_content
-            self.config_loaded = True
-
-            # Setup environment
-            self.env = self._prep_environment()
-
-            # Discover available launch files
-            self._discover_launch_files()
-
-            logger.info(f"Config loaded successfully from URL {url}")
-
-            # Optionally auto-start roscore when config is loaded
-            auto_start_roscore = self.config.get('launch_args', {}).get('auto_start_roscore', False)
-            if auto_start_roscore and not self._is_process_running("roscore"):
-                logger.info("Auto-starting roscore because auto_start_roscore is enabled")
-                await self.start_process("roscore")
-
+            # Apply the config
+            await self._apply_loaded_config(config_content, f"URL {url}")
             return True
 
         except Exception as e:
@@ -688,11 +564,6 @@ class PhytoARMServer:
 
         return env
 
-    def _get_config_file_path(self) -> Optional[str]:
-        """Get path to config file (only returns real files, not temp files)"""
-        if self.config_file and os.path.exists(self.config_file):
-            return self.config_file
-        return None
 
     def _create_temp_config_file(self) -> Optional[str]:
         """Create temporary config file from in-memory config for roslaunch"""
@@ -1188,7 +1059,7 @@ app = FastAPI(title="PhytO-ARM Control Interface", version="2.0.0", lifespan=lif
 async def get_dashboard():
     """Main dashboard page with Tailwind CSS and HTMX"""
     try:
-        with open("server/dashboard.html", "r") as f:
+        with open("server/templates/dashboard.html", "r") as f:
             content = f.read()
         return HTMLResponse(content=content)
     except FileNotFoundError:
@@ -1253,23 +1124,7 @@ async def api_render_processes():
 
     # Add config status banner if no config is loaded
     if not config_loaded:
-        html_parts.append('''
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-yellow-800">No Configuration Loaded</h3>
-                    <p class="text-sm text-yellow-700 mt-1">
-                        Load a configuration file via the Config tab before starting processes.
-                    </p>
-                </div>
-            </div>
-        </div>
-        ''')
+        html_parts.append(_load_template("config_warning.html"))
 
     # Add alerts test button
     alerts_disabled = "" if config_loaded else "disabled"
@@ -1334,8 +1189,18 @@ async def api_render_processes():
     return HTMLResponse(content=''.join(html_parts))
 
 
+def _load_template(template_name: str) -> str:
+    """Load HTML template from file"""
+    try:
+        with open(f"server/templates/{template_name}", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        logger.error(f"Template {template_name} not found")
+        return f"<div>Template {template_name} not found</div>"
+
+
 def _render_process_card(process_info: ProcessInfo, metadata: dict, config_loaded: bool = True) -> str:
-    """Render a single process card"""
+    """Render a single process card using template"""
     state = process_info.state.value
 
     # State-specific styling
@@ -1390,53 +1255,23 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict, config_loade
     if not config_loaded:
         config_warning = '<p class="text-xs text-yellow-600 mt-1">⚠️ Config required</p>'
 
-    return f"""
-    <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 {category_class}">
-        <div class="flex justify-between items-start mb-4">
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900">{process_info.name}</h3>
-                <p class="text-gray-600 text-sm mt-1">{metadata.get('description', 'No description')}</p>
-                {type_info}
-                {config_warning}
-            </div>
-            <div class="flex flex-col items-end space-y-1">
-                <span class="px-3 py-1 rounded-full text-xs font-medium border {state_class}">
-                    {state.upper()}
-                </span>
-                <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                    {metadata.get('category', 'other').title()}
-                </span>
-            </div>
-        </div>
-
-        <div class="space-y-1">
-            {pid_info}
-            {started_at}
-            {restart_info}
-        </div>
-
-        <div class="flex space-x-2 mt-4">
-            <button
-                class="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                hx-post="/api/processes/{process_info.name}/start"
-                hx-target="#processes-container"
-                hx-swap="innerHTML"
-                {"disabled" if start_disabled else ""}
-            >
-                ▶️ Start
-            </button>
-            <button
-                class="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                hx-post="/api/processes/{process_info.name}/stop"
-                hx-target="#processes-container"
-                hx-swap="innerHTML"
-                {"disabled" if stop_disabled else ""}
-            >
-                ⏹️ Stop
-            </button>
-        </div>
-    </div>
-    """
+    # Load template and substitute values
+    template = _load_template("process_card.html")
+    return template.format(
+        category_class=category_class,
+        process_name=process_info.name,
+        description=metadata.get('description', 'No description'),
+        type_info=type_info,
+        config_warning=config_warning,
+        state_class=state_class,
+        state_upper=state.upper(),
+        category_title=metadata.get('category', 'other').title(),
+        pid_info=pid_info,
+        started_at=started_at,
+        restart_info=restart_info,
+        start_disabled_attr="disabled" if start_disabled else "",
+        stop_disabled_attr="disabled" if stop_disabled else ""
+    )
 
 
 @app.post("/api/processes/{process_name}/start")
