@@ -19,72 +19,47 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 from fastapi import WebSocket, WebSocketDisconnect
 
+# PyLint thinks this is a first party import
+from scripts.config_validation import validate_config
+
 from .models import ConfigValidationResult, ProcessInfo, ProcessState
 from .process import PhytoARMProcess
 
 logger = logging.getLogger(__name__)
 
 
-def _is_roscore_running() -> bool:
-    """Check if roscore is running by trying to connect to the parameter server"""
+def _check_ros_connectivity() -> Tuple[bool, str]:
+    """Check if ROS tools are available and roscore is running"""
     try:
         # Test if rosparam command is available
         result = subprocess.run(['which', 'rosparam'], capture_output=True, text=True, check=False)
         if result.returncode != 0:
-            return False
+            return False, "ROS tools not available"
 
         # Try to list parameters - this will fail if roscore isn't running
         cmd_result = subprocess.run(['rosparam', 'list'], capture_output=True, text=True, timeout=5, check=False)
-        return cmd_result.returncode == 0
-    except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError, OSError):
-        return False
+        if cmd_result.returncode != 0:
+            return False, "ROS core is not running"
 
-
-def _get_ros_status() -> dict:
-    """Get detailed ROS status information"""
-    status = {
-        "ros_tools_available": False,
-        "roscore_running": False,
-        "master_uri": None,
-        "error": None
-    }
-
-    try:
-        # Test if rosparam command is available
-        result = subprocess.run(['which', 'rosparam'], capture_output=True, text=True, check=False)
-        status["ros_tools_available"] = result.returncode == 0
-
-        if not status["ros_tools_available"]:
-            status["error"] = "ROS tools not available"
-            return status
-
-        status["master_uri"] = os.environ.get('ROS_MASTER_URI', 'http://localhost:11311')
-        status["roscore_running"] = _is_roscore_running()
-    except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
-        status["error"] = str(e)
-
-    return status
+        return True, "ROS is ready"
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+        return False, f"ROS error: {str(e)}"
 
 
 def _update_ros_parameters(config: dict) -> Tuple[bool, str]:
     """Update ROS parameters with the entire config using rosparam CLI"""
-    ros_status = _get_ros_status()
-
-    if not ros_status["ros_tools_available"]:
-        return False, "ROS tools not available"
-
-    if not ros_status["roscore_running"]:
-        return False, "ROS core is not running"
+    ros_ready, error_msg = _check_ros_connectivity()
+    if not ros_ready:
+        return False, error_msg
 
     try:
-        # Create temporary YAML file with all config parameters
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        # Use temporary file with context manager for automatic cleanup
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=True) as tmp:
             yaml.dump(config, tmp)
-            tmp_path = tmp.name
+            tmp.flush()  # Ensure data is written before reading
 
-        try:
             # Use rosparam load to set all parameters at once
-            cmd = ['rosparam', 'load', tmp_path]
+            cmd = ['rosparam', 'load', tmp.name]
             cmd_result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
 
             if cmd_result.returncode == 0:
@@ -95,10 +70,6 @@ def _update_ros_parameters(config: dict) -> Tuple[bool, str]:
             logger.error("rosparam load failed: %s", error_msg)
             return False, f"Failed to load parameters: {error_msg}"
 
-        finally:
-            # Clean up temporary file
-            os.unlink(tmp_path)
-
     except subprocess.TimeoutExpired:
         return False, "rosparam load timed out"
     except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
@@ -108,15 +79,11 @@ def _update_ros_parameters(config: dict) -> Tuple[bool, str]:
 
 async def _wait_for_roscore_and_apply_config(server_instance, max_wait_seconds: int = 30):
     """Wait for roscore to be ready and then apply current config"""
-    ros_status = _get_ros_status()
-    if not ros_status["ros_tools_available"]:
-        logger.warning("ROS tools not available - skipping config application")
-        return
-
     logger.info("Waiting for roscore to be ready...")
 
     for _ in range(max_wait_seconds):
-        if _is_roscore_running():
+        ros_ready, _ = _check_ros_connectivity()
+        if ros_ready:
             logger.info("Roscore is ready, applying configuration...")
 
             if server_instance.config:
@@ -141,9 +108,7 @@ class PhytoARMServer:
         self.config_file = config_file_path
         self.config_schema = config_schema or "./configs/example.yaml"
         self.config = None
-        self.original_config = None  # Store original for reset
-        self.config_content = None  # Store original YAML text with formatting
-        self.original_config_content = None  # Store original YAML text for reset
+        self.config_content = None  # Store YAML text with formatting
         self.env = None
         self.config_loaded = False  # Track if config is properly loaded
 
@@ -162,8 +127,6 @@ class PhytoARMServer:
         self.log_file_monitors: Dict[str, asyncio.Task] = {}
         self.log_file_positions: Dict[str, int] = {}
 
-        # Temporary launch configs for cleanup
-        self._temp_launch_configs: set = set()
 
     def _is_process_running(self, process_name: str) -> bool:
         """Check if a process is currently running"""
@@ -171,9 +134,37 @@ class PhytoARMServer:
             return self.processes[process_name].is_running()
         return False
 
+    async def _start_roscore(self):
+        """Start roscore if not already running"""
+        if not self._is_process_running("roscore"):
+            # Create basic environment for roscore (no config needed)
+            env = os.environ.copy()
+
+            process = PhytoARMProcess(
+                name="roscore",
+                command="roscore",
+                env=env
+            )
+
+            self.processes["roscore"] = process
+            success = process.start()
+
+            if success:
+                logger.info("Roscore started successfully")
+                # Start background task to apply config when roscore is ready (if config exists)
+                asyncio.create_task(_wait_for_roscore_and_apply_config(self))
+            else:
+                logger.error("Failed to start roscore")
+        else:
+            logger.info("Roscore is already running")
+
     async def initialize(self):
         """Initialize the server - load config if provided, setup environment"""
         try:
+            # Always start roscore first - it's fundamental to ROS operation
+            logger.info("Starting roscore")
+            await self._start_roscore()
+
             if self.config_file and os.path.exists(self.config_file):
                 # Load config if provided
                 logger.info("Loading config file %s", self.config_file)
@@ -195,41 +186,27 @@ class PhytoARMServer:
 
     async def _apply_loaded_config(self, config_content: str, source: str, config_path: str = None):
         """Apply loaded config content - common logic for file and URL loading"""
-        try:
-            # Load the validated config
-            self.config = yaml.safe_load(config_content)
-            self.config_content = config_content
-            self.original_config = yaml.safe_load(config_content)  # Parse fresh copy
-            self.original_config_content = config_content
-            self.config_loaded = True
+        # Load the validated config
+        self.config = yaml.safe_load(config_content)
+        self.config_content = config_content
+        self.config_loaded = True
 
-            # Set config file path if provided
-            if config_path:
-                self.config_file = config_path
+        # Set config file path if provided
+        if config_path:
+            self.config_file = config_path
 
-            # Setup environment
-            self.env = self._prep_environment()
+        # Setup environment
+        self.env = self._prep_environment()
 
-            # Discover available launch files
-            self._discover_launch_files()
+        # Discover available launch files
+        self._discover_launch_files()
 
-            logger.info("Config loaded successfully from %s", source)
-
-            # Optionally auto-start roscore when config is loaded
-            auto_start_roscore = self.config.get('launch_args', {}).get('auto_start_roscore', False)
-            if auto_start_roscore and not self._is_process_running("roscore"):
-                logger.info("Auto-starting roscore because auto_start_roscore is enabled")
-                await self.start_process("roscore")
-
-        except (OSError, yaml.YAMLError, ValueError) as e:
-            logger.error("Failed to apply config from %s: %s", source, e)
-            raise
+        logger.info("Config loaded successfully from %s", source)
 
     async def load_config_from_file(self, config_path: str):
         """Load configuration from a file"""
         try:
             # Validate config
-            from scripts.config_validation import validate_config
             logger.info("Validating config file %s", config_path)
             if not validate_config(config_path, self.config_schema):
                 raise ValueError("Config validation failed")
@@ -425,10 +402,8 @@ class PhytoARMServer:
             fd, temp_path = tempfile.mkstemp(suffix='.yaml', prefix='phyto_arm_launch_')
             with os.fdopen(fd, 'w') as f:
                 # Use preserved formatting if available, otherwise dump current config
-                if self.config_content:
-                    f.write(self.config_content)
-                else:
-                    yaml.dump(self.config, f)
+                content = self.config_content if self.config_content else yaml.dump(self.config)
+                f.write(content)
 
             logger.debug("Created temporary config file for launch: %s", temp_path)
             return temp_path
@@ -452,8 +427,6 @@ class PhytoARMServer:
             temp_config_path = self._create_temp_config_file()
             if temp_config_path:
                 rl_args.append(f'config_file:={os.path.abspath(temp_config_path)}')
-                # Store path for cleanup later
-                self._temp_launch_configs.add(temp_config_path)
 
         # Pass launch args directly (these override file params)
         for launch_arg, value in self.config.get('launch_args', {}).items():
@@ -464,20 +437,19 @@ class PhytoARMServer:
 
     async def start_process(self, process_name: str) -> bool:
         """Start a specific process"""
-        # Check if config is loaded before starting processes
-        if not self.has_config():
-            logger.error("Cannot start processes - no config loaded")
-            return False
 
         if process_name in self.processes:
             return self.processes[process_name].start()
 
         # Create new process based on name
+        process = None
         if process_name == "roscore":
+            # Use basic environment for roscore (no config dependency)
+            env = self.env if self.env else os.environ.copy()
             process = PhytoARMProcess(
                 name="roscore",
                 command="roscore",
-                env=self.env
+                env=env
             )
         elif process_name == "rosbag":
             command = self._build_roslaunch_command('phyto_arm', 'rosbag.launch')
@@ -496,7 +468,8 @@ class PhytoARMServer:
                 command=command,
                 env=self.env
             )
-        else:
+
+        if process is None:
             logger.error("Unknown process: %s", process_name)
             return False
 
@@ -620,11 +593,9 @@ class PhytoARMServer:
 
             # Basic validation passed, but add warnings about ROS connectivity
             warnings = []
-            ros_status = _get_ros_status()
-            if not ros_status["ros_tools_available"]:
-                warnings.append("ROS tools not available - parameters cannot be updated")
-            elif not ros_status["roscore_running"]:
-                warnings.append("ROS core is not running - parameters will be applied when roscore starts")
+            ros_ready, error_msg = _check_ros_connectivity()
+            if not ros_ready:
+                warnings.append(f"ROS connectivity issue: {error_msg} - parameters will be applied when ROS is ready")
 
             return ConfigValidationResult(valid=True, warnings=warnings)
 
@@ -653,14 +624,9 @@ class PhytoARMServer:
             # Update internal config (in-memory only)
             self.config = new_config
             self.config_content = content  # Preserve formatting
-            self.config_loaded = True  # Mark config as properly loaded
+            self.config_loaded = True
 
-            # Set original config for reset functionality if not already set
-            if not self.original_config:
-                self.original_config = yaml.safe_load(content)  # Parse fresh copy
-                self.original_config_content = content
-
-            # Update environment if needed
+            # Update environment
             self.env = self._prep_environment()
 
             # Discover available launch files
@@ -680,21 +646,6 @@ class PhytoARMServer:
             logger.error("Failed to apply config changes: %s", e)
             return False, f"Failed to apply configuration: {str(e)}"
 
-    def reset_config_to_original(self) -> str:
-        """Reset config to original state (in memory only)"""
-        try:
-            # Reset in-memory config to original
-            self.config = yaml.safe_load(self.original_config_content)  # Parse original content
-            self.config_content = self.original_config_content  # Restore original formatting
-
-            # Update environment if needed
-            self.env = self._prep_environment()
-
-            # Return original content with preserved formatting
-            return self.original_config_content
-        except (yaml.YAMLError, TypeError, AttributeError) as e:
-            logger.error("Failed to reset config: %s", e)
-            return ""
 
     async def _monitor_processes(self):
         """Background task to monitor process health"""
@@ -869,14 +820,6 @@ class PhytoARMServer:
             if name in self.processes:
                 await self.stop_process(name)
 
-        # Clean up temporary config files
-        if hasattr(self, '_temp_launch_configs'):
-            for temp_file in self._temp_launch_configs:
-                try:
-                    if os.path.exists(temp_file):
-                        os.unlink(temp_file)
-                        logger.debug("Cleaned up temporary config file: %s", temp_file)
-                except (OSError, IOError) as e:
-                    logger.warning("Failed to clean up temporary config file %s: %s", temp_file, e)
+        # Note: Temporary config files are automatically cleaned up when processes stop
 
         logger.info("PhytO-ARM server shutdown complete")

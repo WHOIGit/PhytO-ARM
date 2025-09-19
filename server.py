@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from server.models import ProcessInfo, ProcessState
-from server.dashboard import PhytoARMServer, _get_ros_status
+from server.dashboard import PhytoARMServer, _check_ros_connectivity
 
 # Setup logging
 logging.basicConfig(
@@ -97,7 +97,7 @@ async def api_status():
     return {
         "processes": {name: info.dict() for name, info in status.items()},
         "config_loaded": server.has_config(),
-        "ros_status": _get_ros_status()
+        "ros_status": {"ready": _check_ros_connectivity()[0], "message": _check_ros_connectivity()[1]}
     }
 
 
@@ -227,8 +227,8 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict, config_loade
     is_running = state == 'running'
     is_transitioning = state in ['starting', 'stopping']
 
-    # Disable buttons if no config loaded
-    buttons_disabled = not config_loaded or is_transitioning
+    # Only disable buttons during state transitions
+    buttons_disabled = is_transitioning
     start_disabled = buttons_disabled or is_running
     stop_disabled = buttons_disabled or not is_running
 
@@ -251,10 +251,8 @@ def _render_process_card(process_info: ProcessInfo, metadata: dict, config_loade
     if metadata.get('type') == 'launch' and metadata.get('filename'):
         type_info = f'<p class="text-xs text-gray-500 mt-1">📄 {metadata["filename"]}</p>'
 
-    # Config warning if not loaded
+    # No individual config warnings - the global banner is sufficient
     config_warning = ''
-    if not config_loaded:
-        config_warning = '<p class="text-xs text-yellow-600 mt-1">⚠️ Config required</p>'
 
     # Load template and substitute values
     template = _load_template("process_card.html")
@@ -410,30 +408,6 @@ async def api_apply_config(request_data: dict):
         "warnings": []
     })
 
-
-@app.post("/api/config/reset", response_class=HTMLResponse)
-async def api_reset_config():
-    """Reset config to original state"""
-    if not server:
-        raise HTTPException(status_code=500, detail="Server not initialized")
-
-    content = server.reset_config_to_original()
-
-    # Escape backticks for JavaScript
-    escaped_content = content.replace("`", "\\`")
-
-    return HTMLResponse(content=f"""
-    <textarea
-        id="config-textarea"
-        class="w-full h-96 p-4 border border-gray-300 rounded-lg font-mono text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        placeholder="Configuration file content..."
-        onchange="onConfigChange()"
-        oninput="onConfigChange()"
-    >{content}</textarea>
-    <script>
-        onConfigContentLoaded(`{escaped_content}`);
-    </script>
-    """)
 
 
 @app.post("/api/config/load_url")
