@@ -41,7 +41,8 @@ async def lifespan(fastapi_app: FastAPI):
     # Startup
     global server
     config_file_path = os.environ.get('PHYTO_ARM_CONFIG')  # Optional now
-    server = PhytoARMServer(config_file_path)
+    auto_start_processes = os.environ.get('PHYTO_ARM_AUTO_START')  # Optional auto-start
+    server = PhytoARMServer(config_file_path, auto_start_processes=auto_start_processes)
     await server.initialize()
 
     yield
@@ -509,16 +510,22 @@ async def websocket_logs(websocket: WebSocket):
 
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
 
-    # Get config file from command line or environment (optional now)
-    main_config_file = None
-    if len(sys.argv) > 1:
-        main_config_file = sys.argv[1]
-    else:
-        main_config_file = os.environ.get('PHYTO_ARM_CONFIG')
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="PhytO-ARM Control Server")
+    parser.add_argument("config", nargs="?", help="Config file path (optional)")
+    parser.add_argument("--start", type=str, help="Comma-separated list of processes to auto-start (e.g., main,arm_ifcb,rosbag)")
+    parser.add_argument("--port", type=int, default=8080, help="Server port (default: 8080)")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Server host (default: 0.0.0.0)")
 
-    # Set environment variable for app startup (can be None)
+    args = parser.parse_args()
+
+    # Get config file from arguments or environment (optional now)
+    main_config_file = args.config or os.environ.get('PHYTO_ARM_CONFIG')
+
+    # Set environment variables for app startup
     if main_config_file:
         os.environ['PHYTO_ARM_CONFIG'] = main_config_file
         logger.info("Starting PhytO-ARM Control Server with config: %s", main_config_file)
@@ -527,9 +534,14 @@ if __name__ == "__main__":
         os.environ.pop('PHYTO_ARM_CONFIG', None)
         logger.info("Starting PhytO-ARM Control Server without config - config must be loaded via web interface")
 
+    # Set auto-start processes if specified
+    if args.start:
+        os.environ['PHYTO_ARM_AUTO_START'] = args.start
+        logger.info("Auto-start processes: %s", args.start)
+
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=8080,
+        host=args.host,
+        port=args.port,
         log_level="info"
     )
