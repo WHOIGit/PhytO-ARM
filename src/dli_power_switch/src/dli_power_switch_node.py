@@ -3,6 +3,7 @@
 Functionality for monitoring and controlling a Digital Loggers Web Power Switch Pro model.
 """
 import functools
+import time
 
 import rospy
 
@@ -55,16 +56,30 @@ def run_dli_power_switch_node() -> None:
 
     # Monitor outlets at 1Hz
     rate = rospy.Rate(1)
+    last_successful_update = time.time()
+    timeout_duration = 60.0  # 1 minute timeout
 
     while not rospy.is_shutdown():
-        # send a status request for each configured outlet
-        for outlet in outlets:
-            num = outlet['outlet']
-            outlet_status = OutletStatus()
-            outlet_status.is_active = client.get_outlet_state(num - 1)
-            outlet_status.header.stamp = outlet_status.ds_header.io_time = \
-                rospy.Time.now()
-            outlet_pubs[num].publish(outlet_status)
+        try:
+            # send a status request for each configured outlet
+            for outlet in outlets:
+                num = outlet['outlet']
+                outlet_status = OutletStatus()
+                outlet_status.is_active = client.get_outlet_state(num - 1)
+                outlet_status.header.stamp = outlet_status.ds_header.io_time = \
+                    rospy.Time.now()
+                outlet_pubs[num].publish(outlet_status)
+
+            # Update successful communication timestamp
+            last_successful_update = time.time()
+
+        except Exception as e:
+            rospy.logwarn(f'Failed to get outlet status: {e}')
+
+            # Check if we've exceeded the timeout
+            if time.time() - last_successful_update > timeout_duration:
+                rospy.logerr(f'No successful updates for {timeout_duration} seconds, shutting down')
+                break
 
         rate.sleep()
 
