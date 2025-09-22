@@ -8,7 +8,7 @@ After=network.target
 Type=simple
 Restart=on-failure
 WorkingDirectory=/home/hablab/PhytO-ARM
-ExecStart=/bin/bash -c ". devel/setup.bash; roslaunch pa_base phyto_arm.launch"
+ExecStart=/bin/bash scripts/docker_run_daemon.sh
 
 [Install]
 WantedBy=multi-user.target

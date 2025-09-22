@@ -36,17 +36,17 @@ fi
 if [ -t 0 ]; then
     DOCKER_FLAGS="--rm -it"
 else
-    DOCKER_FLAGS="--rm -d"
+    DOCKER_FLAGS="--rm"
 fi
 
 # Set command based on mode
 if [ "$MODE" = "bash" ]; then
     COMMAND="bash"
 else
-    COMMAND="python3 ./phyto_arm_daemon.py /app/mounted_config.yaml"
+    COMMAND="python3 ./server.py /app/mounted_config.yaml"
 fi
 
-echo "Starting PhytO-ARM daemon with config: $CONFIG"
+echo "Starting PhytO-ARM server with config: $CONFIG"
 echo "Web interface will be available at http://localhost:8080"
 
 docker run $DOCKER_FLAGS \
@@ -54,7 +54,6 @@ docker run $DOCKER_FLAGS \
     --publish 8080:8080/tcp \
     --publish 9090:9090/tcp \
     --publish 8098:8098/tcp \
-    --publish 12345:12345/udp \
     --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
     --mount type=bind,source=$CONFIG,target=/app/mounted_config.yaml,readonly \
     --mount type=bind,source=/home/embedpi/routines,target=/routines,readonly \
