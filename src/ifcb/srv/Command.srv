@@ -4,3 +4,5 @@
 string command
 
 ---
+
+bool success
