@@ -34,8 +34,8 @@ def do_command(pub, req):
         rospy.logwarn(f'Cannot send command "{req.command}": IFCB is not connected')
         return srv.CommandResponse()  # Commands don't return success/failure
 
-    send_command(pub, req.command)
-    return srv.CommandResponse()
+    sent = send_command(pub, req.command)
+    return srv.CommandResponse(success=sent)
 
 
 # The ROS service handler that runs a routine, optionally with instrumentation
@@ -61,9 +61,11 @@ def do_runroutine(pub, req):
 
     # Check for beads routines
     if req.routine == 'beads':
-        send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
+        sent = send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
     else:
-        send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
+        sent = send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
+    if not sent:
+        return srv.RunRoutineResponse(success=False)
 
     # Attempt to load the file
     path = os.path.join(rospy.get_param('~routines_dir'), f'{req.routine}.json')
@@ -80,10 +82,11 @@ def do_runroutine(pub, req):
 
     # Encode and send the routine
     encoded = json.dumps(routine, separators=(',', ':'))  # less whitespace
-    send_command(pub, f'interactive:load:{encoded}')
-    send_command(pub, 'interactive:start')
+    sent = send_command(pub, f'interactive:load:{encoded}')
+    sent = sent and send_command(pub, 'interactive:start')
 
-    return srv.RunRoutineResponse(success=True)
+    return srv.RunRoutineResponse(success=sent)
+        
 
 
 # Send a command to the IFCB host and publish it to ROS
@@ -91,19 +94,21 @@ def send_command(pub, command):
     global connection_lost
 
     # Wait for the IFCB to be ready; this prevents sending a command too early
-    ifcb_ready.wait()
+    ready = ifcb_ready.wait(5.0)
+    if not ready:
+        return False
 
     # Check if we're connected before trying to send
     if connection_lost:
         rospy.logwarn(f'IFCB disconnected, cannot send command: {command}')
-        return
+        return False
 
     # Get client safely
     with client_lock:
         client = ifcb_client
         if client is None:
             rospy.logwarn(f'No IFCB client available, cannot send command: {command}')
-            return
+            return False
 
     # Construct the message we are going to publish
     msg = RawData()
@@ -116,6 +121,7 @@ def send_command(pub, command):
         client.relay_message_to_host(command)
         # Publish the message after sending it, so that the timestamp is more accurate
         pub.publish(msg)
+        return True
     except Exception as e:
         rospy.logerr(f'Failed to send command "{command}": {e}')
         # Mark connection as lost to trigger reconnection
@@ -157,7 +163,9 @@ def on_connection_lost(status_pub):
 
 # Reset the data folder to the configured data directory
 def on_interactive_stopped(pub, *_):
-    send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
+    sent = send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
+    if not sent:
+        raise ConnectionError("Unable to reset IFCB data dir.")
 
 def on_triggerimage(pub, _, image):
     # The image data should be in PNG format, which is an allowed ROS image type
@@ -236,6 +244,8 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
                 raise ConnectionError(f"Failed to create IFCB client: {client_error}")
 
             # Set up callbacks before connecting
+            client.hub_connection.on_reconnect(functools.partial(on_connection_lost,
+                 publishers['status']))
             client.hub_connection.on('messageRelayed',
                 functools.partial(on_any_message, publishers['rx']))
             client.hub_connection.on('startedAsClient', on_started)
