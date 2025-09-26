@@ -94,8 +94,8 @@ def send_command(pub, command):
     global connection_lost
 
     # Wait for the IFCB to be ready; this prevents sending a command too early
-    ready = ifcb_ready.wait(5.0)
-    if not ready:
+    if not ifcb_ready.wait(5.0):
+        rospy.logwarn('IFCB not ready within 5s of attempting to send a command; aborting.')
         return False
 
     # Check if we're connected before trying to send
@@ -163,8 +163,7 @@ def on_connection_lost(status_pub):
 
 # Reset the data folder to the configured data directory
 def on_interactive_stopped(pub, *_):
-    sent = send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
-    if not sent:
+    if not send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}'):
         raise ConnectionError("Unable to reset IFCB data dir.")
 
 def on_triggerimage(pub, _, image):
@@ -244,11 +243,11 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
                 raise ConnectionError(f"Failed to create IFCB client: {client_error}")
 
             # Set up callbacks before connecting
-            client.hub_connection.on_reconnect(functools.partial(on_connection_lost,
-                 publishers['status']))
-            client.hub_connection.on('messageRelayed',
-                functools.partial(on_any_message, publishers['rx']))
-            client.hub_connection.on('startedAsClient', on_started)
+            client.on_started('startedAsClient', on_started)
+            client.on_reconnect(
+                        functools.partial(on_connection_lost, publishers['status']))
+            client.on_any_message('messageRelayed',
+                        functools.partial(on_any_message,publishers['rx']))
             client.on(('triggerimage',),
                         functools.partial(on_triggerimage, publishers['img']))
             client.on(('triggercontent',),
