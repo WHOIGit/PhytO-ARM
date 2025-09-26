@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="config_file" />
+  <arg name="simple_move_winch" />
+
+  <!-- Most settings are in config.yaml, which is easier to edit. -->
+  <rosparam command="load" file="$(arg config_file)" />
+
+  <!-- Simple move arm namespace. Important for separating similar nodes on different arms -->
+  <group ns="arm_simple_move">
+    <node name="arm" pkg="phyto_arm" type="arm_simple_move.py" />
+
+    <!-- Map launch arg to parameter for driving arm behavior -->
+    <param name="winch_enabled" value="$(arg simple_move_winch)" type="bool" />
+
+    <!-- Conditionally run the motor and winch nodes based on the winch_enabled argument -->
+    <group if="$(arg simple_move_winch)">
+      <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+      <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+    </group>
+  </group>
+</launch>
