@@ -1,3 +1,5 @@
+# Cache bust: 1
+
 aiohttp==3.10.11
 pyModbusTCP==0.1.8
 scipy==1.10
