@@ -292,6 +292,8 @@ arm_simple_move: #optional
         refresh_rate: 1  # hz
         counts_per_turn: 8192  # defined in manual p.9
 
+    ctd_topic: '/arm_simple_move/ctd/depth'
+
     winch: #optional
         range:
             min:  0.5  # m
