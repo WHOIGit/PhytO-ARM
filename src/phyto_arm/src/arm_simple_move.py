@@ -30,10 +30,6 @@ class ArmSimpleMove(ArmBase):
             self.movement_complete = False
             return Task('move_to_target', self.handle_movement_complete, target)
 
-        # Default behavior: stay at min depth
-        if last_task is None:
-            return Task('move_to_min', self.handle_movement_complete, rospy.get_param('winch/range/min'))
-
         # If no specific target, just wait and check again
         return Task('idle', self.handle_idle)
 
