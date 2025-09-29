@@ -311,12 +311,22 @@ digital_logger: #optional
     outlets:
         - name: "ifcb"
           outlet: 0
+          switch_on_times: #optional. List of times (HH:MM format) to automatically switch outlet ON
+              - "08:00"
+              - "14:00"
+          switch_off_times: #optional. List of times (HH:MM format) to automatically switch outlet OFF
+              - "12:00"
+              - "18:00"
         - name: "arm_ifcb"
           outlet: 1
         - name: "arm_chanos"
           outlet: 2
         - name: "camera"
           outlet: 3
+          switch_on_times: #optional. Example: Turn camera on at sunrise
+              - "06:00"
+          switch_off_times: #optional. Example: Turn camera off at sunset
+              - "20:00"
         - name: "gps"
           outlet: 4
         - name: "ctd"
@@ -325,3 +335,9 @@ digital_logger: #optional
           outlet: 6
         - name: "starlink"
           outlet: 7
+          switch_on_times: #optional. Example: Turn Starlink on for data upload windows
+              - "02:00"
+              - "14:00"
+          switch_off_times: #optional. Example: Turn Starlink off to conserve power
+              - "04:00"
+              - "16:00"
