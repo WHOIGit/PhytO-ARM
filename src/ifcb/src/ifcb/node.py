@@ -243,7 +243,7 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
                 raise ConnectionError(f"Failed to create IFCB client: {client_error}")
 
             # Set up callbacks before connecting
-            client.on_started('startedAsClient', on_started)
+            client.on_started(on_started)
             client.on_reconnect(
                         functools.partial(on_connection_lost, publishers['status']))
             client.on_any_message('messageRelayed',
