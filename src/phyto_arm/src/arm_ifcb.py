@@ -38,7 +38,7 @@ class ArmIFCB(ArmBase):
     #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
         # Check if we should pause tasks when IFCB is disconnected
-        pause_on_disconnect = rospy.get_param('tasks/ifcb/pause_tasks_until_connected', False)
+        pause_on_disconnect = rospy.get_param('tasks/pause_tasks_until_connected', False)
         if pause_on_disconnect and not self.ifcb_connected:
             rospy.logwarn('IFCB is disconnected. Waiting for connection...')
             return Task('await_ifcb_connection', await_ifcb_connection)
