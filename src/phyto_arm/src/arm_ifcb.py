@@ -37,14 +37,14 @@ class ArmIFCB(ArmBase):
     #  - depth: the depth to move to (optional, won't move if not provided)
     #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
-        if not rospy.get_param('winch_enabled'):
-            return Task('no_winch', handle_nowinch)
-
         # Check if we should pause tasks when IFCB is disconnected
         pause_on_disconnect = rospy.get_param('tasks/ifcb/pause_tasks_until_connected', False)
         if pause_on_disconnect and not self.ifcb_connected:
             rospy.logwarn('IFCB is disconnected. Waiting for connection...')
             return Task('await_ifcb_connection', await_ifcb_connection)
+
+        if not rospy.get_param('winch_enabled'):
+            return Task('no_winch', handle_nowinch)
 
         # If close to scheduled wiz time, prioritize first
         if its_wiz_time():
