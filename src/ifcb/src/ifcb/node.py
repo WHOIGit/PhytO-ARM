@@ -23,15 +23,11 @@ from .instrumentation import instrument_routine
 
 
 ifcb_ready = threading.Event()
-ifcb_client = None  # Global client set once in main
+ifcb_client = None  # Global client reference for command sending
 
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
 def do_command(pub, req):
-    if not ifcb_ready.is_set():
-        rospy.logwarn(f'Cannot send command "{req.command}": IFCB is not connected')
-        return srv.CommandResponse()  # Commands don't return success/failure
-
     sent = send_command(pub, req.command)
     return srv.CommandResponse(success=sent)
 
@@ -48,10 +44,6 @@ def do_runroutine(pub, req):
     #
     # This means that the routines *must* be written to disk at the expected
     # location.
-
-    if not ifcb_ready.is_set():
-        rospy.logwarn(f'Cannot run routine "{req.routine}": IFCB is not connected')
-        return srv.RunRoutineResponse(success=False)
 
     # Deny path traversal
     if '/' in req.routine:
@@ -107,8 +99,8 @@ def send_command(pub, command):
         # Publish the message after sending it, so that the timestamp is more accurate
         pub.publish(msg)
         return True
-    except Exception as e:
-        rospy.logerr(f'Failed to send command "{command}": {e}')
+    except Exception:
+        rospy.logerr(f'Failed to send command "{command}"', exc_info=True)
         # Mark connection as lost to trigger reconnection
         ifcb_ready.clear()
         return False
@@ -130,8 +122,6 @@ def on_any_message(pub, data):
 # Callback for the "startedAsClient" message from the IFCB
 def on_started(*args, **kwargs):
     rospy.loginfo('Established connection to the IFCB')
-
-    # Allow any queued commands to proceed
     ifcb_ready.set()
 
 # Callback for when connection is lost
@@ -205,6 +195,7 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
 
 # Manages IFCB client connection with automatic retry on failure.
 def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
+    global ifcb_client
     current_retry_interval = retry_interval
 
     while not rospy.is_shutdown():
@@ -212,10 +203,36 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
             rospy.sleep(5)
             continue
         try:
+            # Create a new IFCB client instance for each connection attempt
+            rospy.loginfo('Creating new IFCB client...')
+            try:
+                ifcb_client = IFCBClient(
+                    f'ws://{rospy.get_param("~address")}'\
+                        f':{rospy.get_param("~port", 8092)}/ifcbHub',
+                    rospy.get_param('~serial'),
+                )
+            except Exception as client_error:
+                raise ConnectionError(f"Failed to create IFCB client: {client_error}")
+
+            # Set up callbacks for the new client
+            ifcb_client.on_started(on_started)
+            ifcb_client.on_reconnect(
+                        functools.partial(on_connection_lost, publishers['status']))
+            ifcb_client.on_any_message(
+                        functools.partial(on_any_message, publishers['rx']))
+            ifcb_client.on(('triggerimage',),
+                        functools.partial(on_triggerimage, publishers['img']))
+            ifcb_client.on(('triggercontent',),
+                        functools.partial(on_triggercontent, publishers['roi'], publishers['mkr']))
+            ifcb_client.on(('triggerrois',),
+                        functools.partial(on_triggerrois, publishers['roi'], publishers['mkr']))
+            ifcb_client.on(('valuechanged','interactive','stopped',),
+                        functools.partial(on_interactive_stopped, publishers['tx']))
+
             try:
                 ifcb_client.connect()
             except Exception as connect_error:
-                raise ConnectionError(f"Client error: {connect_error}")
+                raise ConnectionError(f"Client connection error: {connect_error}")
 
             # Wait a bit to see if connection establishes
             time.sleep(2)
@@ -232,6 +249,9 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
         except ConnectionError as connect_error:
             rospy.logwarn(f"Unable to establish connection to IFCB: {connect_error}")
 
+            # Clean up the failed client
+            ifcb_client = None
+
             # Exponential backoff with jitter
             rospy.loginfo(f'Retrying IFCB connection in {current_retry_interval} seconds...')
             time.sleep(current_retry_interval)
@@ -241,8 +261,6 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
 
 
 def main():
-    global ifcb_client
-
     rospy.init_node('ifcb', anonymous=True)
 
     # Publishers for raw messages coming in and out of the IFCB
@@ -267,32 +285,6 @@ def main():
         'status': status_pub
     }
 
-    # Create and configure IFCB client once
-    rospy.loginfo('Creating IFCB client...')
-    try:
-        ifcb_client = IFCBClient(
-            f'ws://{rospy.get_param("~address")}'\
-                f':{rospy.get_param("~port", 8092)}/ifcbHub',
-            rospy.get_param('~serial'),
-        )
-    except Exception as client_error:
-        rospy.logerr(f"Failed to create IFCB client: {client_error}")
-        return
-
-    # Set up callbacks once
-    ifcb_client.on_started(on_started)
-    ifcb_client.on_reconnect(
-                functools.partial(on_connection_lost, publishers['status']))
-    ifcb_client.on_any_message(
-                functools.partial(on_any_message,publishers['rx']))
-    ifcb_client.on(('triggerimage',),
-                functools.partial(on_triggerimage, publishers['img']))
-    ifcb_client.on(('triggercontent',),
-                functools.partial(on_triggercontent, publishers['roi'], publishers['mkr']))
-    ifcb_client.on(('triggerrois',),
-                functools.partial(on_triggerrois, publishers['roi'], publishers['mkr']))
-    ifcb_client.on(('valuechanged','interactive','stopped',),
-                functools.partial(on_interactive_stopped, publishers['tx']))
 
     # Create a ROS service for sending commands
     rospy.Service(
@@ -312,7 +304,7 @@ def main():
     status_pub.publish(Bool(data=False))
 
     # Start connection manager in a separate thread
-    # It will handle connection retry logic using the global client
+    # It will handle connection retry logic and client creation
     connection_thread = threading.Thread(
         target=connection_manager,
         args=(publishers,),
