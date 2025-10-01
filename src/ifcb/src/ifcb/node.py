@@ -241,6 +241,8 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
 
 
 def main():
+    global ifcb_client
+
     rospy.init_node('ifcb', anonymous=True)
 
     # Publishers for raw messages coming in and out of the IFCB
@@ -268,7 +270,7 @@ def main():
     # Create and configure IFCB client once
     rospy.loginfo('Creating IFCB client...')
     try:
-        client = IFCBClient(
+        ifcb_client = IFCBClient(
             f'ws://{rospy.get_param("~address")}'\
                 f':{rospy.get_param("~port", 8092)}/ifcbHub',
             rospy.get_param('~serial'),
@@ -278,18 +280,18 @@ def main():
         return
 
     # Set up callbacks once
-    client.on_started(on_started)
-    client.on_reconnect(
+    ifcb_client.on_started(on_started)
+    ifcb_client.on_reconnect(
                 functools.partial(on_connection_lost, publishers['status']))
-    client.on_any_message(
+    ifcb_client.on_any_message(
                 functools.partial(on_any_message,publishers['rx']))
-    client.on(('triggerimage',),
+    ifcb_client.on(('triggerimage',),
                 functools.partial(on_triggerimage, publishers['img']))
-    client.on(('triggercontent',),
+    ifcb_client.on(('triggercontent',),
                 functools.partial(on_triggercontent, publishers['roi'], publishers['mkr']))
-    client.on(('triggerrois',),
+    ifcb_client.on(('triggerrois',),
                 functools.partial(on_triggerrois, publishers['roi'], publishers['mkr']))
-    client.on(('valuechanged','interactive','stopped',),
+    ifcb_client.on(('valuechanged','interactive','stopped',),
                 functools.partial(on_interactive_stopped, publishers['tx']))
 
     # Create a ROS service for sending commands
