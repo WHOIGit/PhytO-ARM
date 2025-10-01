@@ -229,7 +229,7 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
             else:
                 raise ConnectionError("No ready message received")
 
-        except ConnectionError:
+        except ConnectionError as connect_error:
             rospy.logwarn(f"Unable to establish connection to IFCB: {connect_error}")
 
             # Exponential backoff with jitter
