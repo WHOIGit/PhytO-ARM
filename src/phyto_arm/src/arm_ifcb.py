@@ -10,6 +10,7 @@ import rospy
 
 from arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
+from std_msgs.msg import Bool
 
 
 class ArmIFCB(ArmBase):
@@ -26,6 +27,9 @@ class ArmIFCB(ArmBase):
     last_cart_debub_time = None
     last_bead_time = None
 
+    ifcb_connected = False
+    ifcb_connection_event = Event()
+
     # Primary method for determining the next task to execute
     # Each Task object takes:
     #  - name: a string identifying the task
@@ -33,6 +37,12 @@ class ArmIFCB(ArmBase):
     #  - depth: the depth to move to (optional, won't move if not provided)
     #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
+        # Check if we should pause tasks when IFCB is disconnected
+        pause_on_disconnect = rospy.get_param('tasks/pause_tasks_until_connected', False)
+        if pause_on_disconnect and not self.ifcb_connected:
+            rospy.logwarn('IFCB is disconnected. Waiting for connection...')
+            return Task('await_ifcb_connection', await_ifcb_connection)
+
         if not rospy.get_param('winch_enabled'):
             return Task('no_winch', handle_nowinch)
 
@@ -41,8 +51,9 @@ class ArmIFCB(ArmBase):
             wiz_depth = compute_wiz_depth(self.profiler_peak_depth)
             return Task('wiz_probe', lambda _: await_wiz_probe(self.start_next_task), wiz_depth)
 
-        # Othrwise, start off at min
-        if last_task is None or last_task.name in ['scheduled_depth', 'profiler_peak_depth', 'wiz_probe']:
+        # Otherwise, start off at min
+        preupcast_tasks = ['scheduled_depth', 'profiler_peak_depth', 'wiz_probe', 'await_ifcb_connection']
+        if last_task is None or last_task.name in preupcast_tasks:
             return Task('upcast', self.start_next_task, rospy.get_param('winch/range/min'))
 
         # Then perform a downcast to get a full profile
@@ -75,6 +86,25 @@ def on_profile_msg(msg):
     arm.profile_activity.set()
     arm.profile_activity.clear()
 
+
+def on_ifcb_connection_status(msg):
+    arm.ifcb_connected = msg.data
+    if arm.ifcb_connected:
+        rospy.loginfo('IFCB connection established')
+        arm.ifcb_connection_event.set()
+        arm.ifcb_connection_event.clear()
+    else:
+        rospy.logwarn('IFCB connection lost')
+
+
+def await_ifcb_connection():
+    while not arm.ifcb_connected and not rospy.is_shutdown():
+        rospy.loginfo('Waiting for IFCB connection...')
+        arm.ifcb_connection_event.wait(30)
+
+    if arm.ifcb_connected:
+        rospy.loginfo('IFCB connection restored, resuming tasks')
+        arm.start_next_task()
 
 # Convert HH:MM to a rospy.Time datetime. Take into account the current time,
 # pushing the requested time to the next day if it's already passed.
@@ -246,6 +276,9 @@ def main():
 
     # Subscribe to profiler messages that follow each transit
     rospy.Subscriber('profiler', DepthProfile, on_profile_msg)
+
+    # Subscribe to IFCB connection status
+    rospy.Subscriber('/ifcb/connected', Bool, on_ifcb_connection_status)
 
     # Setup action client for running IFCB
     ifcb_runner = actionlib.SimpleActionClient('ifcb_runner/sample', RunIFCBAction)

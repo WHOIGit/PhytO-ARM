@@ -195,6 +195,9 @@ arm_ifcb:
 
 arm_chanos: #optional
     tasks:
+        # Pause if IFCB disconnects. If False and IFCB disconnects, will shutdown and alert.
+        pause_tasks_until_connected: False #optional
+
         dwell_time: 60 # seconds
         # For continuous movements (no steps), a speed can be specified.
         continuous_speed: 0.005
