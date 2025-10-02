@@ -121,7 +121,7 @@ def on_any_message(pub, data):
 
 # Callback for the "startedAsClient" message from the IFCB
 def on_started(*args, **kwargs):
-    rospy.loginfo('Established connection to the IFCB')
+    rospy.logwarn('Established connection to the IFCB')
     ifcb_ready.set()
 
 # Callback for when connection is lost
