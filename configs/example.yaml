@@ -201,14 +201,19 @@ arm_duty_cycle: #optional
         # Pause if IFCB disconnects. If False and IFCB disconnects, will shutdown and alert.
         pause_tasks_until_connected: False #optional
 
+        # Shut down the IFCB host when we stop sampling.
+        # This requires the IFCB we are talking to have an SSH key from the host
+        # PhytO-ARM is running on, and passwordless shutdown enabled.
+        ifcb_host_shutdown_enabled: True
+
         # Duty cycle schedule - times when IFCB should be active or inactive
         duty_cycle:
             # How often to check if duty cycle state should change (seconds)
             check_interval: 60
             # Duration to wait for IFCB to finish current sample before shutdown (seconds)
-            shutdown_wait_duration: 60
+            shutdown_wait_duration: 180
             # Duration to wait for IFCB to start up and connect (seconds)
-            restart_wait_duration: 120
+            restart_wait_duration: 180
             # Schedule entries define when sampling should be active/inactive
             # Times are in UTC 24-hour format (HH:MM)
             schedule:
