@@ -16,6 +16,7 @@ import rospy
 from arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
 from std_msgs.msg import Bool
+import ifcb.srv
 
 
 class ArmDutyCycle(ArmBase):
@@ -177,6 +178,9 @@ arm = None
 # DL outlet publishers
 dl_ifcb_pub = None
 
+# IFCB command service client
+ifcb_command_client = None
+
 
 def on_profile_msg(msg):
     """Handle incoming profile messages.
@@ -235,6 +239,9 @@ def startup_sampling():
     rospy.loginfo('Starting IFCB sampling - turning on IFCB power')
     start_ifcb()
 
+    # Turn on IFCB auxiliary power
+    send_ifcb_auxpower_on()
+
     # Update duty cycle state
     arm.is_sampling_active = True
     arm.update_duty_cycle_state()
@@ -285,6 +292,19 @@ def stop_ifcb():
     """Turn off IFCB via digital logger"""
     if dl_ifcb_pub:
         dl_ifcb_pub.publish(Bool(data=False))
+
+
+def send_ifcb_auxpower_on():
+    """Send command to turn on IFCB auxiliary power port 1"""
+    rospy.loginfo('Sending IFCB auxiliary power ON command')
+    req = ifcb.srv.CommandRequest()
+    req.command = 'daq:switchauxpower1:1'
+    response = ifcb_command_client(req)
+    if response.success:
+        rospy.loginfo('IFCB auxiliary power ON command sent successfully')
+    else:
+        rospy.logwarn('IFCB auxiliary power ON command failed')
+    return response.success
 
 
 def its_scheduled_depth_time(peak_value):
@@ -392,6 +412,7 @@ def main():
     global arm
     global ifcb_runner
     global dl_ifcb_pub
+    global ifcb_command_client
 
     rospy.init_node('arm_duty_cycle', log_level=rospy.DEBUG)
 
@@ -419,6 +440,12 @@ def main():
     rospy.loginfo(f'Arm {rospy.get_name()} awaiting IFCB-run action server')
     ifcb_runner.wait_for_server()
     rospy.loginfo(f'Arm {rospy.get_name()} IFCB-run action server acquired')
+
+    # Setup service client for IFCB commands
+    rospy.loginfo('Waiting for IFCB command service...')
+    rospy.wait_for_service('/ifcb/command', timeout=30)
+    ifcb_command_client = rospy.ServiceProxy('/ifcb/command', ifcb.srv.Command)
+    rospy.loginfo('IFCB command service client acquired')
 
     # Initialize duty cycle state
     arm.update_duty_cycle_state()
