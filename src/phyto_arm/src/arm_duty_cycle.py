@@ -5,6 +5,7 @@ This module implements a duty cycle arm that turns the IFCB on and off based on
 a configurable schedule while performing profiling and sampling tasks.
 """
 import math
+import subprocess
 
 from datetime import datetime, timedelta
 from threading import Event
@@ -237,7 +238,7 @@ def await_duty_cycle():
 def startup_sampling():
     """Start IFCB sampling by turning on the digital logger outlet"""
     rospy.loginfo('Starting IFCB sampling - turning on IFCB power')
-    start_ifcb()
+    power_on_ifcb()
 
     # Turn on IFCB auxiliary power
     send_ifcb_auxpower_on()
@@ -254,11 +255,11 @@ def shutdown_sampling():
     rospy.loginfo('Stopping IFCB sampling - turning off IFCB power')
 
     # Wait for current sample to finish
-    shutdown_duration = rospy.get_param('tasks/duty_cycle/shutdown_wait_duration', 60)
+    shutdown_duration = rospy.get_param('tasks/duty_cycle/shutdown_wait_duration')
     rospy.logwarn(f'Waiting for IFCB to finish current sample for {shutdown_duration} seconds')
     rospy.sleep(shutdown_duration)
 
-    stop_ifcb()
+    power_off_ifcb()
 
     # Update duty cycle state
     arm.is_sampling_active = False
@@ -267,31 +268,33 @@ def shutdown_sampling():
     arm.start_next_task()
 
 
-def start_ifcb():
-    """Turn on IFCB via digital logger"""
-    if dl_ifcb_pub:
-        dl_ifcb_pub.publish(Bool(data=True))
+def power_on_ifcb():
+    dl_ifcb_pub.publish(Bool(data=True))
 
-        # Wait for IFCB to connect
-        restart_duration = rospy.get_param('tasks/duty_cycle/restart_wait_duration', 120)
-        rospy.loginfo(f'Waiting for IFCB to connect (timeout: {restart_duration} seconds)')
+    # Wait for IFCB to connect
+    restart_duration = rospy.get_param('tasks/duty_cycle/restart_wait_duration', 120)
+    rospy.loginfo(f'Waiting for IFCB to connect (timeout: {restart_duration} seconds)')
 
-        # If already connected, proceed immediately
-        if arm.ifcb_connected:
-            rospy.loginfo('IFCB already connected, proceeding')
-            return
+    # If already connected, proceed immediately
+    if arm.ifcb_connected:
+        rospy.loginfo('IFCB already connected, proceeding')
+        return
 
-        # Wait for connection with timeout
-        if arm.ifcb_connection_event.wait(timeout=restart_duration):
-            rospy.loginfo('IFCB connected successfully')
-        else:
-            rospy.logerr('IFCB failed to connect within timeout')
+    # Wait for connection with timeout
+    if arm.ifcb_connection_event.wait(timeout=restart_duration):
+        rospy.loginfo('IFCB connected successfully')
+    else:
+        rospy.logerr('IFCB failed to connect within timeout')
 
 
-def stop_ifcb():
-    """Turn off IFCB via digital logger"""
-    if dl_ifcb_pub:
-        dl_ifcb_pub.publish(Bool(data=False))
+def power_off_ifcb():
+    # Send graceful shutdown command to IFCB host if enabled
+    if rospy.get_param('~ifcb_host_shutdown_enabled'):
+        send_ifcb_host_shutdown()
+        rospy.sleep(60) # Wait 1 minute for IFCB to shutdown completely
+
+    # Switch off power
+    dl_ifcb_pub.publish(Bool(data=False))
 
 
 def send_ifcb_auxpower_on():
@@ -305,6 +308,29 @@ def send_ifcb_auxpower_on():
     else:
         rospy.logwarn('IFCB auxiliary power ON command failed')
     return response.success
+
+
+def send_ifcb_host_shutdown():
+    rospy.loginfo('Sending shutdown command to IFCB host via SSH')
+
+    # Get IFCB host address from ROS parameters
+    ifcb_host = rospy.get_param('/ifcb/address')
+
+    # Execute shutdown command via SSH
+    # Assumes SSH key is already set up for passwordless authentication
+    result = subprocess.run([
+        'ssh', '-o', 'ConnectTimeout=10',
+        '-o', 'StrictHostKeyChecking=no',
+        f'ifcb@{ifcb_host}',
+        f'sudo shutdown now'
+    ], capture_output=True, text=True, timeout=15)
+
+    if result.returncode == 0:
+        rospy.loginfo('IFCB host shutdown command sent successfully')
+        return True
+    else:
+        raise Exception("Unable to send shutdown command to IFCB")
+
 
 
 def its_scheduled_depth_time(peak_value):
