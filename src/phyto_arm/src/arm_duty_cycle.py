@@ -14,9 +14,10 @@ import actionlib
 import numpy as np
 import rospy
 
+from std_msgs.msg import Bool
+
 from arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
-from std_msgs.msg import Bool
 import ifcb.srv
 
 
@@ -322,14 +323,14 @@ def send_ifcb_host_shutdown():
         'ssh', '-o', 'ConnectTimeout=10',
         '-o', 'StrictHostKeyChecking=no',
         f'ifcb@{ifcb_host}',
-        f'sudo shutdown now'
+        'sudo shutdown now'
     ], capture_output=True, text=True, timeout=15)
 
     if result.returncode == 0:
         rospy.loginfo('IFCB host shutdown command sent successfully')
         return True
     else:
-        raise Exception("Unable to send shutdown command to IFCB")
+        raise SystemError("Unable to send shutdown command to IFCB")
 
 
 
