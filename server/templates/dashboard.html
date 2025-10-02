@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhytO-ARM Control Dashboard</title>
+    <script src="/static/tailwind-3.4.17.js"></script>
+    <script src="/static/htmx-2.0.7.min.js"></script>
+    <script src="/static/htmx-ext-ws-2.0.2.js"></script>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+        .htmx-request .htmx-indicator { opacity: 1; }
+        .htmx-request.htmx-indicator { opacity: 1; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <!-- Header -->
+    <header class="bg-blue-900 text-white p-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold flex items-center">
+                <span class="mr-3">🦠</span>
+                PhytO-ARM Control Dashboard
+            </h1>
+            <button
+                class="bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-lg transition-colors flex items-center"
+                onclick="location.reload()"
+            >
+                <span class="mr-2">🔄</span>
+                Refresh
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-6">
+        <!-- Tab Navigation -->
+        <nav class="flex space-x-1 bg-white rounded-lg shadow-md p-2 mb-6">
+            <button
+                class="tab-btn flex-1 px-6 py-3 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white"
+                onclick="switchTab('processes')"
+                id="processes-tab-btn"
+            >
+                🔧 Processes
+            </button>
+            <button
+                class="tab-btn flex-1 px-6 py-3 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900"
+                onclick="switchTab('logs')"
+                id="logs-tab-btn"
+            >
+                📄 Logs
+            </button>
+            <button
+                class="tab-btn flex-1 px-6 py-3 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900"
+                onclick="switchTab('config')"
+                id="config-tab-btn"
+            >
+                ⚙️ Config
+            </button>
+        </nav>
+
+        <!-- Tab Contents -->
+
+        <!-- Processes Tab -->
+        <div id="processes-tab" class="tab-content active">
+            <div
+                id="processes-container"
+                hx-get="/api/processes/render"
+                hx-trigger="load, every 5s"
+                hx-target="#processes-container"
+                hx-swap="innerHTML"
+                class="min-h-96"
+            >
+                <div class="flex justify-center items-center h-96">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs-tab" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Log Files</h2>
+                    <button
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                        hx-get="/api/logs/files"
+                        hx-target="#log-files-container"
+                        hx-swap="innerHTML"
+                    >
+                        🔄 Refresh Files
+                    </button>
+                </div>
+
+                <div
+                    id="log-files-container"
+                    hx-get="/api/logs/files"
+                    hx-trigger="load"
+                    hx-target="#log-files-container"
+                    hx-swap="innerHTML"
+                >
+                    <div class="animate-pulse space-y-4">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                </div>
+
+                <!-- Log Viewer -->
+                <div class="mt-6">
+                    <div id="log-viewer" class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm h-96 overflow-y-auto">
+                        <div class="text-gray-500">Select a log file to view its contents</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Config Tab -->
+        <div id="config-tab" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-semibold text-gray-800">Configuration Editor</h2>
+                        <button
+                            id="config-apply-btn"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                            onclick="applyConfig()"
+                        >
+                            ✅ Apply Changes
+                        </button>
+                    </div>
+
+                    <!-- URL Loading Section -->
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-sm font-medium text-gray-800 mb-2">Load Config from URL</h3>
+                        <div class="flex space-x-2">
+                            <input
+                                type="url"
+                                id="config-url-input"
+                                placeholder="https://example.com/config.yaml"
+                                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                            <button
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                                onclick="loadConfigFromUrl()"
+                            >
+                                📥 Load
+                            </button>
+                        </div>
+                        <div id="url-load-status" class="mt-2 hidden"></div>
+                    </div>
+
+                    <!-- Status Message -->
+                    <div id="config-status" class="mt-4 hidden"></div>
+                </div>
+
+                <div class="p-6">
+                    <div
+                        id="config-editor"
+                        hx-get="/api/config/content"
+                        hx-trigger="load"
+                        hx-target="#config-editor"
+                        hx-swap="innerHTML"
+                    >
+                        <div class="animate-pulse">
+                            <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                            <div class="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
+                            <div class="h-4 bg-gray-200 rounded w-4/6"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentConfigContent = '';
+        let logWebSocket = null;
+        let currentLogFile = null;
+
+        function initLogWebSocket() {
+            if (logWebSocket && logWebSocket.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/logs`;
+
+            logWebSocket = new WebSocket(wsUrl);
+
+            logWebSocket.onopen = function(event) {
+                console.log('Log WebSocket connected');
+            };
+
+            logWebSocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'initial_content') {
+                        const logViewer = document.getElementById('log-viewer');
+                        if (logViewer) {
+                            logViewer.innerHTML = `<pre class="whitespace-pre-wrap">${data.content}</pre>`;
+                            logViewer.scrollTop = logViewer.scrollHeight;
+                        }
+                    } else if (data.type === 'log_update' && data.filename === currentLogFile) {
+                        const logViewer = document.getElementById('log-viewer');
+                        if (logViewer) {
+                            const pre = logViewer.querySelector('pre') || logViewer;
+                            pre.textContent += data.content;
+                            logViewer.scrollTop = logViewer.scrollHeight;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing WebSocket message:', e);
+                }
+            };
+
+            logWebSocket.onclose = function(event) {
+                console.log('Log WebSocket disconnected');
+                // Attempt to reconnect after 3 seconds
+                setTimeout(initLogWebSocket, 3000);
+            };
+
+            logWebSocket.onerror = function(error) {
+                console.error('Log WebSocket error:', error);
+            };
+        }
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('text-gray-600', 'hover:text-gray-900');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Add active class to clicked tab button
+            const activeBtn = document.getElementById(tabName + '-tab-btn');
+            activeBtn.classList.remove('text-gray-600', 'hover:text-gray-900');
+            activeBtn.classList.add('bg-blue-600', 'text-white');
+
+            // Load logs when switching to logs tab
+            if (tabName === 'logs') {
+                htmx.trigger('#log-files-container', 'load');
+                initLogWebSocket();
+            }
+        }
+
+        function selectLogFile(filename) {
+            // Update selected state
+            document.querySelectorAll('.log-file-card').forEach(card => {
+                card.classList.remove('ring-2', 'ring-blue-500');
+            });
+            event.target.closest('.log-file-card').classList.add('ring-2', 'ring-blue-500');
+
+            // Set current log file and request via WebSocket
+            currentLogFile = filename;
+
+            if (logWebSocket && logWebSocket.readyState === WebSocket.OPEN) {
+                logWebSocket.send(JSON.stringify({
+                    type: 'select_log_file',
+                    filename: filename
+                }));
+            } else {
+                // Fallback to HTTP if WebSocket not available
+                htmx.ajax('GET', `/api/logs/content/${filename}?max_lines=200`, {
+                    target: '#log-viewer',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    const logViewer = document.getElementById('log-viewer');
+                    if (logViewer) {
+                        logViewer.scrollTop = logViewer.scrollHeight;
+                    }
+                });
+            }
+        }
+
+        function onConfigContentLoaded(content) {
+            currentConfigContent = content;
+            clearConfigStatus();
+        }
+
+        function onConfigChange() {
+            const textarea = document.getElementById('config-textarea');
+            if (textarea) {
+                currentConfigContent = textarea.value;
+                updateConfigStatus();
+            }
+        }
+
+        function updateConfigStatus() {
+            // Config changes are now applied immediately, so just clear status
+            clearConfigStatus();
+        }
+
+        function clearConfigStatus() {
+            const statusDiv = document.getElementById('config-status');
+            statusDiv.classList.add('hidden');
+        }
+
+        function applyConfig() {
+            const textarea = document.getElementById('config-textarea');
+            if (!textarea) return;
+
+            const content = textarea.value;
+
+            // Show loading state
+            const statusDiv = document.getElementById('config-status');
+            statusDiv.className = 'mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg';
+            statusDiv.innerHTML = '<p class="text-blue-800">🔄 Validating and applying changes...</p>';
+            statusDiv.classList.remove('hidden');
+
+            // Apply changes via API
+            fetch('/api/config/apply', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentConfigContent = content;
+                    statusDiv.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-lg';
+                    statusDiv.innerHTML = '<p class="text-green-800">✅ Configuration applied successfully</p>';
+                    setTimeout(clearConfigStatus, 3000);
+
+                    // Refresh processes to show updated state
+                    htmx.trigger('#processes-container', 'load');
+                } else {
+                    statusDiv.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
+                    statusDiv.innerHTML = `<p class="text-red-800"><strong>❌ Validation failed:</strong></p><ul class="list-disc list-inside mt-2">${data.errors.map(err => `<li>${err}</li>`).join('')}</ul>`;
+                }
+            })
+            .catch(error => {
+                statusDiv.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
+                statusDiv.innerHTML = '<p class="text-red-800">❌ Error applying configuration</p>';
+            });
+        }
+
+        function loadConfigFromUrl() {
+            const urlInput = document.getElementById('config-url-input');
+            const statusDiv = document.getElementById('url-load-status');
+
+            if (!urlInput.value.trim()) {
+                statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
+                statusDiv.innerHTML = '<p class="text-red-800 text-sm">Please enter a URL</p>';
+                statusDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Show loading state
+            statusDiv.className = 'mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg';
+            statusDiv.innerHTML = '<p class="text-blue-800 text-sm">🔄 Loading config from URL...</p>';
+            statusDiv.classList.remove('hidden');
+
+            // Load config from URL
+            fetch('/api/config/load_url', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: urlInput.value.trim() })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.className = 'mt-2 p-3 bg-green-50 border border-green-200 rounded-lg';
+                    statusDiv.innerHTML = '<p class="text-green-800 text-sm">✅ Config loaded successfully</p>';
+
+                    // Reload the config editor to show new content
+                    htmx.trigger('#config-editor', 'load');
+
+                    // Clear the input
+                    urlInput.value = '';
+
+                    // Hide status after 3 seconds
+                    setTimeout(() => statusDiv.classList.add('hidden'), 3000);
+                } else {
+                    statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
+                    statusDiv.innerHTML = `<p class="text-red-800 text-sm">❌ ${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                statusDiv.className = 'mt-2 p-3 bg-red-50 border border-red-200 rounded-lg';
+                statusDiv.innerHTML = '<p class="text-red-800 text-sm">❌ Error loading config from URL</p>';
+            });
+        }
+    </script>
+</body>
+</html>
