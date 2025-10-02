@@ -1,0 +1,33 @@
+<launch>
+    <!-- Most settings are in config.yaml, which is easier to edit. -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <node name="ifcb" pkg="ifcb" type="ifcb" />
+
+    <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
+
+    <!-- Duty cycle arm namespace. Important for separating similar nodes on different arms -->
+    <group ns="arm_duty_cycle">
+        <node name="arm" pkg="phyto_arm" type="arm_duty_cycle.py" />
+
+        <!-- Map launch arg to parameter for driving arm behavior -->
+        <param name="winch_enabled" value="$(arg duty_cycle_winch)" type="bool" />
+
+        <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
+        <group if="$(arg duty_cycle_winch)">
+            <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
+
+            <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+                <remap from="~in" to="ctd_comms/in" />
+            </node>
+
+            <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
+
+            <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
+
+            <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+        </group>
+
+        <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
+    </group>
+</launch>
