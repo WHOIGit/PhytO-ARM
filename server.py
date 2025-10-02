@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PhytO-ARM Control Server 2.0 - Modern web interface for managing PhytO-ARM ROS processes
+PhytO-ARM Control Server - Modern web interface for managing PhytO-ARM ROS processes
 
 Enhanced version with:
 - Tailwind CSS for modern styling
@@ -12,7 +12,7 @@ Enhanced version with:
 import json
 import logging
 import os
-import sys
+
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
@@ -516,7 +516,7 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="PhytO-ARM Control Server")
     parser.add_argument("config", nargs="?", help="Config file path (optional)")
-    parser.add_argument("--start", type=str, help="Comma-separated list of processes to auto-start (e.g., main,arm_ifcb,rosbag)")
+    parser.add_argument("--start", type=str, help="Comma-separated list to auto-start (e.g. main,arm_ifcb)")
     parser.add_argument("--port", type=int, default=8080, help="Server port (default: 8080)")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Server host (default: 0.0.0.0)")
 
