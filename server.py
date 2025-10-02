@@ -70,19 +70,19 @@ async def get_dashboard():
 # Static file serving for JS libraries
 @app.get("/static/tailwind-3.4.17.js")
 async def get_tailwind():
-    with open("server/tailwind-3.4.17.js", "r", encoding='utf-8') as f:
+    with open("server/lib/tailwind-3.4.17.js", "r", encoding='utf-8') as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
 
 
 @app.get("/static/htmx-2.0.7.min.js")
 async def get_htmx():
-    with open("server/htmx-2.0.7.min.js", "r", encoding='utf-8') as f:
+    with open("server/lib/htmx-2.0.7.min.js", "r", encoding='utf-8') as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
 
 
 @app.get("/static/htmx-ext-ws-2.0.2.js")
 async def get_htmx_ws():
-    with open("server/htmx-ext-ws-2.0.2.js", "r", encoding='utf-8') as f:
+    with open("server/lib/htmx-ext-ws-2.0.2.js", "r", encoding='utf-8') as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
 
 
