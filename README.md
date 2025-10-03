@@ -243,10 +243,8 @@ You can also provide your own schema by passing in the `--config_schema <file>` 
   3. The datatype for every parameter present in both config and schema must match.
   4. Parameters in config but not schema are ignored.
 
-The config validation script includes a separate set of unit tests that can be run with
-```bash
-python3 scripts/config_validation.test.py
-```
+For more information see https://github.com/WHOIGit/example-yaml-validator
+
 
 ### Configuring host address
 
