@@ -38,7 +38,7 @@ RUN python3 -m pip install "Cython<3.1"
 
 # Install Python dependencies
 COPY deps/python3-requirements.txt ./
-RUN python3 -m pip install -r python3-requirements.txt
+RUN python3 -m pip install --ignore-installed -r python3-requirements.txt
 
 
 # Clone third-party dependencies from VCS
@@ -91,7 +91,20 @@ RUN bash -c "source devel/setup.bash \
         rbr_maestro3_ctd \
 "
 
-# Copy the launch tool
+# Clone the ROS Launchpad management server
+RUN git clone --depth 1 --branch v1.0.5 https://github.com/WHOIGit/ros-launchpad.git /launchpad
+RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
+
+# Copy the launch tools and server files
 ENV DONT_SCREEN=1
 ENV NO_VIRTUALENV=1
 COPY ./phyto-arm ./phyto-arm
+
+# Expose web interface port
+EXPOSE 8080
+
+# Default command runs the server with ROS environment sourced
+CMD ["bash", "-c", "source /opt/ros/${ROS_DISTRO}/setup.bash && \
+        source devel/setup.bash && \
+        cd /launchpad && \
+        python3 server.py --package /app/src/phyto_arm /app/configs/example.yaml"]
