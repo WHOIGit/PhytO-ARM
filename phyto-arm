@@ -19,7 +19,7 @@ import urllib.request
 
 import yaml
 
-from scripts.config_validation import validate_config
+from yaml_validator import validate_config
 
 # Load the virtual environment and Catkin workspace and return the resulting
 # environment
