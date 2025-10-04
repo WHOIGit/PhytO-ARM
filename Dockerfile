@@ -2,7 +2,6 @@ FROM ros:noetic
 
 WORKDIR /app
 
-
 # Install apt package dependencies
 COPY deps/apt-requirements.txt ./
 RUN apt update \
@@ -95,3 +94,7 @@ RUN bash -c "source devel/setup.bash \
 ENV DONT_SCREEN=1
 ENV NO_VIRTUALENV=1
 COPY ./phyto-arm ./phyto-arm
+
+# Capture commit hash at build time
+ARG COMMIT_HASH=unknown
+ENV COMMIT_HASH=${COMMIT_HASH}
