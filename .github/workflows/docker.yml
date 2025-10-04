@@ -76,6 +76,8 @@ jobs:
           push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            COMMIT_HASH=${{ github.sha }}
           cache-from: |
             type=local,src=/tmp/.buildx-cache
             type=registry,ref=${{ steps.init.outputs.docker_repo }}:buildcache
@@ -96,6 +98,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            COMMIT_HASH=${{ github.sha }}
           cache-from: |
             type=local,src=/tmp/.buildx-cache-new
           cache-to: |

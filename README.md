@@ -67,7 +67,7 @@ docker pull whoi/phyto-arm:latest
 
 Alternatively, the container image can be built with
 
-    docker build --tag whoi/phyto-arm .
+    docker build --build-arg COMMIT_HASH=$(git rev-parse HEAD) --tag whoi/phyto-arm .
 
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
 

@@ -2,6 +2,10 @@ FROM ros:noetic
 
 WORKDIR /app
 
+# Capture commit hash at build time
+ARG COMMIT_HASH=unknown
+ENV COMMIT_HASH=${COMMIT_HASH}
+
 
 # Install apt package dependencies
 COPY deps/apt-requirements.txt ./

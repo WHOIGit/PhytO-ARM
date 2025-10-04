@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass
 from threading import Lock
+import os
 
 import actionlib
 import rospy
 
 from geopy.distance import distance as vincenty_distance
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import String
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 from phyto_arm.srv import LockCheck, LockCheckRequest, LockOperation, LockOperationRequest
@@ -44,6 +46,13 @@ class ArmBase:
         # Subscribe to GPS data for geofence check
         rospy.Subscriber("/gps/fix", NavSatFix, self.gps_callback)
         rospy.loginfo(f"Subscribed to /gps/fix for {self.arm_name}")
+
+        # Publish commit hash to /config/commit once at startup
+        commit_hash = os.environ.get('COMMIT_HASH', 'unknown')
+        commit_pub = rospy.Publisher('/config/commit', String, queue_size=1, latch=True)
+        rospy.sleep(0.5)  # Give the publisher time to connect
+        commit_pub.publish(String(data=commit_hash))
+        rospy.loginfo(f"Published commit hash: {commit_hash}")
 
         if rospy.get_param('winch_enabled'):
             if winch_name is None:
