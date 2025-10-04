@@ -37,8 +37,8 @@ generate_messages(
   ds_core_msgs
 )
 
-if (CATKIN_ENABLE_TESTING)
-  catkin_add_nosetests(src/tests.py)
-endif()
-
 catkin_package()
+
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(tests)
+endif()
