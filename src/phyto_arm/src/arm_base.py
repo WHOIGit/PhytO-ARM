@@ -48,11 +48,8 @@ class ArmBase:
         rospy.loginfo(f"Subscribed to /gps/fix for {self.arm_name}")
 
         # Publish commit hash to /config/commit once at startup
-        commit_hash = os.environ.get('COMMIT_HASH', 'unknown')
-        commit_pub = rospy.Publisher('/config/commit', String, queue_size=1, latch=True)
-        rospy.sleep(0.5)  # Give the publisher time to connect
-        commit_pub.publish(String(data=commit_hash))
-        rospy.loginfo(f"Published commit hash: {commit_hash}")
+        rospy.Publisher('/config/commit', String, queue_size=1, latch=True)\
+            .publish(String(data=os.environ.get('COMMIT_HASH', 'unknown')))
 
         if rospy.get_param('winch_enabled'):
             if winch_name is None:
