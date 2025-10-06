@@ -92,7 +92,8 @@ RUN bash -c "source devel/setup.bash \
 "
 
 # Clone the ROS Launchpad management server
-RUN git clone --depth 1 --branch v1.0.5 https://github.com/WHOIGit/ros-launchpad.git /launchpad
+RUN mkdir -p /launchpad
+RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/main.tar.gz | tar zxf - --strip-components=1 -C /launchpad
 RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
 
 # Copy the launch tools and server files
