@@ -103,8 +103,10 @@ COPY ./phyto-arm ./phyto-arm
 # Expose web interface port
 EXPOSE 8080
 
+# Source ROS environment automatically for all bash sessions
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc && \
+    echo "source /app/devel/setup.bash" >> /etc/bash.bashrc
+
 # Default command runs the server with ROS environment sourced
-CMD ["bash", "-c", "source /opt/ros/${ROS_DISTRO}/setup.bash && \
-        source devel/setup.bash && \
-        cd /launchpad && \
+CMD ["bash", "-c", "cd /launchpad && \
         python3 server.py --package /app/src/phyto_arm /app/configs/example.yaml"]
