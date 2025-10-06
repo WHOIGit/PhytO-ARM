@@ -29,15 +29,13 @@ shift $((OPTIND -1))
 
 # If an arg config is passed in use that instead
 if [ -n "$1" ]; then
-    CONFIG=$1
+    CONFIG="$1"
 fi
 
-# Check if we're running in systemd (no TTY available)
-if [ -t 0 ]; then
-    DOCKER_FLAGS="--rm -it"
-else
-    DOCKER_FLAGS="--rm"
-fi
+DOCKER_FLAGS=()
+DOCKER_FLAGS+=("--rm")
+# Check if we're running with a TTY available
+[ -t 0 ] && DOCKER_FLAGS+=("-it")
 
 # Set command based on mode
 if [ "$MODE" = "bash" ]; then
@@ -49,13 +47,13 @@ fi
 echo "Starting PhytO-ARM server with config: $CONFIG"
 echo "Web interface will be available at http://localhost:8080"
 
-docker run $DOCKER_FLAGS \
+docker run "${DOCKER_FLAGS[@]}" \
     --name phyto-arm-daemon \
     --publish 8080:8080/tcp \
     --publish 9090:9090/tcp \
     --publish 8098:8098/tcp \
     --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
-    --mount type=bind,source=$CONFIG,target=/app/mounted_config.yaml,readonly \
+    --mount type=bind,source="$CONFIG",target=/app/mounted_config.yaml,readonly \
     --mount type=bind,source=/home/embedpi/routines,target=/routines,readonly \
     --mount type=bind,source="$(pwd)"/src/phyto_arm,target=/app/src/phyto_arm,readonly \
     --mount type=bind,source="$(pwd)"/src/ifcb,target=/app/src/ifcb,readonly \
