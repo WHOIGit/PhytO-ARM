@@ -110,4 +110,4 @@ RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc && \
 
 # Default command runs the server with ROS environment sourced
 CMD ["bash", "-c", "cd /launchpad && \
-        python3 server.py --package /app/src/phyto_arm /app/configs/example.yaml"]
+        python3 server.py --package /app/src/phyto_arm /app/mounted_config.yaml"]
