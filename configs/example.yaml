@@ -77,7 +77,7 @@ ifcb:
     data_dir: "/data/ifcbdata"
 
 
-arm_ifcb:
+arm_ifcb: # optional
     # Configuration related to tasks
     tasks: #optional
         profiler_peak:
