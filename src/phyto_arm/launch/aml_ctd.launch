@@ -1,0 +1,15 @@
+<launch>
+    <!-- Only use this launchfile if you need to run the AML node independently,
+         for example, on an IFCB while the rest of PhytO-ARM runs on an RPi -->
+
+    <!-- Most settings are in config.yaml, which is easier to edit. -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <group ns="aml">
+        <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
+
+        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+            <remap from="~in" to="ctd_comms/in" />
+        </node>
+    </group>
+</launch>
