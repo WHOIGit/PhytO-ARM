@@ -15,11 +15,13 @@
 
         <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
         <group if="$(arg duty_cycle_winch)">
-            <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
+
+            <!-- AML CTD on another device -->
+            <!-- <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
 
             <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
                 <remap from="~in" to="ctd_comms/in" />
-            </node>
+            </node> -->
 
             <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
 
