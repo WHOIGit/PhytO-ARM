@@ -144,7 +144,7 @@ arm_ifcb: #optional
     #  Note these values are not read by PhytO-ARM, they are sought by
     #  the included ds_util_nodes package, which publishes CTD data reads.
     #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
-    ctd_comms:
+    ctd_comms: #optional
         connection:
             type: "SERIAL"
             port: "/dev/ttyS3"
