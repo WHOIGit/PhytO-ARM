@@ -77,7 +77,19 @@ ifcb:
     data_dir: "/data/ifcbdata"
 
 
-arm_ifcb: # optional
+aml: #optional - useful if launching on another device
+    #  Note these values are not read by PhytO-ARM, they are sought by
+    #  the included ds_util_nodes package, which publishes CTD data reads.
+    #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
+    ctd_comms:
+        connection:
+            type: "SERIAL"
+            port: "/dev/ttyS3"
+            baud: 115200
+            data_bits: 8
+
+
+arm_ifcb: #optional
     # Configuration related to tasks
     tasks: #optional
         profiler_peak:
@@ -126,7 +138,7 @@ arm_ifcb: # optional
         # Should we flush sample tube after each sample?
         flush_after_sample: false
 
-    ctd_topic: '/arm_ifcb/ctd/depth'
+    ctd_topic: '/aml/ctd/depth'
 
 
     #  Note these values are not read by PhytO-ARM, they are sought by
