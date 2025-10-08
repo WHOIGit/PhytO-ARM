@@ -93,7 +93,7 @@ RUN bash -c "source devel/setup.bash \
 
 # Clone the ROS Launchpad management server
 RUN mkdir -p /launchpad
-RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/main.tar.gz | tar zxf - --strip-components=1 -C /launchpad
+RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.6.tar.gz | tar zxf - --strip-components=1 -C /launchpad
 RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
 
 # Copy the launch tools and server files
@@ -110,4 +110,6 @@ RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc && \
 
 # Default command runs the server with ROS environment sourced
 CMD ["bash", "-c", "cd /launchpad && \
-        python3 server.py --package /app/src/phyto_arm /app/mounted_config.yaml"]
+        python3 server.py --package /app/src/phyto_arm \
+        --config /app/mounted_config.yaml \
+        /app/configs/example.yaml"]
