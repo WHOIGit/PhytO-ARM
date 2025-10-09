@@ -269,3 +269,6 @@ Finally, confirm that the IFCB custom routine loaded and the IFCB is sampling as
 
 ### Stopping Super-Sipper
 To abort PhytO-ARM, click the PhytO-ARM kill shortcut.
+
+
+Confirm PhytoArmDataSource:1:http://localhost:8098
