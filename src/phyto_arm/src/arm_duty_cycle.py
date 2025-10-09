@@ -52,12 +52,6 @@ class ArmDutyCycle(ArmBase):
         self.next_duty_transition_time = None
 
     def get_next_task(self, last_task):
-        # Check if we should pause tasks when IFCB is disconnected
-        pause_on_disconnect = rospy.get_param('tasks/pause_tasks_until_connected', False)
-        if pause_on_disconnect and not self.ifcb_connected:
-            rospy.logwarn('IFCB is disconnected. Waiting for connection...')
-            return Task('await_ifcb_connection', await_ifcb_connection)
-
         # Check duty cycle schedule
         if self.should_transition_duty_state():
             if self.is_sampling_active:
