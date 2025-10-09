@@ -284,7 +284,7 @@ def power_on_ifcb():
 
 def power_off_ifcb():
     # Send graceful shutdown command to IFCB host if enabled
-    if rospy.get_param('~ifcb_host_shutdown_enabled'):
+    if rospy.get_param('tasks/ifcb_host_shutdown_enabled'):
         send_ifcb_host_shutdown()
         rospy.sleep(60) # Wait 1 minute for IFCB to shutdown completely
 
