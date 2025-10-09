@@ -248,7 +248,7 @@ arm_duty_cycle: #optional
 
     ctd_topic: '/arm_duty_cycle/ctd/depth'
 
-    ctd_comms:
+    ctd_comms: #optional
         connection:
             type: "SERIAL"
             port: "/dev/ttyS3"
