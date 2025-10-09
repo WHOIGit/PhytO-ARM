@@ -264,6 +264,17 @@ arm_duty_cycle: #optional
         peak_min_depth: 0.0 # optional, m
         # Profile will only consider peaks that are at most this deep
         peak_max_depth: 10.0 # optional, m
+    
+    ifcb_maintenance:
+        # Interval at which we run a cartridge debubble, necessary when IFCB on its side
+        cartridge_debubble_interval: 0 # minutes, 0 = never
+        # Interval at which we run a biocide and bleach
+        clean_interval: 1440  # minutes, 0 = never
+        # Interval at which we run a debubble and bead sample. Make this a multiple of 
+        # the clean interval if you want a clean after each bead sample.
+        bead_interval: 1440  # minutes, 0 = never
+        # Should we flush sample tube after each sample?
+        flush_after_sample: false
 
     motor: #optional
         address: "192.168.13.3"
