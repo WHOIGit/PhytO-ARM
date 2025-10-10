@@ -21,37 +21,6 @@ import yaml
 
 from yaml_validator import validate_config
 
-# Load the virtual environment and Catkin workspace and return the resulting
-# environment
-def prep_environment():
-    # Due to a long-standing bug in the setup.sh script, we must provide to the
-    # devel/ directory in the _CATKIN_SETUP_DIR environment variable.
-    #
-    # This also needs to be an absolute path so that Python can locate packages.
-    #
-    # Ref: https://github.com/catkin/catkin_tools/issues/376
-    parent_dir = os.path.dirname(__file__)
-    setup_dir = os.path.abspath(os.path.join(parent_dir, 'devel'))
-    env = {
-        '_CATKIN_SETUP_DIR': setup_dir
-    }
-
-    # Build command to load the catkin workspace (and optionally a virtual
-    # environment) and dump the environment.
-    command = f'. {shlex.quote(setup_dir)}/setup.sh && env'
-
-    if os.getenv('NO_VIRTUALENV') is None:
-        command = f'. {shlex.quote(parent_dir)}/.venv/bin/activate && ' + \
-                  command
-
-    # Dump the environment and parse the output
-    env_out = subprocess.check_output(command, shell=True, env=env)
-    for line in env_out.rstrip().split(b'\n'):
-        var, _, value = line.partition(b'=')
-        env[var] = value
-
-    return env
-
 
 # Prepare a command and environment for roslaunch
 def prep_roslaunch(config, env, package, launchfile):
@@ -112,7 +81,7 @@ def _start(args):
         config = yaml.safe_load(f)
 
     # Prepare the environment
-    env = prep_environment()
+    env = dict(os.environ)
 
     # Define an atexit handler that can be used to terminate subprocesses.
     # Recall that these handlers are invoked in reverse order, so since we start
