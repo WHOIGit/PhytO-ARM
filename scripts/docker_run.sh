@@ -55,4 +55,4 @@ docker run "${DOCKER_FLAGS[@]}" \
     --volume /data:/data \
     --device /dev/ttyS3 \
     whoi/phyto-arm:latest \
-    $COMMAND
+    "$COMMAND"
