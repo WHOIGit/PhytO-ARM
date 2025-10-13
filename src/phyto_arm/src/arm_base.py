@@ -84,7 +84,7 @@ class ArmBase:
             rospy.loginfo(f'Server acquired for {winch_name}')
 
         # Publish initial idle state
-        self.publish_task_status("idle")
+        self.publish_current_task("idle")
 
 
     def gps_callback(self, msg):
@@ -137,7 +137,7 @@ class ArmBase:
         return False
 
 
-    def publish_task_status(self, task_name):
+    def publish_current_task(self, task_name):
         self.task_pub.publish(String(data=task_name))
 
     def winch_busy(self):
@@ -185,7 +185,7 @@ class ArmBase:
                 raise e
 
         self.winch_client.send_goal(MoveToDepthGoal(depth=depth, velocity=speed), done_cb=winch_done)
-        self.publish_task_status("winch_movement")
+        self.publish_current_task("winch_movement")
 
 
     # Logic for determining arm tasks goes heres, all implementations should override this
@@ -196,7 +196,7 @@ class ArmBase:
     # Callback for when a task is complete. Unused result argument is required
     # for cases where this method is used as a task callback
     def start_next_task(self, move_result=None):
-        self.publish_task_status("task_completed")
+        self.publish_current_task("task_completed")
         self.task_lock.release()
 
 
@@ -210,13 +210,13 @@ class ArmBase:
                 if self.winch_client is None:
                     task = self.get_next_task(task)
                     rospy.logwarn(f'No winch; running {task.name}')
-                    self.publish_task_status(task.name)
+                    self.publish_current_task(task.name)
                     task.callback()
 
                 # Otherwise, move winch
                 else:
                     rospy.logwarn('Arm waiting for clearance')
-                    self.publish_task_status("waiting_for_clearance")
+                    self.publish_current_task("waiting_for_clearance")
 
                     # TODO: Consider replacing this with a queueing mechanism.  Requires setting up
                     # callbacks via ROS service calls. Unnecessarily complex for a 2 winch system,
@@ -233,5 +233,5 @@ class ArmBase:
 
                     task = self.get_next_task(task)
                     rospy.logwarn(f'Goal depth {task.depth} for task {task.name}')
-                    self.publish_task_status(task.name)
+                    self.publish_current_task(task.name)
                     self.send_winch_goal(task.depth, task.speed, task.callback)
