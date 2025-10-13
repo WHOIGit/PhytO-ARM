@@ -7,9 +7,11 @@ import rospy
 
 from geopy.distance import distance as vincenty_distance
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import String
 
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 from phyto_arm.srv import LockCheck, LockCheckRequest, LockOperation, LockOperationRequest
+
 
 
 @dataclass
@@ -45,6 +47,9 @@ class ArmBase:
         rospy.Subscriber("/gps/fix", NavSatFix, self.gps_callback)
         rospy.loginfo(f"Subscribed to /gps/fix for {self.arm_name}")
 
+        # Publisher for current task status
+        self.task_pub = rospy.Publisher('task', String, queue_size=1, latch=True)
+
         if rospy.get_param('winch_enabled'):
             if winch_name is None:
                 raise ValueError('Winch name must be provided if winch is enabled')
@@ -77,6 +82,10 @@ class ArmBase:
             rospy.loginfo(f'Awaiting winch server for {winch_name}')
             self.winch_client.wait_for_server()
             rospy.loginfo(f'Server acquired for {winch_name}')
+
+        # Publish initial idle state
+        self.publish_current_task("idle")
+
 
     def gps_callback(self, msg):
         with self._gps_lock:
@@ -121,10 +130,15 @@ class ArmBase:
             distance = vincenty_distance(current_point, zone_point).m
 
             if distance < zone_radius:
-                rospy.logwarn_throttle(60, f'{self.arm_name}: Inside denied geofence zone ({distance:.1f}m < {zone_radius}m).')
+                deny_warn = f'{self.arm_name}: Inside denied geofence zone ({distance:.1f}m < {zone_radius}m).'
+                rospy.logwarn_throttle(60, deny_warn)
                 return True # Pause due to being in a denied zone
 
         return False
+
+
+    def publish_current_task(self, task_name):
+        self.task_pub.publish(String(data=task_name))
 
     def winch_busy(self):
         state = self.winch_client.get_state()
@@ -171,6 +185,7 @@ class ArmBase:
                 raise e
 
         self.winch_client.send_goal(MoveToDepthGoal(depth=depth, velocity=speed), done_cb=winch_done)
+        self.publish_current_task("winch_movement")
 
 
     # Logic for determining arm tasks goes heres, all implementations should override this
@@ -181,6 +196,7 @@ class ArmBase:
     # Callback for when a task is complete. Unused result argument is required
     # for cases where this method is used as a task callback
     def start_next_task(self, move_result=None):
+        self.publish_current_task("task_completed")
         self.task_lock.release()
 
 
@@ -194,11 +210,13 @@ class ArmBase:
                 if self.winch_client is None:
                     task = self.get_next_task(task)
                     rospy.logwarn(f'No winch; running {task.name}')
+                    self.publish_current_task(task.name)
                     task.callback()
 
                 # Otherwise, move winch
                 else:
                     rospy.logwarn('Arm waiting for clearance')
+                    self.publish_current_task("waiting_for_clearance")
 
                     # TODO: Consider replacing this with a queueing mechanism.  Requires setting up
                     # callbacks via ROS service calls. Unnecessarily complex for a 2 winch system,
@@ -215,4 +233,5 @@ class ArmBase:
 
                     task = self.get_next_task(task)
                     rospy.logwarn(f'Goal depth {task.depth} for task {task.name}')
+                    self.publish_current_task(task.name)
                     self.send_winch_goal(task.depth, task.speed, task.callback)

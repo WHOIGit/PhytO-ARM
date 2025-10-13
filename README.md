@@ -473,6 +473,8 @@ cb --> snt
 snt --> loop
 ```
 
+The history of task states can be reconstructed via the task names published at `/<arm name>/task`.
+
 ### Hardware topology
 
 In all deployments thus far, we have used the IFCB as the primary host to run PhytO-ARM and coordinate movements and sampling. The hardware architecture diagram below illustrates this. 
@@ -523,6 +525,10 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
       - `~acquire` for arms to request permission to move their winches
       - `~release` for arms to release permission to move
       - `~check` for arms to check whether they might have a dangling lock (e.g. after a crash or user stop)
+
+  - `arm_base`: Common task management capabilities for payloads, such as determining whether to move winch and enforcing geofence limits.
+    - Publishes:
+      - `~task`: Name of the current task being executed by the arm.
 
   - `arm_ifcb`: Orchestrates IFCB payload behaviors
     - Subscribes:
