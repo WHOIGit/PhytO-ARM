@@ -464,7 +464,6 @@ def main():
 
     # Setup service client for IFCB commands
     rospy.loginfo('Waiting for IFCB command service...')
-    rospy.wait_for_service('/ifcb/command', timeout=30)
     ifcb_command_client = rospy.ServiceProxy('/ifcb/command', ifcb.srv.Command)
     rospy.loginfo('IFCB command service client acquired')
 
