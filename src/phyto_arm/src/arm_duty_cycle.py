@@ -4,14 +4,12 @@
 This module implements a duty cycle arm that turns the IFCB on and off based on
 a configurable schedule while performing profiling and sampling tasks.
 """
-import math
 import subprocess
 
 from datetime import datetime, timedelta
 from threading import Event
 
 import actionlib
-import numpy as np
 import rospy
 
 from std_msgs.msg import Bool
@@ -29,11 +27,6 @@ class ArmDutyCycle(ArmBase):
         self.profile_activity = Event()
         self.latest_profile = None
 
-        # Scheduled depth tracking
-        self.scheduled_depths = []
-        self.last_scheduled_time = None
-        self.next_scheduled_index = 0
-
         # Profiler peak tracking
         self.profiler_peak_depth = None
         self.profiler_peak_value = None
@@ -50,6 +43,12 @@ class ArmDutyCycle(ArmBase):
         self.is_sampling_active = False
         self.last_duty_check_time = None
         self.next_duty_transition_time = None
+
+        # Sample session tracking
+        self.samples_in_current_session = 0
+        self.last_session_start_time = None
+        self.target_samples_per_session = 0
+        self.reference_start_time = None  # Fixed reference time for interval calculations
 
     def get_next_task(self, last_task):
         # Check duty cycle schedule
@@ -69,7 +68,7 @@ class ArmDutyCycle(ArmBase):
             return Task('no_winch', handle_nowinch)
 
         # Start off at min depth for upcast
-        preupcast_tasks = ['scheduled_depth', 'profiler_peak_depth', 'await_ifcb_connection',
+        preupcast_tasks = ['profiler_peak_depth', 'default_depth', 'await_ifcb_connection',
                           'startup_sampling', 'await_duty_cycle']
         if last_task is None or last_task.name in preupcast_tasks:
             return Task('upcast', self.start_next_task, rospy.get_param('winch/range/min'))
@@ -78,15 +77,17 @@ class ArmDutyCycle(ArmBase):
         if last_task.name == 'upcast':
             return Task('downcast', handle_downcast, rospy.get_param('winch/range/max'))
 
-        # Then go to peak depth, unless it's scheduled depth time
+        # Then go to peak depth if found and above threshold, otherwise use default depth
         if last_task.name == 'downcast':
-            if its_scheduled_depth_time(self.profiler_peak_value):
-                return Task('scheduled_depth', handle_target_depth, scheduled_depth(self))
-            if self.profiler_peak_depth is not None:
+            threshold = rospy.get_param('tasks/profiler_peak/threshold', 0.0)
+            if self.profiler_peak_depth is not None and self.profiler_peak_value >= threshold:
+                rospy.loginfo(f'Using profiler peak depth: {self.profiler_peak_depth:.2f} m')
                 return Task('profiler_peak_depth', handle_target_depth, self.profiler_peak_depth)
 
-            # If we don't have a peak depth, we can't do anything, so just run scheduled depth
-            return Task('scheduled_depth', handle_target_depth, scheduled_depth(self))
+            # Peak not found or below threshold, use default depth
+            default_depth = rospy.get_param('tasks/default_depth', 1.0)
+            rospy.loginfo(f'Using default depth: {default_depth:.2f} m')
+            return Task('default_depth', handle_target_depth, default_depth)
 
         raise ValueError(f'Unhandled next-task state where last task={last_task.name}')
 
@@ -100,68 +101,68 @@ class ArmDutyCycle(ArmBase):
             self.update_duty_cycle_state()
             return False
 
-        # Check if we've reached the next transition time
-        if self.next_duty_transition_time and current_time >= self.next_duty_transition_time:
-            return True
+        if self.is_sampling_active:
+            # Check if we've reached the target sample count
+            if self.samples_in_current_session >= self.target_samples_per_session:
+                rospy.loginfo(f'Reached target sample count ({self.target_samples_per_session}), shutting down')
+                return True
+        else:
+            # Check if it's time to start a new sampling session
+            if self.next_duty_transition_time and current_time >= self.next_duty_transition_time:
+                rospy.loginfo('Interval elapsed, starting new sampling session')
+                return True
 
         return False
 
     def update_duty_cycle_state(self):
-        """Update the duty cycle state based on current schedule"""
-        current_time = datetime.now()
-        schedule = rospy.get_param('tasks/duty_cycle/schedule', [])
+        """Update the duty cycle state based on interval configuration"""
+        # Load configuration
+        interval_minutes = rospy.get_param('tasks/duty_cycle/interval', 0)
+        self.target_samples_per_session = rospy.get_param('tasks/duty_cycle/number_of_samples', 0)
 
-        if not schedule:
-            # No schedule defined, always sample
+        if interval_minutes == 0 or self.target_samples_per_session == 0:
+            # No interval configured, default to always sampling
+            rospy.logwarn('Duty cycle interval or number_of_samples not configured, defaulting to continuous sampling')
             self.is_sampling_active = True
             self.next_duty_transition_time = None
             return
 
-        # Find current and next schedule entries
-        current_entry = None
-        next_entry = None
+        # Initialize reference start time if needed
+        if self.reference_start_time is None:
+            start_time_str = rospy.get_param('tasks/duty_cycle/start_time', None)
+            if start_time_str:
+                try:
+                    # Parse UTC time string
+                    reference_datetime = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
+                    self.reference_start_time = rospy.Time.from_sec(reference_datetime.timestamp())
+                    rospy.loginfo(f'Using configured reference start time: {start_time_str} UTC')
+                except ValueError:
+                    rospy.logwarn(f'Invalid start_time format: {start_time_str}, using current time')
+                    self.reference_start_time = rospy.Time.now()
+            else:
+                # No start time configured, use current time
+                self.reference_start_time = rospy.Time.now()
+                rospy.loginfo('No start_time configured, using current time as reference')
 
-        # Find next entry (future schedule entry)
-        for entry in schedule:
-            entry_time = datetime.strptime(entry['time'], '%H:%M').time()
-            entry_datetime = datetime.combine(current_time.date(), entry_time)
+        # Calculate next session start time based on fixed intervals from reference time
+        current_time = rospy.Time.now()
+        interval_duration = rospy.Duration(interval_minutes * 60)
 
-            # Adjust for next day if time has passed
-            if entry_datetime <= current_time:
-                entry_datetime += timedelta(days=1)
-
-            if next_entry is None:
-                next_entry = {'datetime': entry_datetime, 'active': entry['active']}
-            elif entry_datetime < next_entry['datetime']:
-                next_entry = {'datetime': entry_datetime, 'active': entry['active']}
-
-        # Find the most recent entry that applies to current time
-        for entry in schedule:
-            entry_time = datetime.strptime(entry['time'], '%H:%M').time()
-            entry_datetime = datetime.combine(current_time.date(), entry_time)
-
-            # Check today and yesterday
-            for days_back in [0, 1]:
-                check_datetime = entry_datetime - timedelta(days=days_back)
-                if check_datetime <= current_time:
-                    if current_entry is None:
-                        current_entry = {'datetime': check_datetime, 'active': entry['active']}
-                    elif check_datetime > current_entry['datetime']:
-                        current_entry = {'datetime': check_datetime, 'active': entry['active']}
-
-        # Update state
-        if current_entry:
-            self.is_sampling_active = current_entry['active']
+        # Calculate how many intervals have elapsed since reference time
+        elapsed = (current_time - self.reference_start_time).to_sec()
+        if elapsed < 0:
+            # Reference time is in the future, use it as the next session
+            intervals_elapsed = 0
         else:
-            # Default to inactive if no schedule entry found
-            self.is_sampling_active = False
+            # Round up to get the next interval slot
+            intervals_elapsed = int(elapsed / (interval_minutes * 60)) + 1
 
-        if next_entry:
-            self.next_duty_transition_time = rospy.Time.from_sec(next_entry['datetime'].timestamp())
-        else:
-            self.next_duty_transition_time = None
+        # Calculate next session time
+        self.next_duty_transition_time = self.reference_start_time + rospy.Duration(intervals_elapsed * interval_minutes * 60)
 
         rospy.loginfo(f'Duty cycle state: sampling_active={self.is_sampling_active}, '
+                     f'interval={interval_minutes} min, '
+                     f'target_samples={self.target_samples_per_session}, '
                      f'next_transition={self.next_duty_transition_time}')
 
 
@@ -238,10 +239,15 @@ def startup_sampling():
     # Turn on IFCB auxiliary power
     send_ifcb_auxpower_on()
 
+    # Reset session tracking
+    arm.samples_in_current_session = 0
+    arm.last_session_start_time = rospy.Time.now()
+
     # Update duty cycle state
     arm.is_sampling_active = True
     arm.update_duty_cycle_state()
 
+    rospy.loginfo(f'Starting new sampling session: target {arm.target_samples_per_session} samples')
     arm.start_next_task()
 
 
@@ -328,59 +334,15 @@ def send_ifcb_host_shutdown():
 
 
 
-def its_scheduled_depth_time(peak_value):
-    """Determine if it's time to run a scheduled depth task.
-
-    Args:
-        peak_value: The current profiler peak value
-
-    Returns:
-        bool: True if scheduled depth should be run
-    """
-    # Decide if we want to use the scheduled depth
-    scheduled_interval = rospy.Duration(60*rospy.get_param('tasks/scheduled_depth/every'))
-
-    run_schedule = False
-    if math.isclose(scheduled_interval.to_sec(), 0.0):  # disabled
-        run_schedule = False
-    elif arm.last_scheduled_time is None:
-        run_schedule = True
-    elif rospy.Time.now() - arm.last_scheduled_time > scheduled_interval:
-        run_schedule = True
-    elif peak_value is not None and peak_value < rospy.get_param('tasks/profiler_peak/threshold'):
-        run_schedule = True
-    return run_schedule
-
-
-def scheduled_depth(arm_instance):
-    """Calculate the next scheduled depth to sample.
-
-    Args:
-        arm_instance: The ArmDutyCycle instance
-
-    Returns:
-        float: The target depth in meters
-    """
-    scheduled_depths = np.linspace(
-        rospy.get_param('tasks/scheduled_depth/range/first'),
-        rospy.get_param('tasks/scheduled_depth/range/last'),
-        rospy.get_param('tasks/scheduled_depth/range/count'),
-    )
-
-    target_depth = scheduled_depths[arm_instance.next_scheduled_index % scheduled_depths.shape[0]]
-
-    rospy.loginfo(f'Using scheduled depth of {target_depth:.2f} m')
-
-    arm_instance.next_scheduled_index += 1
-    arm_instance.last_scheduled_time = rospy.Time.now()
-    return target_depth
-
-
 def send_ifcb_action():
     """Send an IFCB sampling action and wait for completion."""
     goal = RunIFCBGoal()
     ifcb_runner.send_goal(goal)
     ifcb_runner.wait_for_result()
+
+    # Increment sample counter for duty cycle tracking
+    arm.samples_in_current_session += 1
+    rospy.loginfo(f'Completed sample {arm.samples_in_current_session}/{arm.target_samples_per_session}')
 
 
 def handle_downcast(move_result):
