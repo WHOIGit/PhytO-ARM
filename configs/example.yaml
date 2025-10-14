@@ -215,7 +215,7 @@ arm_duty_cycle: #optional
         # PhytO-ARM is running on, and passwordless shutdown enabled.
         ifcb_host_shutdown_enabled: True
 
-        # Duty cycle schedule - times when IFCB should be active or inactive
+        # Duty cycle configuration - interval-based sampling
         duty_cycle:
             # How often to check if duty cycle state should change (seconds)
             check_interval: 60
@@ -223,25 +223,20 @@ arm_duty_cycle: #optional
             shutdown_wait_duration: 180
             # Duration to wait for IFCB to start up and connect (seconds)
             restart_wait_duration: 180
-            # Schedule entries define when sampling should be active/inactive
-            # Times are in UTC 24-hour format (HH:MM)
-            schedule:
-                - time: "06:00"   # Start sampling at 6 AM UTC
-                  active: true
-                - time: "18:00"   # Stop sampling at 6 PM UTC
-                  active: false
+            # How often to start a new sampling session (minutes)
+            interval: 60
+            # Number of IFCB samples to take during each sampling session
+            number_of_samples: 2
+            # Reference start time for calculating intervals (UTC, format: "YYYY-MM-DD HH:MM")
+            # If not specified, uses current time on first startup
+            # Example: "2025-01-01 00:00" means sessions at 00:00, 02:00, 04:00, etc.
+            start_time: "2025-01-01 00:00"  # optional
 
         profiler_peak:
             # Minimum level of the profiled sensor data to trigger a sample at depth
             threshold: 0.0
-        scheduled_depth:
-            # Scheduled depths are sampled once per time interval, or when the profile
-            # data does not exceed the configured threshold above.
-            every: 60  # minutes, 0 = never
-            range:
-                first: 0.7  # m
-                last:  1.5  # m
-                count: 3
+        # Default depth to use when profiler peak is not found or below threshold
+        default_depth: 5.0  # m
 
     ctd_topic: '/arm_duty_cycle/ctd/depth'
 
