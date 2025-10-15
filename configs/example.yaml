@@ -210,11 +210,6 @@ arm_ifcb: #optional
 arm_duty_cycle: #optional
     # Configuration for duty cycle arm that turns IFCB on/off based on schedule
     tasks:
-        # Shut down the IFCB host when we stop sampling.
-        # This requires the IFCB we are talking to have an SSH key from the host
-        # PhytO-ARM is running on, and passwordless shutdown enabled.
-        ifcb_host_shutdown_enabled: True
-
         # Duty cycle configuration - interval-based sampling
         duty_cycle:
             # How often to check if duty cycle state should change (seconds)
