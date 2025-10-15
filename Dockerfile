@@ -38,7 +38,7 @@ RUN python3 -m pip install "Cython<3.1"
 
 # Install Python dependencies
 COPY deps/python3-requirements.txt ./
-RUN python3 -m pip install -r python3-requirements.txt
+RUN python3 -m pip install --ignore-installed -r python3-requirements.txt
 
 
 # Clone third-party dependencies from VCS
@@ -75,9 +75,8 @@ RUN apt update \
  && rosdep install --default-yes --from-paths ./src --ignore-src \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy the rest of the sources
+# Copy the rest of the source
 COPY ./src ./src
-COPY ./scripts ./scripts
 
 # Build
 RUN bash -c "source devel/setup.bash \
@@ -91,7 +90,23 @@ RUN bash -c "source devel/setup.bash \
         rbr_maestro3_ctd \
 "
 
-# Copy the launch tool
+# Clone the ROS Launchpad management server
+RUN mkdir -p /launchpad
+RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.13.tar.gz | tar zxf - --strip-components=1 -C /launchpad
+RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
+
+# Copy the launch tools and server files
 ENV DONT_SCREEN=1
 ENV NO_VIRTUALENV=1
 COPY ./phyto-arm ./phyto-arm
+
+# Expose web interface port
+EXPOSE 8080
+
+# Source ROS environment automatically for all bash sessions
+RUN echo "source /app/devel/setup.bash" >> /etc/bash.bashrc
+
+ENTRYPOINT ["/bin/bash", "-c", "source /app/devel/setup.bash && exec \"$@\"", "--"]
+
+# Default command runs the server with ROS environment sourced
+CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]

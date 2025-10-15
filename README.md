@@ -120,9 +120,15 @@ These steps assume that ROS Noetic has been installed already.
     sudo systemctl start phyto-arm
 
 
-## Running
+## Running 
 
-The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
+### Using ROS Launchpad (NEW)
+
+ROS Launchpad is a simple web dashboard for managing ROS processes and config. The default Docker command will start it up, so simply starting the container is sufficient. `./scripts/docker_run.sh -d` will also run the dashboard.
+
+### Using `phyto-arm`
+
+The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file. This is typically run within the container.
 
 ```
 phyto-arm start [-h] [--config_schema <schema file>] [--skip_validation] \
@@ -194,6 +200,14 @@ To launch all three simultaneously as separate panes in a tmux session, run the 
 
 ### Running natively
 
+*Not recommended*: Running as a Docker container is preferable in most scenarios.
+
+Source any environments that are in use:
+```
+. venv/bin/activate # Python environment
+. devel/setup.bash  # ROS environment
+```
+
 The `phyto-arm` tool starts the main ROS nodes and loads the provided configuration file.
 
     $ ./phyto-arm start main config/config.yaml
@@ -243,10 +257,8 @@ You can also provide your own schema by passing in the `--config_schema <file>` 
   3. The datatype for every parameter present in both config and schema must match.
   4. Parameters in config but not schema are ignored.
 
-The config validation script includes a separate set of unit tests that can be run with
-```bash
-python3 scripts/config_validation.test.py
-```
+For more information see https://github.com/WHOIGit/example-yaml-validator
+
 
 ### Configuring host address
 
