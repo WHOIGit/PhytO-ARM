@@ -146,7 +146,6 @@ class ArmDutyCycle(ArmBase):
 
         # Calculate next session start time based on fixed intervals from reference time
         current_time = rospy.Time.now()
-        interval_duration = rospy.Duration(interval_minutes * 60)
 
         # Calculate how many intervals have elapsed since reference time
         elapsed = (current_time - self.reference_start_time).to_sec()
@@ -270,16 +269,17 @@ def shutdown_sampling():
 
 
 def power_on_ifcb():
+    # If already connected, proceed immediately
+    if arm.ifcb_connected:
+        rospy.loginfo('IFCB already connected, proceeding')
+        return
+
     dl_ifcb_pub.publish(Bool(data=True))
 
     # Wait for IFCB to connect
     restart_duration = rospy.get_param('tasks/duty_cycle/restart_wait_duration', 120)
     rospy.loginfo(f'Waiting for IFCB to connect (timeout: {restart_duration} seconds)')
 
-    # If already connected, proceed immediately
-    if arm.ifcb_connected:
-        rospy.loginfo('IFCB already connected, proceeding')
-        return
 
     # Wait for connection with timeout
     if arm.ifcb_connection_event.wait(timeout=restart_duration):
@@ -290,9 +290,13 @@ def power_on_ifcb():
 
 def power_off_ifcb():
     # Send graceful shutdown command to IFCB host if enabled
-    if rospy.get_param('tasks/ifcb_host_shutdown_enabled'):
-        send_ifcb_host_shutdown()
-        rospy.sleep(60) # Wait 1 minute for IFCB to shutdown completely
+    if not arm.ifcb_connected:
+        rospy.loginfo('IFCB already disconnected, skipping shutdown')
+        return
+
+    send_ifcb_host_shutdown()
+    rospy.loginfo('Waiting 60 seconds for IFCB to shutdown')
+    rospy.sleep(60) # Wait 1 minute for IFCB to shutdown completely
 
     # Switch off power
     dl_ifcb_pub.publish(Bool(data=False))
