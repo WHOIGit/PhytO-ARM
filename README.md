@@ -120,9 +120,15 @@ These steps assume that ROS Noetic has been installed already.
     sudo systemctl start phyto-arm
 
 
-## Running
+## Running 
 
-The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file.
+### Using ROS Launchpad (NEW)
+
+ROS Launchpad is a simple web dashboard for managing ROS processes and config. The default Docker command will start it up, so simply starting the container is sufficient. `./scripts/docker_run.sh -d` will also run the dashboard.
+
+### Using `phyto-arm`
+
+The `phyto-arm` tool starts all of the ROS nodes and loads the provided configuration file. This is typically run within the container.
 
 ```
 phyto-arm start [-h] [--config_schema <schema file>] [--skip_validation] \
@@ -193,6 +199,14 @@ docker exec -it phyto-arm ./phyto-arm start arm_chanos /configs/config.yaml
 To launch all three simultaneously as separate panes in a tmux session, run the `scripts/tmux_run.sh` script. Running this a second time will attach you to the existing session. To kill the session and all processes running within, use the `scripts/tmux_kill.sh` script.
 
 ### Running natively
+
+*Not recommended*: Running as a Docker container is preferable in most scenarios.
+
+Source any environments that are in use:
+```
+. venv/bin/activate # Python environment
+. devel/setup.bash  # ROS environment
+```
 
 The `phyto-arm` tool starts the main ROS nodes and loads the provided configuration file.
 

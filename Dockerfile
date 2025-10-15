@@ -75,9 +75,8 @@ RUN apt update \
  && rosdep install --default-yes --from-paths ./src --ignore-src \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy the rest of the sources
+# Copy the rest of the source
 COPY ./src ./src
-COPY ./scripts ./scripts
 
 # Build
 RUN bash -c "source devel/setup.bash \
@@ -104,7 +103,11 @@ COPY ./phyto-arm ./phyto-arm
 # Expose web interface port
 EXPOSE 8080
 
-ENTRYPOINT ["/bin/bash", "-c", "source /app/devel/setup.bash && exec bash -c \"$@\"", "--"]
+# Source ROS environment automatically for all bash sessions
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc && \
+    echo "source /app/devel/setup.bash" >> /etc/bash.bashrc
+
+ENTRYPOINT ["/bin/bash", "-c", "source /app/devel/setup.bash && exec \"$@\"", "--"]
 
 # Default command runs the server with ROS environment sourced
-CMD ["cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]
+CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]
