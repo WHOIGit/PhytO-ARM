@@ -104,8 +104,7 @@ COPY ./phyto-arm ./phyto-arm
 EXPOSE 8080
 
 # Source ROS environment automatically for all bash sessions
-RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc && \
-    echo "source /app/devel/setup.bash" >> /etc/bash.bashrc
+RUN echo "source /app/devel/setup.bash" >> /etc/bash.bashrc
 
 ENTRYPOINT ["/bin/bash", "-c", "source /app/devel/setup.bash && exec \"$@\"", "--"]
 
