@@ -13,6 +13,7 @@ import actionlib
 import rospy
 
 from std_msgs.msg import Bool
+from ds_sensor_msgs.msg import DepthPressure
 
 from arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
@@ -38,6 +39,10 @@ class ArmDutyCycle(ArmBase):
         # IFCB connection tracking
         self.ifcb_connected = False
         self.ifcb_connection_event = Event()
+
+        # CTD depth tracking
+        self.ctd_depth_received = Event()
+        self.latest_ctd_depth = None
 
         # Duty cycle state tracking
         self.is_sampling_active = False
@@ -205,6 +210,12 @@ def on_ifcb_connection_status(msg):
         rospy.logwarn('IFCB connection lost')
 
 
+def on_ctd_depth(msg):
+    arm.latest_ctd_depth = msg.depth
+    arm.ctd_depth_received.set()
+    arm.ctd_depth_received.clear()
+
+
 def await_ifcb_connection():
     """Wait for IFCB connection to be established."""
     while not arm.ifcb_connected and not rospy.is_shutdown():
@@ -237,6 +248,15 @@ def startup_sampling():
 
     # Turn on IFCB auxiliary power
     send_ifcb_auxpower_on()
+
+    # Wait to get a depth message
+    rospy.loginfo('Waiting for CTD depth message...')
+    timeout = 60  # Wait up to 60 seconds for depth message
+    if arm.ctd_depth_received.wait(timeout=timeout):
+        rospy.loginfo(f'CTD depth received: {arm.latest_ctd_depth:.2f} m')
+    else:
+        rospy.logerr('No CTD depth message received within timeout')
+        raise RuntimeError('No depth messages received after startup wait period')
 
     # Reset session tracking
     arm.samples_in_current_session = 0
@@ -418,6 +438,11 @@ def main():
 
     # Subscribe to IFCB connection status
     rospy.Subscriber('/ifcb/connected', Bool, on_ifcb_connection_status)
+
+    # Subscribe to CTD depth topic
+    ctd_topic = rospy.get_param('~ctd_topic')
+    rospy.loginfo(f'Subscribing to CTD depth topic: {ctd_topic}')
+    rospy.Subscriber(ctd_topic, DepthPressure, on_ctd_depth)
 
     # Setup publisher for DL outlet control
     dl_ifcb_pub = rospy.Publisher('/digital_logger/outlet/ifcb/control', Bool, queue_size=10)
