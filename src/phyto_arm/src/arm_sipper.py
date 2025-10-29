@@ -30,6 +30,11 @@ class ArmSipper(ArmBase):
             rospy.signal_shutdown("Missing configuration")
             return None
 
+        if self.sample_index == rospy.get_param('starting_sample_index'):
+            rospy.logwarn("Completed all samples")
+            rospy.signal_shutdown("Done sampling")
+            return None
+
         if self.sample_index is None:
             self.sample_index = rospy.get_param('starting_sample_index')
             if self.sample_index < 0 or self.sample_index >= len(samples):
