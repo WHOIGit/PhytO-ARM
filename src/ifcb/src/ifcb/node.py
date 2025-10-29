@@ -109,6 +109,18 @@ def send_command(pub, command):
 # Publish incoming "raw" messages from the IFCB as ROS messages
 def on_any_message(pub, data):
     sender_id, smsgsrc, seqno, data = data
+    
+    # Log different message types to understand what's available
+    if data.startswith('valuechanged:'):
+        rospy.logwarn(f"IFCB valuechanged message: {data}")
+    elif data.startswith('triggerimage:'):
+        rospy.logwarn(f"IFCB triggerimage message (length: {len(data)})")
+    elif data.startswith('triggercontent:'):
+        rospy.logwarn(f"IFCB triggercontent message (length: {len(data)})")
+    elif data.startswith('triggerrois:'):
+        rospy.logwarn(f"IFCB triggerrois message (length: {len(data)})")
+    elif not data.startswith('reportevent:'):  # reportevent is very verbose
+        rospy.logwarn(f"IFCB other message: {data[:100]}...")
 
     # Publish a copy of the incoming message
     msg = RawData()
@@ -137,9 +149,25 @@ def on_interactive_stopped(pub, *_):
     if not send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}'):
         raise ConnectionError("Unable to reset IFCB data dir.")
 
+# Global variables for tracking trigger rates
+last_trigger_time = None
+trigger_count = 0
+
 def on_triggerimage(pub, _, image):
+    global last_trigger_time, trigger_count
+    
     # The image data should be in PNG format, which is an allowed ROS image type
     assert image.startswith(b'\x89PNG\x0D\x0A\x1A\x0A')  # magic bytes
+
+    current_time = rospy.Time.now()
+    trigger_count += 1
+    
+    if last_trigger_time is not None:
+        time_diff = (current_time - last_trigger_time).to_sec()
+        rate = 1.0 / time_diff if time_diff > 0 else 0
+        rospy.logwarn(f"IFCB trigger rate: {rate:.2f} Hz, total triggers: {trigger_count}")
+    
+    last_trigger_time = current_time
 
     msg = CompressedImage()
     msg.header.stamp = rospy.Time.now()
@@ -152,6 +180,9 @@ def on_triggercontent(roi_pub, mkr_pub, _, daq, rois):
     timestamp = rospy.Time.now()
 
     # TODO: Publish DAQ messages too
+    rospy.logwarn(f"IFCB DAQ data type: {type(daq)}")
+    rospy.logwarn(f"IFCB DAQ data content: {daq}")
+    rospy.logwarn(f"IFCB ROIs count: {len(rois) if rois else 0}")
     pass
 
     # Delegate publishing of ROI images and markers to on_triggerrois
@@ -161,12 +192,20 @@ def on_triggercontent(roi_pub, mkr_pub, _, daq, rois):
 def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     timestamp = timestamp or rospy.Time.now()
     markers = ImageMarkerArray()
+    
+    rospy.logwarn(f"IFCB processing {len(rois)} ROIs")
+    total_area = 0
+    
     for i, (top, left, image) in enumerate(rois):
         # IFCB does not give us the width and height so we must extract from
         # the IHDR chunks.
         magic, chlen, chtype, w, h = struct.unpack_from('>8sL4sLL', image)
         assert magic == b'\x89PNG\x0D\x0A\x1A\x0A'
         assert chtype == b'IHDR'
+
+        area = w * h
+        total_area += area
+        rospy.logwarn(f"IFCB ROI {i}: position=({left},{top}), size=({w},{h}), area={area}")
 
         # Publish the ROI image itself
         roi = CompressedImage()
@@ -189,6 +228,7 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
         ]
         markers.markers.append(mkr)
 
+    rospy.logwarn(f"IFCB ROI batch total area: {total_area}")
     # Publish all the markers together
     mkr_pub.publish(markers)
 
