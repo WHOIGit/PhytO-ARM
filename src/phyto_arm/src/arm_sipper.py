@@ -8,6 +8,7 @@ from arm_base import ArmBase, Task
 from std_msgs.msg import String, Bool
 from phyto_arm.msg import RunIFCBGoal, RunIFCBAction
 from dli_power_switch.msg import OutletStatus
+from ifcb.srv import RunRoutine
 
 
 class ArmSipper(ArmBase):
@@ -30,17 +31,32 @@ class ArmSipper(ArmBase):
             rospy.signal_shutdown("Missing configuration")
             return None
 
-        if self.sample_index == rospy.get_param('starting_sample_index'):
-            rospy.logwarn("Completed all samples")
-            rospy.signal_shutdown("Done sampling")
-            return None
-
         if self.sample_index is None:
             self.sample_index = rospy.get_param('starting_sample_index')
             if self.sample_index < 0 or self.sample_index >= len(samples):
-                rospy.logerr(f"Starting sample index {self.sample_index} is not in range 0-{len(samples)-1}. Shutting down node.")
+                rospy.logerr(
+                    f"Starting sample index {self.sample_index} is not in range "
+                    f"0-{len(samples)-1}. Shutting down node."
+                )
                 rospy.signal_shutdown("Invalid configuration")
                 return None
+
+        # After maintenance completes, enter wait mode
+        if last_task is not None and last_task.name == 'maintenance':
+            rospy.logwarn(
+                'Maintenance completed. All samples processed. '
+                'Entering wait mode...'
+            )
+            return Task('wait', wait_for_intervention())
+
+        # After cycling through all samples, run maintenance
+        if (last_task is not None and
+            last_task.name == 'postsample_drain' and
+            self.sample_index == rospy.get_param('starting_sample_index')):
+            rospy.logwarn(
+                'Completed full sample cycle - running biocide and bleach maintenance'
+            )
+            return Task('maintenance', run_manual_maintenance())
 
         next_sample = samples[self.sample_index]
         next_sample_name = next_sample.get('name', f'sample_{self.sample_index}')
@@ -55,7 +71,7 @@ class ArmSipper(ArmBase):
         # Just publish sample metadata every time
         publish_sample_metadata(next_sample)
 
-        # Start at presample_pump if no previous task
+        # Start at presample_pump if no previous task or after drain
         if last_task is None or last_task.name == 'postsample_drain':
             rospy.logwarn(f'Sample {next_sample_name}: starting presample seawater flush')
             return Task('flush_pump', pump_seawater_for(task_durations['flush_pump']))
@@ -77,11 +93,16 @@ class ArmSipper(ArmBase):
             self.sample_index = (self.sample_index + 1) % len(samples)
             return Task('postsample_drain', drain_for(task_durations['drain_valve_open']))
 
+        if last_task.name == 'wait':
+            # Stay in wait mode
+            return Task('wait', wait_for_intervention())
+
         raise ValueError(f'Unhandled next-task state where last task={last_task.name}')
 
 
 # Global references
 ifcb_runner = None
+ifcb_routine_service = None  # Direct access to IFCB routine service for maintenance
 ifcb_data_dir = None
 outlet_publishers = {}  # Maps "<logger_name>/<outlet_name>" to publishers
 metadata_publishers = {}  # Maps metadata keys to publishers
@@ -325,9 +346,46 @@ def open_valve_and_run_ifcb_for(sample_config, duration):
     return open_valve_and_run_ifcb_callback
 
 
+def run_manual_maintenance():
+    """Run biocide and bleach maintenance routines directly via IFCB service."""
+    def manual_maintenance_callback():
+        try:
+            rospy.loginfo('Starting manual biocide routine')
+            result = ifcb_routine_service(routine='biocide', instrument=True)
+            if not result.success:
+                rospy.logerr('Biocide routine failed')
+                arm.start_next_task()
+                return
+
+            rospy.loginfo('Starting manual bleach routine')
+            result = ifcb_routine_service(routine='bleach', instrument=True)
+            if not result.success:
+                rospy.logerr('Bleach routine failed')
+                arm.start_next_task()
+                return
+
+            rospy.loginfo('Manual maintenance completed successfully')
+            arm.start_next_task()
+        except Exception as e:
+            rospy.logerr(f"Error in run_manual_maintenance: {e}. Shutting down node.")
+            rospy.signal_shutdown("Runtime error")
+    return manual_maintenance_callback
+
+
+def wait_for_intervention():
+    """Wait indefinitely for user intervention."""
+    def wait_callback():
+        # Sleep for a long period, then loop back to wait task
+        rospy.loginfo('Waiting for user intervention... (sleeping for 60s)')
+        rospy.sleep(60)
+        arm.start_next_task()
+    return wait_callback
+
+
 def main():
     global arm
     global ifcb_runner
+    global ifcb_routine_service
     global ifcb_data_dir
 
     rospy.init_node('arm_sipper', log_level=rospy.DEBUG)
@@ -354,6 +412,11 @@ def main():
     rospy.loginfo(f'Arm {rospy.get_name()} awaiting IFCB-run action server')
     ifcb_runner.wait_for_server()
     rospy.loginfo(f'Arm {rospy.get_name()} IFCB-run action server acquired')
+
+    # Setup service proxy for direct IFCB routine calls (for manual maintenance)
+    ifcb_routine_service = rospy.ServiceProxy('/ifcb/routine', RunRoutine)
+    ifcb_routine_service.wait_for_service()
+    rospy.loginfo('IFCB routine service acquired for manual maintenance')
 
     # Set a fake timestamp for having run beads and cartridge debubble, so that
     # we don't run it every startup and potentially waste time or bead supply.

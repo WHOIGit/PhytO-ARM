@@ -9,8 +9,10 @@
 
         <node name="ifcb_runner" pkg="phyto_arm" type="mock_ifcb_runner.py" />
 
-        <node name="digital_logger_1" pkg="phyto_arm" type="mock_digital_logger_node.py"/>
+        <group ns="digital_loggers">
+            <node name="digital_logger_1" pkg="phyto_arm" type="mock_digital_logger_node.py"/>
 
-        <node name="digital_logger_2" pkg="phyto_arm" type="mock_digital_logger_node.py"/>
+            <node name="digital_logger_2" pkg="phyto_arm" type="mock_digital_logger_node.py"/>
+        </group>
     </group>
 </launch>
