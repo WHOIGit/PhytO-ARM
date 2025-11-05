@@ -54,7 +54,7 @@ class ArmSipper(ArmBase):
             last_task.name == 'postsample_drain' and
             self.sample_index == rospy.get_param('starting_sample_index')):
             rospy.logwarn(
-                'Completed full sample cycle - running biocide and bleach maintenance'
+                'Completed full sample cycle - running biocide'
             )
             return Task('maintenance', run_manual_maintenance())
 
