@@ -347,20 +347,12 @@ def open_valve_and_run_ifcb_for(sample_config, duration):
 
 
 def run_manual_maintenance():
-    """Run biocide and bleach maintenance routines directly via IFCB service."""
     def manual_maintenance_callback():
         try:
             rospy.loginfo('Starting manual biocide routine')
             result = ifcb_routine_service(routine='biocide', instrument=True)
             if not result.success:
                 rospy.logerr('Biocide routine failed')
-                arm.start_next_task()
-                return
-
-            rospy.loginfo('Starting manual bleach routine')
-            result = ifcb_routine_service(routine='bleach', instrument=True)
-            if not result.success:
-                rospy.logerr('Bleach routine failed')
                 arm.start_next_task()
                 return
 
