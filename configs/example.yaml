@@ -76,7 +76,37 @@ ifcb:
     data_dir: "/data/ifcbdata"
 
 
-arm_ifcb:
+arm_oleander: #optional
+    # Configuration related to tasks
+    tasks: #optional
+        geofence_check_interval: 60 # seconds
+        shutdown_wait_duration: 1800 # seconds
+        restart_wait_duration: 180 # seconds
+
+    ifcb_maintenance:
+        # Interval at which we run a cartridge debubble, necessary when IFCB on its side
+        cartridge_debubble_interval: 0 # minutes, 0 = never
+        # Interval at which we run a biocide and bleach
+        clean_interval: 1440  # minutes, 0 = never
+        # Interval at which we run a debubble and bead sample. Make this a multiple of 
+        # the clean interval if you want a clean after each bead sample.
+        bead_interval: 1440  # minutes, 0 = never
+        # Should we flush sample tube after each sample?
+        flush_after_sample: false
+
+    geofence: #optional
+        # If true, arm will only run tasks where GPS positions allow
+        enabled: true
+        # If true, will pause tasks if last GPS fix is over 5 minutes old
+        strict: false 
+        # List of geofence zones to deny
+        deny:
+            - latitude: 32.7157
+              longitude: -117.2500
+              radius: 1000 # meters
+
+
+arm_ifcb: #optional
     # Configuration related to tasks
     tasks: #optional
         profiler_peak:
