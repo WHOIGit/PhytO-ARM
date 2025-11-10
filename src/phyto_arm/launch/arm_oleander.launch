@@ -1,0 +1,17 @@
+<launch>
+    <!-- Most settings are in config.yaml, which is easier to edit. -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <node name="ifcb" pkg="ifcb" type="ifcb" />
+
+    <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
+
+    <group ns="arm_oleander">
+        <!-- Never has a winch-->
+        <param name="winch_enabled" value="false" />
+
+        <node name="arm" pkg="phyto_arm" type="arm_oleander.py" />
+
+        <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
+    </group>
+</launch>
