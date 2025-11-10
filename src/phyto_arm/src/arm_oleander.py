@@ -99,10 +99,14 @@ def stop_ifcb():
 
 def shutdown_sampling():
     stop_pump()
-    shutdown_duration = rospy.get_param('tasks/shutdown_wait_duration')
-    rospy.logwarn(f'Waiting for IFCB to finish current sample for {shutdown_duration} seconds')
-    rospy.sleep(shutdown_duration)
-    stop_ifcb()
+    power_cycle = rospy.get_param('tasks/power_cycle_on_geofence', True)
+    if power_cycle:
+        shutdown_duration = rospy.get_param('tasks/shutdown_wait_duration')
+        rospy.logwarn(f'Waiting for IFCB to finish current sample for {shutdown_duration} seconds')
+        rospy.sleep(shutdown_duration)
+        stop_ifcb()
+    else:
+        rospy.logwarn('IFCB power cycling disabled, keeping IFCB powered on')
     arm.start_next_task()
 
 
@@ -136,7 +140,11 @@ def start_ifcb():
 
 def restart_sampling():
     start_pump()
-    start_ifcb()
+    power_cycle = rospy.get_param('tasks/power_cycle_on_geofence', True)
+    if power_cycle:
+        start_ifcb()
+    else:
+        rospy.logwarn('IFCB power cycling disabled, IFCB should already be powered on')
     arm.start_next_task()
 
 def main():

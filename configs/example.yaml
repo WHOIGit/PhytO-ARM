@@ -82,6 +82,9 @@ arm_oleander: #optional
         geofence_check_interval: 60 # seconds
         shutdown_wait_duration: 1800 # seconds
         restart_wait_duration: 180 # seconds
+        # If true, will power cycle IFCB via Digital Logger when entering/exiting geofence
+        # If false, IFCB stays powered on, only pump is controlled
+        power_cycle_on_geofence: true
 
     ifcb_maintenance:
         # Interval at which we run a cartridge debubble, necessary when IFCB on its side
