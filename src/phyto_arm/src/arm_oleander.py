@@ -99,7 +99,7 @@ def stop_ifcb():
 
 def shutdown_sampling():
     stop_pump()
-    power_cycle = rospy.get_param('tasks/power_cycle_on_geofence', True)
+    power_cycle = rospy.get_param('tasks/power_cycle_on_geofence')
     if power_cycle:
         shutdown_duration = rospy.get_param('tasks/shutdown_wait_duration')
         rospy.logwarn(f'Waiting for IFCB to finish current sample for {shutdown_duration} seconds')
@@ -140,7 +140,7 @@ def start_ifcb():
 
 def restart_sampling():
     start_pump()
-    power_cycle = rospy.get_param('tasks/power_cycle_on_geofence', True)
+    power_cycle = rospy.get_param('tasks/power_cycle_on_geofence')
     if power_cycle:
         start_ifcb()
     else:
@@ -174,6 +174,14 @@ def main():
     # we don't run it every startup and potentially waste time or bead supply.
     arm.last_cart_debub_time = rospy.Time.now()
     arm.last_bead_time = rospy.Time.now()
+
+    # Let's give the IFCB a moment to try to connect
+    power_cycle = rospy.get_param('tasks/power_cycle_on_geofence')
+    if not power_cycle:
+        rospy.loginfo('Letting IFCB connection warm up...')
+        rospy.sleep(15)
+        if not ifcb_connected:
+            rospy.signal_shutdown('IFCB not connected and power cycling disabled. Shutting down.')
 
     arm.loop()
 
