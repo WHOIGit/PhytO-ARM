@@ -64,6 +64,8 @@ class ArmDutyCycle(ArmBase):
             else:
                 # Time to start up
                 return Task('startup_sampling', startup_sampling)
+        elif last_task is None:
+            send_ifcb_auxpower_on()
 
         # If we're not supposed to be sampling, just wait
         if not self.is_sampling_active:
@@ -243,7 +245,7 @@ def await_duty_cycle():
 
 def startup_sampling():
     """Start IFCB sampling by turning on the digital logger outlet"""
-    rospy.loginfo('Starting IFCB sampling - turning on IFCB power')
+    rospy.loginfo('Starting IFCB sampling')
     power_on_ifcb()
 
     # Turn on IFCB auxiliary power
@@ -272,7 +274,7 @@ def startup_sampling():
 
 def shutdown_sampling():
     """Stop IFCB sampling by turning off the digital logger outlet"""
-    rospy.loginfo('Stopping IFCB sampling - turning off IFCB power')
+    rospy.loginfo('Stopping IFCB sampling')
 
     # Wait for current sample to finish
     shutdown_duration = rospy.get_param('tasks/duty_cycle/shutdown_wait_duration')
@@ -294,6 +296,7 @@ def power_on_ifcb():
         rospy.loginfo('IFCB already connected, proceeding')
         return
 
+    rospy.loginfo('Turning on IFCB power')
     dl_ifcb_pub.publish(Bool(data=True))
 
     # Wait for IFCB to connect
@@ -315,10 +318,12 @@ def power_off_ifcb():
         return
 
     send_ifcb_host_shutdown()
+    arm.ifcb_connected = False
     rospy.loginfo('Waiting 60 seconds for IFCB to shutdown')
     rospy.sleep(60) # Wait 1 minute for IFCB to shutdown completely
 
     # Switch off power
+    rospy.loginfo('Turning off IFCB power')
     dl_ifcb_pub.publish(Bool(data=False))
 
 
@@ -350,12 +355,20 @@ def send_ifcb_host_shutdown():
         'sudo shutdown now'
     ], capture_output=True, text=True, timeout=15)
 
-    if result.returncode == 0:
+    # Accept return codes 0 (clean exit) and 255 (SSH connection dropped due to shutdown)
+    # When the remote host shuts down immediately, SSH returns 255 as the connection is lost
+    if result.returncode in [0, 255]:
         rospy.loginfo('IFCB host shutdown command sent successfully')
         return True
     else:
-        raise SystemError("Unable to send shutdown command to IFCB")
-
+        error_msg = f"Unable to send shutdown command to IFCB (code {result.returncode})"
+        if result.stderr:
+            error_msg += f"\nSTDERR: {result.stderr}"
+        if result.stdout:
+            error_msg += f"\nSTDOUT: {result.stdout}"
+        error_msg += "\nDid you remember to add passwordless shutdown to the IFCB via visudo?"
+        rospy.logerr(error_msg)
+        raise SystemError(error_msg)
 
 
 def send_ifcb_action():
@@ -440,7 +453,7 @@ def main():
     rospy.Subscriber('/ifcb/connected', Bool, on_ifcb_connection_status)
 
     # Subscribe to CTD depth topic
-    ctd_topic = rospy.get_param('~ctd_topic')
+    ctd_topic = rospy.get_param('ctd_topic')
     rospy.loginfo(f'Subscribing to CTD depth topic: {ctd_topic}')
     rospy.Subscriber(ctd_topic, DepthPressure, on_ctd_depth)
 
