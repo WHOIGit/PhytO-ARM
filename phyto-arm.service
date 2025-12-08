@@ -9,7 +9,7 @@ Type=simple
 Restart=on-failure
 RestartSec=10
 WorkingDirectory=/home/hablab/PhytO-ARM
-ExecStart=/bin/bash scripts/docker_run_daemon.sh
+ExecStart=/bin/bash scripts/docker_run.sh -d
 
 [Install]
 WantedBy=multi-user.target
