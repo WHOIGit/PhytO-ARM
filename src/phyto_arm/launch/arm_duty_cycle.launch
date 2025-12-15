@@ -13,15 +13,16 @@
         <!-- Map launch arg to parameter for driving arm behavior -->
         <param name="winch_enabled" value="$(arg duty_cycle_winch)" type="bool" />
 
+        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+            <!-- Use network data capture to convert AML UDP stream from IFCB -->
+            <remap from="~in" to="/aml_udp_stream" />
+        </node>
+
+
+        <!-- <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />  -->
+
         <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
         <group if="$(arg duty_cycle_winch)">
-
-            <!-- AML CTD on another device -->
-            <!-- <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />
-
-            <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
-                <remap from="~in" to="ctd_comms/in" />
-            </node> -->
 
             <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />
 
