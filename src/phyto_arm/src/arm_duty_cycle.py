@@ -312,11 +312,6 @@ def power_on_ifcb():
 
 
 def power_off_ifcb():
-    # Send graceful shutdown command to IFCB host if enabled
-    if not arm.ifcb_connected:
-        rospy.loginfo('IFCB already disconnected, skipping shutdown')
-        return
-
     send_ifcb_host_shutdown()
     arm.ifcb_connected = False
     rospy.loginfo('Waiting 60 seconds for IFCB to shutdown')
