@@ -16,6 +16,16 @@ def on_message(pub, msg):
         for i in range(4, len(parts), 3):
             parts[i] = b'<omitted>'
         msg.data = b':'.join(parts)
+    elif msg.data.startswith(b'triggercontent:'):
+        parts = msg.data.split(b':')
+        try:
+            rois_idx = parts.index(b'rois')
+            count = int(parts[rois_idx + 1])
+            for j in range(count):
+                parts[rois_idx + 1 + 3 * (j + 1)] = b'<omitted>'
+        except (ValueError, IndexError):
+            pass
+        msg.data = b':'.join(parts)
     elif msg.data.startswith(b'file:chunk:'):
         parts = msg.data.split(b':', maxsplit=4)
         parts[-1] = b'<omitted>'
