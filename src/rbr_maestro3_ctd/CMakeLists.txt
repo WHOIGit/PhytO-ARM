@@ -21,3 +21,8 @@ generate_messages(
 )
 
 catkin_package()
+
+catkin_install_python(
+  PROGRAMS src/rbr_maestro3_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
