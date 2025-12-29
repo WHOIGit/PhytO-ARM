@@ -9,6 +9,7 @@ RUN apt update \
  && sed '/^#/d' apt-requirements.txt | xargs apt install -y \
  && rm -rf /var/lib/apt/lists/*
 
+
 # Update Python setuptools and its dependencies.
 # https://github.com/pypa/setuptools/issues/4478#issuecomment-2235160778
 #
@@ -28,6 +29,14 @@ RUN python3 -m pip install --upgrade \
         platformdirs \
         tomli \
         wheel
+
+# Force setuptools to use stdlib distutils. This is required to be able to use
+# `catkin install` with our newer setuptools, which provides its own distutils.
+#
+# TODO: distutils was removed from the stdlib in Python 3.12. When we migrate to
+# ROS 2 / colcon / Ubuntu 24.04, we don't need this workaround anymore.
+ENV SETUPTOOLS_USE_DISTUTILS=stdlib
+
 
 # Fix the Cython version to work around a gevent install error.
 # https://github.com/gevent/gevent/issues/2076
