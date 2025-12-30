@@ -63,11 +63,7 @@ def send_alerts(alert_config, deployment, launch_name):
         )
 
 
-def attach(args):
-    os.execl('/bin/sh', '/bin/sh', '-c', 'screen -r phyto-arm')
-
-
-def _start(args):
+def start(args):
     # Validate config file
     if not args.skip_validation:
         print(f'Validating config file {args.config} against {args.config_schema}...')
@@ -150,39 +146,10 @@ def _start(args):
     pass
 
 
-def start(args):
-    # Use an environment variable to bypass wrapping the process in screen
-    if os.getenv('DONT_SCREEN'):
-        return _start(args)
-    os.environ['DONT_SCREEN'] = '1'
-
-    # Check if there is a screen session running already
-    try:
-        subprocess.check_call(
-            ['screen', '-list', 'phyto-arm'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        print('PhytO-ARM appears to be running already, aborting')
-        return
-    except subprocess.CalledProcessError:
-        pass
-
-    # Re-run this command in a screen session
-    command = 'screen -L -dmS phyto-arm ' + \
-              ' '.join(shlex.quote(a) for a in sys.argv)
-    os.execl('/bin/sh', '/bin/sh', '-c', command)
-
-
-def stop(args):
-    os.execl('/bin/sh', '/bin/sh', '-c', 'screen -S phyto-arm -X quit')
-
-
 if __name__ == '__main__':
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest='command', required=True)
-
-    attach_parser = subparsers.add_parser('attach')
 
     start_parser = subparsers.add_parser('start')
     start_parser.add_argument('launch_name')
@@ -190,13 +157,9 @@ if __name__ == '__main__':
     start_parser.add_argument('--config_schema', default='./configs/example.yaml')
     start_parser.add_argument('--skip_validation', action='store_true')
 
-    stop_parser = subparsers.add_parser('stop')
-
     args = parser.parse_args()
 
     # Invoke the handler for this subcommand
     {
-        'attach': attach,
         'start': start,
-        'stop':  stop,
     }[args.command](args)
