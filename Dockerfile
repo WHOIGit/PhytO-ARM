@@ -1,4 +1,4 @@
-FROM ros:noetic
+FROM ros:noetic AS common-deps
 
 WORKDIR /app
 
@@ -50,11 +50,22 @@ COPY deps/python3-requirements.txt ./
 RUN python3 -m pip install --ignore-installed -r python3-requirements.txt
 
 
+
+################################################################################
+
+# Continue from common-deps for building all ROS packages
+FROM common-deps AS builder
+
 # Clone third-party dependencies from VCS
 COPY deps/deps.rosinstall ./
 RUN echo Installing ROS dependencies \
  && mkdir ./src \
  && vcs import src < deps.rosinstall
+
+# Configure catkin to use install space instead of devel space
+RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
+ && catkin config --install \
+ "
 
 # Install dependencies declared in package.xml files
 RUN apt update \
@@ -88,7 +99,7 @@ RUN apt update \
 COPY ./src ./src
 
 # Build
-RUN bash -c "source devel/setup.bash \
+RUN bash -c "source install/setup.bash \
  && stdbuf -o L catkin build phyto_arm \
  && stdbuf -o L catkin test -- \
         aml_ctd \
@@ -99,10 +110,33 @@ RUN bash -c "source devel/setup.bash \
         rbr_maestro3_ctd \
 "
 
-# Clone the ROS Launchpad management server
-RUN mkdir -p /launchpad
-RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz | tar zxf - --strip-components=1 -C /launchpad
-RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
+
+
+################################################################################
+
+# Revert back to common-deps for the runtime image
+FROM common-deps AS runtime
+
+# Copy the ROS install space from builder
+COPY --from=builder /app/install /app/install
+
+
+# Install runtime dependencies declared in package.xml files.
+#
+# Unfortunately this layer does not cache well and will be invalidated whenever
+# the builder stage changes.
+RUN apt update \
+ && rosdep install --default-yes --from-paths ./install --ignore-src \
+        --dependency-types=exec \
+ && rm -rf /var/lib/apt/lists/*
+
+
+# Install the ROS Launchpad management server
+RUN mkdir -p /launchpad \
+ && curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz \
+        | tar zxf - --strip-components=1 -C /launchpad \
+ && python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
+
 
 # Copy the launch tools and server files
 COPY ./phyto-arm ./phyto-arm
@@ -111,9 +145,9 @@ COPY ./phyto-arm ./phyto-arm
 EXPOSE 8080
 
 # Source ROS environment automatically for all bash sessions
-RUN echo "source /app/devel/setup.bash" >> /etc/bash.bashrc
+RUN echo 'source /app/install/setup.bash' >> /etc/bash.bashrc
 
-ENTRYPOINT ["/bin/bash", "-c", "source /app/devel/setup.bash && exec \"$@\"", "--"]
+ENTRYPOINT ["/bin/bash", "-c", "source /app/install/setup.bash && exec \"$@\"", "--"]
 
 # Default command runs the server with ROS environment sourced
 CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]
