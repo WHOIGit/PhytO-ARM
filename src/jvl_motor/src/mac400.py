@@ -76,8 +76,8 @@ all_registers = [
         encode=lambda x: pack('l', x),
     ),
     Register(name='V_SOLL',          num=5,
-        decode=lambda lo, hi: unpack('l', lo, hi) / 2.77056,  # RPM
-        encode=lambda x: pack('l', int(x * 2.77056)),
+        decode=lambda lo, hi: unpack('l', lo, hi) / 2.83989,  # RPM
+        encode=lambda x: pack('l', int(x * 2.83989)),
     ),
     Register(name='A_SOLL',          num=6,
         decode=lambda lo, hi: unpack('l', lo, hi) / 3.598133e-3,  # RPM/s
