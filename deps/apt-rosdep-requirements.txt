@@ -1,0 +1,23 @@
+# Auto-generated rosdep apt requirements
+# DO NOT EDIT MANUALLY - regenerate with scripts/generate-rosdep-requirements.sh
+#
+# Generated from:
+#   - deps/deps.rosinstall (VCS dependencies)
+#   - src/**/package.xml (local packages)
+#
+# Last updated: 2025-12-30 23:34:11 UTC
+#
+# To regenerate: ./scripts/generate-rosdep-requirements.sh
+# To verify: ./scripts/generate-rosdep-requirements.sh --verify
+
+gstreamer1.0-libav
+gstreamer1.0-rtsp
+libeigen3-dev
+python3-scipy
+ros-noetic-compressed-image-transport
+ros-noetic-control-msgs
+ros-noetic-cv-bridge
+ros-noetic-foxglove-msgs
+ros-noetic-gpsd-client
+ros-noetic-image-transport
+ros-noetic-rosbridge-server

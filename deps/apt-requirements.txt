@@ -1,8 +1,0 @@
-# Dependencies should usually be declared in the package.xml file, to be
-# automatically installed by rosdep.
-build-essential
-git
-python3-catkin-tools
-python3-pip
-python3-rosdep
-python3-vcstool
