@@ -169,14 +169,21 @@ RUN mkdir -p /launchpad \
 COPY ./phyto-arm ./phyto-arm
 
 
+# Create hot-reload workspace directory structure
+RUN mkdir -p /hot/ros1/src
+
+
 # Expose web interface port
 EXPOSE 8080
 
 
 # Source ROS environment automatically for all bash sessions
-RUN echo 'source /app/install/setup.bash' >> /etc/bash.bashrc
+RUN echo 'source /app/install/setup.bash' >> /etc/bash.bashrc \
+ && echo 'if [ -f /hot/ros1/devel/setup.bash ]; then source /hot/ros1/devel/setup.bash; fi' >> /etc/bash.bashrc
 
-ENTRYPOINT ["/bin/bash", "-c", "source /app/install/setup.bash && exec \"$@\"", "--"]
+# Install the entrypoint script.
+# The entrypoint path is inherited from the ROS base image.
+COPY ros_entrypoint.sh /ros_entrypoint.sh
 
 # Default command runs the server with ROS environment sourced
 CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]
