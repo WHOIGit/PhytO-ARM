@@ -72,6 +72,27 @@ Alternatively, the container image can be built with
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
 
 
+#### Hot-patching packages in the container
+
+The Docker container allows you to overlay modified versions of ROS packages without rebuilding the entire container image. This is useful for testing changes to individual packages during development or troubleshooting.
+
+To test changes to the `aml_ctd` package without rebuilding the container:
+
+1. Make your changes to the package source on your host machine under `src/aml_ctd/`.
+
+2. Mount the *entire* package directory (containing the `package.xml` file) into the hot-patch workspace using a read-only bind mount:
+
+    ```bash
+    docker run --rm -it \
+        --mount type=bind,source="$(pwd)"/src/aml_ctd,target=/hot/ros1/src/aml_ctd,readonly \
+        # ... other docker options ...
+    ```
+
+    (If your container runtime does not support bind mounts, you can create a volume mapping with `--volume "$(pwd)"/src/aml_ctd:/hot/ros1/src/aml_ctd:ro`.)
+
+3. The container will build `aml_ctd` on startup and use your modified version instead of the built-in one.
+
+
 ### Install as a service
 
     sudo ln -sf $(pwd)/phyto-arm.service /etc/systemd/system/phyto-arm.service
