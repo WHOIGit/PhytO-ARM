@@ -39,7 +39,7 @@ The following devices are optional:
 ## Installation
 
 
-### Install with Docker (recommended)
+### Install with Docker
 
 First ensure `docker` is installed:
 ```bash
@@ -70,46 +70,6 @@ Alternatively, the container image can be built with
     docker build --tag whoi/phyto-arm .
 
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
-
-
-### Install natively
-
-These instructions are for install of nodes on an IFCB running Debian 10 ("Buster") OS. Additional instructions are provided for installation as dockerized components that may be distributed across several systems on a network.
-
-These steps assume that ROS Noetic has been installed already.
-
-    source /opt/ros/noetic/setup.bash
-
-    # Install apt package dependencies
-    sed 's/#.*//' deps/apt-requirements.txt | envsubst \
-        | xargs sudo apt install -y
-
-    # Clone source dependencies
-    vcs import src < deps/deps.rosinstall
-
-    # Install ROS dependencies
-    sudo rosdep init
-    rosdep update
-    rosdep install --default-yes --from-paths ./src --ignore-src
-
-    # Patch build configuration for cv_bridge
-    # https://github.com/ros-perception/vision_opencv/issues/345
-    sudo sed -i 's,/usr/include/opencv,/usr/include/opencv4,g' \
-        /opt/ros/noetic/share/cv_bridge/cmake/cv_bridgeConfig.cmake
-
-    # Create Python virtual environment
-    python3 -m virtualenv .venv --system-site-packages
-    . venv/bin/activate
-    python3 -m pip install -r deps/python3-requirements.txt
-
-    # Create Catkin workspace
-    catkin init
-
-    # Build
-    catkin build phyto_arm
-
-    # Add user to dialout group (takes effect on next login)
-    sudo usermod -a -G dialout $USER
 
 
 ### Install as a service
@@ -149,11 +109,6 @@ options:
   File to validate config against.
 --skip_validation
   Skip validation check altogether.
-```
-
-If running natively, you may kill the process with:
-```bash
-phyto-arm stop
 ```
 
 Below is an example Docker run script which includes both the `phyto-arm` command as well as the necesssary docker parameters to access devices, ports, and directories on the host. For your convenience, this command is also available as a script in `scripts/docker_run.sh`.
@@ -198,29 +153,6 @@ docker exec -it phyto-arm ./phyto-arm start arm_chanos /configs/config.yaml
 
 To launch all three simultaneously as separate panes in a tmux session, run the `scripts/tmux_run.sh` script. Running this a second time will attach you to the existing session. To kill the session and all processes running within, use the `scripts/tmux_kill.sh` script.
 
-### Running natively
-
-*Not recommended*: Running as a Docker container is preferable in most scenarios.
-
-Source any environments that are in use:
-```
-. venv/bin/activate # Python environment
-. devel/setup.bash  # ROS environment
-```
-
-The `phyto-arm` tool starts the main ROS nodes and loads the provided configuration file.
-
-    $ ./phyto-arm start main config/config.yaml
-    $ ./phyto-arm stop
-
-In seperate terminal sessions, launch one or more arms:
-
-    $ ./phyto-arm start arm_chanos config/config.yaml
-    $ ./phyto-arm start arm_ifcb config/config.yaml
-
-The ROS nodes will be run in the background (so that you can disconnect from the system, for example).
-
-**Note:** All instruments must already be logging data. Some notes on configuring instruments are included below.
 
 ### Hardware mocking
 
@@ -721,5 +653,3 @@ The config file controls where the bag files are written:
 This results in files in the `/mnt/data/rosbags/` directory with names like `phyto-arm_hades_2022-04-01-14-47-11_0.bag`. The name includes the timestamp of when PhytO-ARM was started, plus a numeric counter. A new bag is created, incrementing the counter, when a configured size limit is reached.
 
 A bag file with the suffix `.active` is currently being written, or was left in an incomplete state by a previous session that was terminated abruptly. Such files can sometimes be repaired.
-
-
