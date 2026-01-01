@@ -8,6 +8,8 @@ find_package(
     ds_core_msgs
 )
 
+catkin_python_setup()
+
 add_message_files(
   FILES
   Electrical.msg
@@ -31,6 +33,11 @@ generate_messages(
 )
 
 catkin_package()
+
+catkin_install_python(
+  PROGRAMS src/jvl_motor_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 if (CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(tests)

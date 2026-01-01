@@ -9,6 +9,8 @@ find_package(
     ds_sensor_msgs
 )
 
+catkin_python_setup()
+
 add_message_files(
   FILES
   AmlMeasurement.msg
@@ -21,6 +23,11 @@ generate_messages(
 )
 
 catkin_package()
+
+catkin_install_python(
+  PROGRAMS src/aml_ctd_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 if (CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(tests)

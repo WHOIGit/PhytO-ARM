@@ -7,6 +7,7 @@
 - git:
     local-name: ds_msgs
     uri: https://bitbucket.org/whoidsl/ds_msgs.git
+    version: rzg/fix-cfg
 
 - git:
     local-name: ros-rtsp-camera

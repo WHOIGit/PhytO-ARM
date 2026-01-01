@@ -8,6 +8,8 @@ find_package(
     ds_core_msgs
 )
 
+catkin_python_setup()
+
 add_message_files(
   FILES
   OutletStatus.msg
@@ -20,6 +22,11 @@ generate_messages(
 )
 
 catkin_package()
+
+catkin_install_python(
+  PROGRAMS src/dli_power_switch_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 if (CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(tests)
