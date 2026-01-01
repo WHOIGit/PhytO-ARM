@@ -1,0 +1,5 @@
+# Cache buster: 1 -- increment to force rebuild of the container image layer
+
+- git:
+    local-name: ros2_convert_msg
+    uri: https://github.com/CentraleNantesRobotics/ros2_convert_msg.git
