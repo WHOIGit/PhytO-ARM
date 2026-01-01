@@ -1,5 +1,16 @@
 FROM ros:noetic
 
+ENV ROS2_DISTRO=foxy
+RUN apt-get update && apt-get install -y curl \
+ && curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+        -o /usr/share/keyrings/ros2-archive-keyring.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/ros2-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu focal main" \
+        > /etc/apt/sources.list.d/ros2.list \
+ && apt-get update \
+ && apt-get install -y ros-${ROS2_DISTRO}-ros-base python3-colcon-common-extensions \
+ && rosdep update --include-eol-distros \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 
@@ -92,6 +103,41 @@ RUN bash -c "source devel/setup.bash \
         phyto_arm \
         rbr_maestro3_ctd \
 "
+
+# Generate ROS 2 interfaces for the packages in the Noetic workspace.
+WORKDIR /app/ros2
+COPY deps/ros2-deps.rosinstall /app/deps/
+RUN mkdir -p src && vcs import src < /app/deps/ros2-deps.rosinstall
+COPY ros2/ src/
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN source /app/ros1/devel/setup.bash \
+ && mkdir -p /app/bridge_interfaces/src \
+ && rospack list | while read -r name path; do \
+        case "$path" in /app/ros1/src/*) \
+            python3 /app/ros2/src/ros2_convert_msg/convert.py "$path" /app/bridge_interfaces ;; \
+        esac; \
+    done
+WORKDIR /app/bridge_interfaces
+RUN source /opt/ros/${ROS2_DISTRO}/setup.bash \
+ && apt-get update \
+ && rosdep install -y --from-paths src --ignore-src --rosdistro=${ROS2_DISTRO} \
+ && colcon build --merge-install \
+ && rm -rf /var/lib/apt/lists/*
+
+# Build the Foxy bridge after sourcing the interfaces from both workspaces.
+WORKDIR /app/bridge
+RUN git clone --depth 1 --branch ${ROS2_DISTRO} https://github.com/ros2/ros1_bridge.git src/ros1_bridge
+COPY patches/std_msgs_converters.cpp src/ros1_bridge/src/
+RUN sed -i '/"src\/builtin_interfaces_factories.cpp"/a\  "src/std_msgs_converters.cpp"' src/ros1_bridge/CMakeLists.txt \
+ && sed -i '/xmlrpcpp/d' src/ros1_bridge/package.xml \
+ && source /app/ros1/devel/setup.bash \
+ && source /opt/ros/${ROS2_DISTRO}/local_setup.bash \
+ && source /app/bridge_interfaces/install/local_setup.bash \
+ && apt-get update \
+ && rosdep install -y --from-paths src --ignore-src --rosdistro=${ROS2_DISTRO} \
+        --skip-keys="fastcdr rti-connext-dds-6.0.1 urdfdom_headers demo_nodes_cpp" \
+ && MAKEFLAGS=-j1 colcon build --packages-select ros1_bridge --cmake-force-configure \
+ && rm -rf /var/lib/apt/lists/*
 
 # Clone the ROS Launchpad management server
 RUN mkdir -p /launchpad
