@@ -281,6 +281,9 @@ def shutdown_sampling():
     rospy.logwarn(f'Waiting for IFCB to finish current sample for {shutdown_duration} seconds')
     rospy.sleep(shutdown_duration)
 
+    # Sync files from IFCB to Pi before shutdown
+    sync_ifcb_files()
+
     power_off_ifcb()
 
     # Update duty cycle state
@@ -364,6 +367,66 @@ def send_ifcb_host_shutdown():
         error_msg += "\nDid you remember to add passwordless shutdown to the IFCB via visudo?"
         rospy.logerr(error_msg)
         raise SystemError(error_msg)
+
+
+def sync_ifcb_files():
+    """Sync files from IFCB host to Pi using rsync.
+
+    This function is called before IFCB shutdown to transfer data files
+    from the IFCB host to the Raspberry Pi for backup/storage.
+    """
+    # Check if file sync is enabled
+    sync_enabled = rospy.get_param('tasks/duty_cycle/file_sync/enabled', False)
+    if not sync_enabled:
+        rospy.loginfo('File sync disabled, skipping')
+        return True
+
+    # Get sync configuration
+    ifcb_host = rospy.get_param('/ifcb/address')
+    source_path = rospy.get_param('tasks/duty_cycle/file_sync/source_path', '/data/ifcbdata')
+    destination_path = rospy.get_param('tasks/duty_cycle/file_sync/destination_path', '/mnt/data/ifcb_sync')
+    rsync_timeout = rospy.get_param('tasks/duty_cycle/file_sync/rsync_timeout', 600)
+    rsync_options = rospy.get_param('tasks/duty_cycle/file_sync/rsync_options', '-avz')
+
+    rospy.loginfo(f'Starting file sync from IFCB: {source_path} -> {destination_path}')
+
+    # Build rsync command
+    # Format: rsync <options> ifcb@<host>:<source>/ <destination>/
+    # Note: trailing slashes are important for rsync behavior
+    rsync_cmd = [
+        'rsync',
+        *rsync_options.split(),  # Split options string into list
+        '--timeout=60',  # Per-file timeout
+        f'ifcb@{ifcb_host}:{source_path}/',
+        f'{destination_path}/'
+    ]
+
+    try:
+        rospy.loginfo(f'Running: {" ".join(rsync_cmd)}')
+        result = subprocess.run(
+            rsync_cmd,
+            capture_output=True,
+            text=True,
+            timeout=rsync_timeout
+        )
+
+        if result.returncode == 0:
+            rospy.loginfo('File sync completed successfully')
+            if result.stdout:
+                rospy.logdebug(f'Rsync output: {result.stdout}')
+            return True
+        else:
+            rospy.logerr(f'File sync failed with return code {result.returncode}')
+            if result.stderr:
+                rospy.logerr(f'Rsync error: {result.stderr}')
+            return False
+
+    except subprocess.TimeoutExpired:
+        rospy.logerr(f'File sync timed out after {rsync_timeout} seconds')
+        return False
+    except Exception as e:
+        rospy.logerr(f'File sync failed with exception: {e}')
+        return False
 
 
 def send_ifcb_action():
