@@ -90,12 +90,15 @@ stateDiagram-v2
     CheckSampleCount --> Upcast: More samples needed
     CheckSampleCount --> ShutdownSampling: Target reached
 
-    ShutdownSampling --> SendShutdownCommand
+    ShutdownSampling --> SyncFiles
+    SyncFiles --> SendShutdownCommand
     SendShutdownCommand --> WaitForShutdown
     WaitForShutdown --> PowerOffIFCB
     PowerOffIFCB --> AwaitDutyCycle
 
     AwaitDutyCycle --> [*]: System stopped
+
+    note right of SyncFiles: Optional: rsync files<br/>from IFCB to Pi
 ```
 
 ### Timing Example
@@ -131,6 +134,11 @@ The system will operate as follows:
 | `shutdown_wait_duration` | Wait for current sample before shutdown (sec) | 180 |
 | `restart_wait_duration` | Wait for IFCB connection after power-on (sec) | 180 |
 | `default_depth` | Sampling depth when no profiler peak found | 5.0 m |
+| `file_sync.enabled` | Enable file syncing from IFCB to Pi | false |
+| `file_sync.source_path` | Path on IFCB host to sync from | /data/ifcbdata |
+| `file_sync.destination_path` | Path on Pi to sync to | /mnt/data/ifcb_sync |
+| `file_sync.rsync_timeout` | Timeout for rsync operation (sec) | 600 |
+| `file_sync.rsync_options` | Additional rsync options | -avz |
 
 ## Running the Duty Cycle Arm
 
@@ -189,6 +197,74 @@ The duty cycle arm sends graceful shutdown commands to the IFCB host via SSH. Th
    ssh ifcb@<IFCB_HOST_IP> "sudo shutdown -c"  # Cancel any pending shutdown
    ```
 
+## File Syncing Setup
+
+The duty cycle arm can automatically sync IFCB data files from the IFCB host to the Raspberry Pi before each shutdown. This provides a backup of data and enables local processing on the Pi.
+
+### How It Works
+
+1. After the last sample completes and before IFCB shutdown, the arm initiates an rsync transfer
+2. Files are copied from the IFCB host to the Pi using SSH
+3. Only new/changed files are transferred (rsync incremental sync)
+4. After sync completes (or times out), normal shutdown proceeds
+
+### Setup Steps
+
+File syncing uses the same SSH key setup as the shutdown command:
+
+1. **Ensure SSH key is set up** (see SSH Setup section above)
+
+2. **Test rsync access:**
+   ```bash
+   rsync -avz ifcb@<IFCB_HOST_IP>:/data/ifcbdata/ /mnt/data/ifcb_sync/
+   ```
+
+3. **Create destination directory on Pi:**
+   ```bash
+   sudo mkdir -p /mnt/data/ifcb_sync
+   sudo chown $USER:$USER /mnt/data/ifcb_sync
+   ```
+
+4. **Enable in configuration:**
+   ```yaml
+   arm_duty_cycle:
+       tasks:
+           duty_cycle:
+               file_sync:
+                   enabled: true
+                   source_path: "/data/ifcbdata"
+                   destination_path: "/mnt/data/ifcb_sync"
+                   rsync_timeout: 600  # 10 minutes
+                   rsync_options: "-avz --exclude='*.tmp' --exclude='*.lock'"
+   ```
+
+### Rsync Options
+
+The `rsync_options` parameter supports standard rsync flags:
+
+- `-a`: Archive mode (preserves permissions, timestamps, etc.)
+- `-v`: Verbose output
+- `-z`: Compress during transfer
+- `--exclude='pattern'`: Exclude files matching pattern
+- `--delete`: Delete files on destination that don't exist on source (use with caution)
+- `--bwlimit=KBPS`: Limit bandwidth usage
+
+Example for bandwidth-limited connections:
+```yaml
+rsync_options: "-avz --bwlimit=5000 --exclude='*.tmp'"
+```
+
+### Monitoring Sync Progress
+
+File sync operations are logged to ROS:
+```bash
+# View sync logs
+rostopic echo /rosout_agg | grep -i sync
+
+# Or in journalctl if using systemd
+sudo journalctl -u phyto-arm -f | grep -i sync
+```
+
 ## Troubleshooting
 
 ### IFCB Won't Connect After Power-On
@@ -227,3 +303,35 @@ The duty cycle arm sends graceful shutdown commands to the IFCB host via SSH. Th
 2. Check sudoers file for shutdown permission
 3. Increase SSH timeout in code if network is slow
 4. Verify IFCB host IP address in config
+
+### File Sync Fails or Times Out
+
+**Symptoms:**
+- Error: "File sync failed with return code X"
+- Error: "File sync timed out"
+- Shutdown proceeds despite sync failure
+
+**Solutions:**
+1. Test rsync manually: `rsync -avz ifcb@<HOST>:/data/ifcbdata/ /mnt/data/ifcb_sync/`
+2. Check SSH key is set up correctly (same as shutdown setup)
+3. Verify destination directory exists and is writable
+4. Check network connectivity between Pi and IFCB
+5. If large dataset, increase `rsync_timeout` in config
+6. Monitor disk space on Pi: `df -h /mnt/data`
+7. Check IFCB disk space: `ssh ifcb@<HOST> df -h`
+8. Use `--bwlimit` if network bandwidth is limited
+9. Add more `--exclude` patterns to skip unnecessary files
+
+### File Sync Takes Too Long
+
+**Symptoms:**
+- Sync times out before completing
+- Long delays before shutdown
+
+**Solutions:**
+1. Increase `rsync_timeout` in configuration
+2. Limit bandwidth if competing with other network traffic: `rsync_options: "-avz --bwlimit=5000"`
+3. Exclude large unnecessary files: `--exclude='*.avi' --exclude='*.mov'`
+4. Consider syncing only recent data: use rsync filters
+5. Run periodic manual syncs between duty cycles to keep incremental syncs small
+6. Check if network connection is slow or unstable
