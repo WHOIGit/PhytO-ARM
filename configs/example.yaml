@@ -226,6 +226,14 @@ arm_duty_cycle: #optional
             # If not specified, uses current time on first startup
             # Example: "2025-01-01 00:00" means sessions at 00:00, 02:00, 04:00, etc.
             start_time: "2025-01-01 00:00"  # optional
+            # File syncing configuration - rsync files from IFCB to Pi before shutdown
+            file_sync: #optional
+                enabled: true  # Set to false to disable file syncing
+                source_path: "/data/ifcbdata"  # Path on IFCB host to sync from
+                destination_path: "/data/ifcb_sync"  # Path on Pi to sync to
+                rsync_timeout: 600  # Timeout in seconds for rsync operation
+                # Additional rsync options (optional, defaults shown)
+                rsync_options: "-avz --exclude='*.tmp' --exclude='*.lock'"  # optional
 
         profiler_peak:
             # Minimum level of the profiled sensor data to trigger a sample at depth
