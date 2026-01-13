@@ -3,7 +3,7 @@ import functools
 
 import rospy
 
-from ds_core_msgs.msg import RawData
+from wr2_msgs.msg import RawData
 
 
 # Republish incoming "raw" messages, dropping data blobs

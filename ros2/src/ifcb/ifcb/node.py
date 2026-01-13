@@ -12,7 +12,7 @@ import ifcb.srv as srv
 
 from ifcbclient import IFCBClient
 
-from ds_core_msgs.msg import RawData
+from wr2_msgs.msg import RawData
 from foxglove_msgs.msg import ImageMarkerArray
 from geometry_msgs.msg import Point
 from sensor_msgs.msg import CompressedImage
