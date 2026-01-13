@@ -70,53 +70,62 @@ RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
  && stdbuf -o L catkin build \
         ds_core_msgs \
         ds_sensor_msgs \
+        seatrac \
  "
 
-# Copy package.xml files for local packages
-COPY ./ros1/aml_ctd/package.xml ./src/aml_ctd/package.xml
-COPY ./ros1/dli_power_switch/package.xml ./src/dli_power_switch/package.xml
-COPY ./ros1/ifcb/package.xml ./src/ifcb/package.xml
-COPY ./ros1/jvl_motor/package.xml ./src/jvl_motor/package.xml
-COPY ./ros1/phyto_arm/package.xml ./src/phyto_arm/package.xml
-COPY ./src/phyto_sim_utils/package.xml ./src/phyto_sim_utils/package.xml
-COPY ./ros1/rbr_maestro3_ctd/package.xml ./src/rbr_maestro3_ctd/package.xml
+# Build and test the packages that still live in the Noetic workspace.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN --mount=type=bind,target=/checkout \
+    source devel/setup.bash \
+ && shopt -s nullglob \
+ && noetic=() && migrated=() && tests=() \
+ && for manifest in /checkout/ros2/*/package.xml; do \
+        directory=${manifest%/package.xml}; migrated+=("${directory##*/}"); \
+    done \
+ && for manifest in /checkout/ros1/*/package.xml /checkout/src/phyto_sim_utils/package.xml; do \
+        [ -f "$manifest" ] || continue; \
+        directory=${manifest%/package.xml}; name=${directory##*/}; \
+        cp -a "$directory" src/ && noetic+=("$name") || exit 1; \
+        if [[ "$name" != phyto_arm || "${#migrated[@]}" == 0 ]]; then tests+=("$name"); fi; \
+    done \
+ && if (( ${#noetic[@]} )); then \
+        apt-get update && rosdep install -y --from-paths src --ignore-src \
+            --rosdistro=noetic --skip-keys="${migrated[*]}" \
+        && catkin build "${noetic[@]}" \
+        && if (( ${#tests[@]} )); then catkin test -- "${tests[@]}"; fi \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
 
-# Install new rosdep dependencies declared in the above package.xml files
-RUN apt update \
- && rosdep install --default-yes --from-paths ./src --ignore-src \
- && rm -rf /var/lib/apt/lists/*
-
-# Copy the rest of the source
-COPY ./src ./src
-COPY ./ros1 ./src
-
-# Build
-RUN bash -c "source devel/setup.bash \
- && stdbuf -o L catkin build phyto_arm \
- && stdbuf -o L catkin test -- \
-        aml_ctd \
-        dli_power_switch \
-        ifcb \
-        jvl_motor \
-        phyto_arm \
-        rbr_maestro3_ctd \
-"
-
-# Generate ROS 2 interfaces for the packages in the Noetic workspace.
+# Build the ROS 2 packages being migrated to rospy_too.
 WORKDIR /app/ros2
 COPY deps/ros2-deps.rosinstall /app/deps/
 RUN mkdir -p src && vcs import src < /app/deps/ros2-deps.rosinstall
-COPY ros2/ src/
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN source /app/ros1/devel/setup.bash \
+COPY ros2/ local/
+RUN source /opt/ros/${ROS2_DISTRO}/setup.bash \
+ && apt-get update \
+ && local_packages=$(colcon list --base-paths local --names-only) \
+ && packages="rospy_too $local_packages" \
+ && paths=$(colcon list --base-paths src local --packages-up-to $packages --paths-only) \
+ && rosdep install -y --from-paths $paths --ignore-src --rosdistro=${ROS2_DISTRO} \
+ && colcon build --base-paths $paths \
+ && rm -rf /var/lib/apt/lists/*
+
+# Generate the ROS 2 equivalents of remaining Noetic interfaces for the bridge.
+WORKDIR /app/bridge_tools
+COPY deps/bridge-deps.rosinstall /app/deps/
+RUN vcs import < /app/deps/bridge-deps.rosinstall
+RUN source /app/ros2/install/setup.bash \
+ && ros2 pkg list > /tmp/ros2-packages \
+ && source /app/ros1/devel/setup.bash \
  && mkdir -p /app/bridge_interfaces/src \
  && rospack list | while read -r name path; do \
+        grep -Fxq "$name" /tmp/ros2-packages && continue; \
         case "$path" in /app/ros1/src/*) \
-            python3 /app/ros2/src/ros2_convert_msg/convert.py "$path" /app/bridge_interfaces ;; \
+            python3 /app/bridge_tools/ros2_convert_msg/convert.py "$path" /app/bridge_interfaces ;; \
         esac; \
     done
 WORKDIR /app/bridge_interfaces
-RUN source /opt/ros/${ROS2_DISTRO}/setup.bash \
+RUN source /app/ros2/install/setup.bash \
  && apt-get update \
  && rosdep install -y --from-paths src --ignore-src --rosdistro=${ROS2_DISTRO} \
  && colcon build --merge-install \
@@ -130,6 +139,7 @@ RUN sed -i '/"src\/builtin_interfaces_factories.cpp"/a\  "src/std_msgs_converter
  && sed -i '/xmlrpcpp/d' src/ros1_bridge/package.xml \
  && source /app/ros1/devel/setup.bash \
  && source /opt/ros/${ROS2_DISTRO}/local_setup.bash \
+ && source /app/ros2/install/local_setup.bash \
  && source /app/bridge_interfaces/install/local_setup.bash \
  && apt-get update \
  && rosdep install -y --from-paths src --ignore-src --rosdistro=${ROS2_DISTRO} \
