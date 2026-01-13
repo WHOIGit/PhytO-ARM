@@ -13,12 +13,14 @@
 
     <node if="$(arg network_data_capture)" name="network_data_capture" pkg="phyto_arm" type="network_data_capture.py" required="false" />
 
+    <!-- NOTE: triton_classifier dependency removed
     <group if="$(arg classifier)">
         <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />
 
         <node name="image_converter" pkg="image_transport" type="republish"
               args="compressed in:=/ifcb/roi/image raw out:=/ifcb/roi/image" />
     </group>
+    -->
 
     <node name="gps" pkg="gpsd_client" type="gpsd_client">
         <remap from="/fix" to="~fix" />
@@ -27,6 +29,7 @@
 
     <node name="web" pkg="phyto_arm" type="web_node.py" />
 
+    <!-- NOTE: rtsp_camera dependency removed
     <group ns="camera">
         <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">
             <remap from="~image" to="~image/do_not_use" />
@@ -38,6 +41,7 @@
             <remap from="~image/do_not_use/compressed" to="~image/compressed" />
         </node>
     </group>
+    -->
 
     <node if="$(arg digital_logger)" name="digital_logger" pkg="dli_power_switch" type="dli_power_switch_node.py"/>
 </launch>
