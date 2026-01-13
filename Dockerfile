@@ -104,10 +104,10 @@ COPY ros2/ local/
 RUN source /opt/ros/${ROS2_DISTRO}/setup.bash \
  && apt-get update \
  && local_packages=$(colcon list --base-paths local --names-only) \
- && packages="rospy_too $local_packages" \
+ && packages="rospy_too wr2_msgs ds_sensor_msgs $local_packages" \
  && paths=$(colcon list --base-paths src local --packages-up-to $packages --paths-only) \
  && rosdep install -y --from-paths $paths --ignore-src --rosdistro=${ROS2_DISTRO} \
- && colcon build --base-paths $paths \
+ && colcon build --base-paths $paths --cmake-args -DCMAKE_CXX_STANDARD=17 \
  && rm -rf /var/lib/apt/lists/*
 
 # Generate the ROS 2 equivalents of remaining Noetic interfaces for the bridge.
