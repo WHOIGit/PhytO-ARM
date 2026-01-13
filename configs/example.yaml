@@ -128,12 +128,9 @@ arm_ifcb:
     ctd_topic: '/arm_ifcb/ctd/depth'
 
 
-    #  Note these values are not read by PhytO-ARM, they are sought by
-    #  the included ds_util_nodes package, which publishes CTD data reads.
-    #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
     ctd_comms:
         connection:
-            type: "SERIAL"
+            connection_type: "serial"
             port: "/dev/ttyS3"
             baud: 115200
             data_bits: 8

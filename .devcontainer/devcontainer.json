@@ -16,7 +16,7 @@
         // would result in the container ROS workspace being erased. Ugly workaround for now.
         // Alternatively could use postStart commands to symlink the workspace folder. Might
         // introduce other headaches.
-        "source=${localWorkspaceFolder}/ros1/aml_ctd,target=/app/ros1/src/aml_ctd,type=bind",
+        "source=${localWorkspaceFolder}/ros2/src/aml_ctd,target=/app/ros2/src/aml_ctd,type=bind",
         "source=${localWorkspaceFolder}/ros2/src/dli_power_switch,target=/app/ros2/src/dli_power_switch,type=bind",
         "source=${localWorkspaceFolder}/ros2/src/ifcb,target=/app/ros2/src/ifcb,type=bind",
         "source=${localWorkspaceFolder}/ros2/src/jvl_motor,target=/app/ros2/src/jvl_motor,type=bind",
