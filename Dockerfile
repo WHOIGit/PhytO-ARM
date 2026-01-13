@@ -70,8 +70,6 @@ RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
  && stdbuf -o L catkin build \
         ds_core_msgs \
         ds_sensor_msgs \
-        ds_util_nodes \
-        rtsp_camera \
  "
 
 # Copy package.xml files for local packages
@@ -139,15 +137,6 @@ RUN sed -i '/"src\/builtin_interfaces_factories.cpp"/a\  "src/std_msgs_converter
  && MAKEFLAGS=-j1 colcon build --packages-select ros1_bridge --cmake-force-configure \
  && rm -rf /var/lib/apt/lists/*
 
-# Clone the ROS Launchpad management server
-RUN mkdir -p /launchpad
-RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz | tar zxf - --strip-components=1 -C /launchpad
-RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
-
-# ROS Launchpad otherwise sources /launchpad/.venv before each launch, which
-# this image does not have -- dependencies are installed system-wide.
-ENV NO_VIRTUALENV=1
-
 # Copy the launch tools and server files
 WORKDIR /app
 COPY ./phyto-arm ./phyto-arm
@@ -161,5 +150,4 @@ RUN echo "source /app/ros1/devel/setup.bash" >> /etc/bash.bashrc
 
 ENTRYPOINT ["/bin/bash", "-c", "source /app/ros1/devel/setup.bash && exec \"$@\"", "--"]
 
-# Default command runs the server with ROS environment sourced
-CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]
+CMD ["/bin/bash"]
