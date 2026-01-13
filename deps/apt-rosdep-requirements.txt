@@ -1,16 +1,5 @@
 # Auto-generated rosdep apt requirements
 # DO NOT EDIT MANUALLY - regenerate with scripts/generate-rosdep-requirements.sh
 #
-# Last updated: 2025-12-30 23:34:11 UTC
+# Last updated: 2026-01-14 15:04:34 UTC
 
-gstreamer1.0-libav
-gstreamer1.0-rtsp
-libeigen3-dev
-python3-scipy
-ros-noetic-compressed-image-transport
-ros-noetic-control-msgs
-ros-noetic-cv-bridge
-ros-noetic-foxglove-msgs
-ros-noetic-gpsd-client
-ros-noetic-image-transport
-ros-noetic-rosbridge-server
