@@ -4,3 +4,13 @@
     local-name: rospy_too
     uri: https://github.com/rgov/rospy-compat.git
     version: main
+
+- git:
+    local-name: wr2_base
+    uri: https://git.whoi.edu/whoi-ros/wr2_base.git
+    version: main
+
+- git:
+    local-name: wr2_msgs
+    uri: https://git.whoi.edu/whoi-ros/wr2_msgs.git
+    version: main
