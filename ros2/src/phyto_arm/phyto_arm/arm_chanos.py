@@ -2,7 +2,7 @@
 
 import rospy
 
-from arm_base import ArmBase, Task
+from phyto_arm.arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile
 
 

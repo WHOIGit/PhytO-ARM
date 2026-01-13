@@ -11,15 +11,11 @@ import socket
 import time
 
 
-# Hack for getting this to recognize local modules for import
-# Have not found a ROS-recommended way to import modules being tested
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from arm_chanos import profiler_peak_ready, compute_profiler_steps, clamp_steps
-import arm_ifcb
-from lock_manager import NamedLockManager
-import network_data_capture
-from network_data_capture import (
+from phyto_arm.arm_chanos import profiler_peak_ready, compute_profiler_steps, clamp_steps
+from phyto_arm import arm_ifcb
+from phyto_arm.lock_manager import NamedLockManager
+from phyto_arm import network_data_capture
+from phyto_arm.network_data_capture import (
     validate_config, validate_topic_config, validate_subtopic_config,
     convert_to_ros_msg, parse_delimited_message, parse_json_dict_message,
     parse_json_array_message, extract_messages, append_to_buffer

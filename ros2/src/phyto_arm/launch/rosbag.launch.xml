@@ -1,0 +1,18 @@
+<!--
+This launch file describes nodes involved in recording messages to rosbags.
+
+The principal node is `ros2 bag record` which saves messages to disk, rolling
+over to a new rosbag on regular intervals.
+-->
+<launch>
+    <arg name="rosbag_prefix" default="/home/hablab/PhytO-ARM/ros/rosbags/phyto-arm" />
+    <arg name="rosbag_duration" default="3600" />
+
+    <executable cmd="ros2 bag record --all
+        --regex-exclude '/camera/.*|/ifcb/image|/ifcb/in|/ifcb/roi/.*|/rosout'
+        --output $(var rosbag_prefix)
+        --max-bag-duration $(var rosbag_duration)
+        --compression-mode file
+        --compression-format zstd"
+        output="screen" />
+</launch>

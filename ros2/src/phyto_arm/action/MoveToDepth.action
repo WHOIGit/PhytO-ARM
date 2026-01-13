@@ -21,13 +21,13 @@ float32 velocity  # m/s
 # simultaneous DepthProfile message.
 string uuid
 
-std_msgs/Duration time_elapsed
+builtin_interfaces/Duration time_elapsed
 
 ---
 
 # Feedback
 
-std_msgs/Duration time_elapsed
+builtin_interfaces/Duration time_elapsed
 
 float32 depth  # m
 float32 velocity  # m/s

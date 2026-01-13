@@ -20,7 +20,7 @@
         "source=${localWorkspaceFolder}/ros2/src/dli_power_switch,target=/app/ros2/src/dli_power_switch,type=bind",
         "source=${localWorkspaceFolder}/ros2/src/ifcb,target=/app/ros2/src/ifcb,type=bind",
         "source=${localWorkspaceFolder}/ros2/src/jvl_motor,target=/app/ros2/src/jvl_motor,type=bind",
-        "source=${localWorkspaceFolder}/ros1/phyto_arm,target=/app/ros1/src/phyto_arm,type=bind",
+        "source=${localWorkspaceFolder}/ros2/src/phyto_arm,target=/app/ros2/src/phyto_arm,type=bind",
         "source=${localWorkspaceFolder}/ros2/src/rbr_maestro3_ctd,target=/app/ros2/src/rbr_maestro3_ctd,type=bind",
         "source=${localWorkspaceFolder}/.gitignore,target=/app/.gitignore,type=bind",
         "source=${localWorkspaceFolder}/configs,target=/app/configs,type=bind",

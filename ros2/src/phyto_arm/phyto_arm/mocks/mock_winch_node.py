@@ -38,7 +38,7 @@ class MockActionServer:
             self._action_server.set_preempted()
         else:
             result = MoveToDepthResult()
-            result.time_elapsed.data = rospy.Duration.from_sec(10)  # Simulated duration
+            result.time_elapsed = rospy.Duration.from_sec(10)  # Simulated duration
             rospy.loginfo("Mocked action succeeded")
             self._action_server.set_succeeded(result)
 
