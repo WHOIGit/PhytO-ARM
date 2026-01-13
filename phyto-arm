@@ -3,10 +3,10 @@
 This script is used to launch the PhytO-ARM software.
 
 It reads the system configuration from the provided config file and starts the
-ROS nodes with the appropriate settings.
+ROS2 nodes with the appropriate settings.
 
-The nodes are mostly started by roslaunch, with the notable exception of
-`rosbag record`, which we want to keep recording at all costs.
+The nodes are mostly started by ros2 launch, with the notable exception of
+`ros2 bag record`, which we want to keep recording at all costs.
 '''
 import argparse
 import atexit
@@ -15,6 +15,7 @@ import os
 import shlex
 import subprocess
 import sys
+import tempfile
 import urllib.request
 
 import yaml
@@ -22,31 +23,66 @@ import yaml
 from yaml_validator import validate_config
 
 
-# Prepare a command and environment for roslaunch
-def prep_roslaunch(config, env, package, launchfile):
-    # Build the command-line arguments for roslaunch
-    rl_args = [
-        'roslaunch',
-        '--wait',  # because we can start the ROS master ourselves
-        '--required',  # stop if any process fails
-        '--skip-log-check',
-        package, launchfile
-    ]
+def flatten_dict(d, parent_key='', sep='.'):
+    """Flatten a nested dictionary using dot-separated keys."""
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def convert_to_ros2_params(config):
+    """
+    Convert ROS1-style YAML config to ROS2 parameter format.
+
+    ROS1 uses nested dicts with slash hierarchy:
+        winch:
+          range:
+            min: 0.7
+
+    ROS2 expects:
+        /**:
+          ros__parameters:
+            winch.range.min: 0.7
+    """
+    flat_params = flatten_dict(config)
+
+    # Filter out None values and unsupported types
+    filtered_params = {}
+    for k, v in flat_params.items():
+        if v is None:
+            continue
+        # ROS2 parameters support: bool, int, float, str, and homogeneous lists
+        if isinstance(v, (bool, int, float, str)):
+            filtered_params[k] = v
+        elif isinstance(v, list) and len(v) > 0:
+            # Check if list is homogeneous and of supported types
+            first_type = type(v[0])
+            if first_type in (bool, int, float, str) and all(isinstance(x, first_type) for x in v):
+                filtered_params[k] = v
+
+    # Wrap in ROS2 parameter format
+    return {'/**': {'ros__parameters': filtered_params}}
+
+
+# Prepare a command and environment for ros2 launch
+def prep_ros2_launch(args, config, env, package, launchfile, params_file=None):
+    # Build the command-line arguments for ros2 launch
+    rl_args = ['ros2', 'launch', package, launchfile]
     rl_args.append(f'config_file:={os.path.abspath(args.config)}')
 
     for launch_arg, value in config.get('launch_args', {}).items():
         rl_args.append(f'{launch_arg}:={value}')
 
-    # Allow the config to set a launch prefix (like gdb) for nodes. We have to
-    # use an environment variable for this because roslaunch will error if an
-    # argument is unset, while an environment variable is option.
-    launch_prefix = config.get('launch_args', {}).get('launch_prefix')
-    if launch_prefix is not None:
-        env = dict(env)  # copy first
-        env['LAUNCH_PREFIX'] = launch_prefix
+    # Pass the ROS2 params file if provided
+    if params_file is not None:
+        rl_args.append(f'params_file:={params_file}')
 
     # Build the command to invoke as an escaped string
-    # For straceing signals: strace -f -o signals.log -tt -e trace=none
     command = ' '.join(shlex.quote(a) for a in rl_args)
     return command, env
 
@@ -76,12 +112,20 @@ def start(args):
     with open(args.config, 'rb') as f:
         config = yaml.safe_load(f)
 
+    # Convert to ROS2 parameter format and write to temp file
+    ros2_params = convert_to_ros2_params(config)
+    params_file = tempfile.NamedTemporaryFile(
+        mode='w', suffix='.yaml', prefix='ros2_params_', delete=False
+    )
+    yaml.dump(ros2_params, params_file)
+    params_file.close()
+    atexit.register(lambda: os.unlink(params_file.name))
+    print(f'Converted config to ROS2 params: {params_file.name}')
+
     # Prepare the environment
     env = dict(os.environ)
 
     # Define an atexit handler that can be used to terminate subprocesses.
-    # Recall that these handlers are invoked in reverse order, so since we start
-    # roscore first, it is last to be terminated.
     def cleanup(name, proc, dont_kill=False):
         if proc.returncode is not None:  # already dead
             return
@@ -110,25 +154,17 @@ def start(args):
         env['ROS_LOG_DIR'] = log_dir
 
     # The following should only launch once, with the main PhytO-ARM processes
-    roscore = None
+    rosbag = None
     if args.launch_name == "main":
-        # Before we continue compress any older log files
-        #print('Compressing older logs')
-        #os.system(f'find {shlex.quote(log_dir)} -iname \*.log -exec gzip {{}} \;')
-
-        # Start the ROS core processes (ROS master, etc.)
-        roscore = subprocess.Popen('roscore', env=env)
-        atexit.register(lambda: cleanup('roscore', roscore))
-
         # Start the rosbag logging process. We run this separately from the main
         # launch file so that if the main nodes crash, we don't terminate the rosbag
         # prematurely.
-        command, env = prep_roslaunch(config, env, 'phyto_arm', 'rosbag.launch')
+        command, env = prep_ros2_launch(args, config, env, 'phyto_arm', 'rosbag.launch.xml')
         rosbag = subprocess.Popen(command, shell=True, env=env)
         atexit.register(lambda: cleanup('rosbag record', rosbag, dont_kill=True))
 
-    # Prepare our roslaunch command
-    command, env = prep_roslaunch(config, env, 'phyto_arm', f'{args.launch_name}.launch')
+    # Prepare our ros2 launch command
+    command, env = prep_ros2_launch(args, config, env, 'phyto_arm', f'{args.launch_name}.launch.xml', params_file.name)
     nodes = subprocess.Popen(command, shell=True, env=env)
     atexit.register(lambda: cleanup('nodes', nodes))
 
@@ -137,7 +173,7 @@ def start(args):
 
     # Since we called wait() behind subprocess's back, we need to inform it that
     # the process terminated. A little hacky.
-    for proc in [roscore, rosbag, nodes]:
+    for proc in [rosbag, nodes]:
         if proc is not None and proc.pid == pid:
             proc.returncode = os.WEXITSTATUS(status) \
                               if os.WIFEXITED(status) else -1
