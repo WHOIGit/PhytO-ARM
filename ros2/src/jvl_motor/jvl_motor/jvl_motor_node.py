@@ -5,9 +5,10 @@ import time
 
 import rospy
 
-import mac400
 import jvl_motor.msg as msg
 import jvl_motor.srv as srv
+
+from jvl_motor import mac400
 
 from pyModbusTCP.client import ModbusClient
 

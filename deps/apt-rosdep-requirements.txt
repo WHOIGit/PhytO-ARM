@@ -5,7 +5,7 @@
 #   - deps/deps.rosinstall (VCS dependencies)
 #   - src/**/package.xml (local packages)
 #
-# Last updated: 2026-01-14 15:05:31 UTC
+# Last updated: 2026-01-14 15:05:41 UTC
 #
 # To regenerate: ./scripts/generate-rosdep-requirements.sh
 # To verify: ./scripts/generate-rosdep-requirements.sh --verify
