@@ -188,16 +188,9 @@ RUN bash -c "source /opt/ros/${ROS1_DISTRO}/setup.bash \
         ds_asio \
         ds_base \
         ds_core_msgs \
-        ds_core_msgs \
         ds_nmea_msgs \
         ds_param \
         ds_sensor_msgs \
-        ds_sensor_msgs \
-        ds_util_nodes \
-        ds_util_nodes \
-        rtsp_camera \
-        rtsp_camera \
-        triton_classifier \
  "
 
 # Build and test local packages
@@ -297,11 +290,7 @@ RUN --mount=type=cache,target=/ccache \
 FROM with-deps-without-local-sources AS runtime
 
 
-# Install the ROS Launchpad management server
-RUN mkdir -p /launchpad \
- && curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz \
-        | tar zxf - --strip-components=1 -C /launchpad \
- && python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
+# NOTE: ros-launchpad removed - will use ros2 launch directly
 
 
 # Install the launch tools and server files
@@ -324,8 +313,8 @@ RUN echo 'source /app/ros1/install/setup.bash' >> /etc/bash.bashrc \
 # The entrypoint path is inherited from the ROS base image.
 COPY ros_entrypoint.sh /ros_entrypoint.sh
 
-# Default command runs the server with ROS environment sourced
-CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]
+# Default command - start bash
+CMD ["/bin/bash"]
 
 
 # Finally, copy the ROS install spaces from both builders
