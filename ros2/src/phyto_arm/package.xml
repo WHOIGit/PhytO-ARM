@@ -20,8 +20,7 @@
   <depend>ds_sensor_msgs</depend>
   <depend>wr2_msgs</depend>
 
-  <!-- Uncomment after switching to ROS2 Humble -->
-  <!-- <depend>wr2_asio</depend> -->
+  <depend>wr2_asio</depend>
 
   <depend>aml_ctd</depend>
   <depend>dli_power_switch</depend>
