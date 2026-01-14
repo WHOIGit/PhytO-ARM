@@ -29,19 +29,15 @@
 
     <node name="web" pkg="phyto_arm" type="web_node.py" />
 
-    <!-- NOTE: rtsp_camera dependency removed
     <group ns="camera">
         <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">
-            <remap from="~image" to="~image/do_not_use" />
-            <remap from="~image/do_not_use/compressed" to="~image/compressed" />
+            <remap from="camera/image" to="fore_camera/image" />
         </node>
 
         <node name="aft_camera" pkg="rtsp_camera" type="rtsp_camera_node">
-            <remap from="~image" to="~image/do_not_use" />
-            <remap from="~image/do_not_use/compressed" to="~image/compressed" />
+            <remap from="camera/image" to="aft_camera/image" />
         </node>
     </group>
-    -->
 
     <node if="$(arg digital_logger)" name="digital_logger" pkg="dli_power_switch" type="dli_power_switch_node.py"/>
 </launch>

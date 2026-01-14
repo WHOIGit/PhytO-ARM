@@ -79,8 +79,10 @@ FROM base-with-build-tools AS with-deps
 COPY deps/apt-rosdep-requirements.txt ./deps/
 
 # Install apt dependencies
+COPY deps/apt-requirements.txt ./deps/
 RUN apt update \
  && apt install -y $(sed 's/#.*//' deps/apt-rosdep-requirements.txt || true) \
+ && apt install -y $(sed 's/#.*//' deps/apt-requirements.txt || true) \
  && rm -rf /var/lib/apt/lists/*
 
 # Update Python setuptools and its dependencies.
