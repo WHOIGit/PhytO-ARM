@@ -394,7 +394,7 @@ def sync_ifcb_files():
     # Format: rsync <options> ifcb@<host>:<source>/ <destination>/
     # Note: trailing slashes are important for rsync behavior
     rsync_cmd = [
-        'rsync',
+        '/usr/bin/rsync',
         *rsync_options.split(),  # Split options string into list
         '--timeout=60',  # Per-file timeout
         f'ifcb@{ifcb_host}:{source_path}/',
