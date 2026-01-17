@@ -7,12 +7,12 @@ import re
 
 import rospy
 
-import amlxparser
+from aml_ctd import amlxparser
 
-from ds_core_msgs.msg import RawData
 from ds_sensor_msgs.msg import Ctd, DepthPressure
+from wr2_msgs.msg import RawData
 
-from aml_ctd.msg import AmlMeasurement
+from aml_ctd_msgs.msg import AmlMeasurement
 
 
 # Converts an arbitrary string to a ROS-safe name per http://wiki.ros.org/Names.

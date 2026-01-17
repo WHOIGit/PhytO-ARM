@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
     <name>aml_ctd</name>
     <version>1.0.0</version>
     <description>Captures data from an AML CTD</description>
@@ -14,12 +15,21 @@
     <author email="rgovostes@whoi.edu">Ryan Govostes</author>
     <author email="vlucke@whoi.edu">Verena Lucke</author>
 
-    <buildtool_depend>catkin</buildtool_depend>
-    <test_depend>rosunit</test_depend>
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-    <!-- We use the DsHeader message type -->
+    <depend>aml_ctd_msgs</depend>
+    <depend>std_msgs</depend>
     <depend>ds_core_msgs</depend>
-
-    <!-- We use the Ctd and DepthPressure message types -->
     <depend>ds_sensor_msgs</depend>
+    <depend>wr2_msgs</depend>
+
+    <exec_depend>rclpy</exec_depend>
+    <exec_depend>rospy_too</exec_depend>
+
+    <test_depend>ament_cmake_pytest</test_depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
 </package>
