@@ -2,10 +2,10 @@
 from itertools import count
 
 import message_filters
-import rospy
+import rclpy
 
-from ds_core_msgs.msg import RawData
 from ds_sensor_msgs.msg import Ctd, DepthPressure
+from wr2_msgs.msg import RawData
 
 from aml_ctd.amlxparser import checksum
 
@@ -13,7 +13,7 @@ from aml_ctd.amlxparser import checksum
 # Encode a monitor record using the port layout from the AMLx capture
 def monitor_record(number, ctd, depth):
     stamp = ctd.header.stamp
-    fields = [f'mux[meta=time,{stamp.secs}.{stamp.nsecs:09d},s]']
+    fields = [f'mux[meta=time,{stamp.sec}.{stamp.nanosec:09d},s]']
     derived = f'derive[data=Depth,{depth.depth:.6f},m]'
 
     # The conductivity and temperature probes only measure submerged water
@@ -33,22 +33,30 @@ def monitor_record(number, ctd, depth):
 
 
 def main():
-    rospy.init_node('aml_sim')
-    pub = rospy.Publisher('sim/aml', RawData, queue_size=5)
+    rclpy.init()
+    node = rclpy.create_node('aml_sim')
+    pub = node.create_publisher(RawData, 'sim/aml', 5)
     sequence = count()
 
     def on_sample(ctd, depth):
-        msg = RawData(header=ctd.header, ds_header=ctd.ds_header)
-        msg.data_direction = RawData.DATA_IN
+        msg = RawData(io_stamp=ctd.ds_header.io_time)
+        msg.data_direction = RawData.DIRECTION_DATA_IN
         msg.data = monitor_record(next(sequence), ctd, depth)
         pub.publish(msg)
 
-    # Pair the measurements taken at the same Gazebo physics step
-    ctd = message_filters.Subscriber('sim/ctd', Ctd)
-    depth = message_filters.Subscriber('sim/depth', DepthPressure)
+    # Pair the measurements taken at the same probe position observation
+    ctd = message_filters.Subscriber(node, Ctd, 'sim/ctd')
+    depth = message_filters.Subscriber(node, DepthPressure, 'sim/depth')
     samples = message_filters.TimeSynchronizer([ctd, depth], 5)
     samples.registerCallback(on_sample)
-    rospy.spin()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
