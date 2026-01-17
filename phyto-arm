@@ -78,8 +78,11 @@ def convert_to_ros2_params(config):
             if first_type in (bool, int, float, str) and all(isinstance(x, first_type) for x in v):
                 filtered_params[k] = v
 
-    # Wrap in ROS2 parameter format
-    return {'/**': {'ros__parameters': filtered_params}}
+    params = {'/**': {'ros__parameters': filtered_params}}
+    settings = (config.get('arm_ifcb') or {}).get('ctd_comms')
+    if settings:
+        params['/arm_ifcb/ctd_comms'] = {'ros__parameters': flatten_dict(settings)}
+    return params
 
 
 # Prepare a command and environment for ros2 launch

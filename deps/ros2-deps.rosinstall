@@ -4,6 +4,11 @@
     version: 74903059e61cc97750979a655a469aab28ee881e
 
 - git:
+    local-name: wr2_asio
+    uri: https://git.whoi.edu/whoi-ros/wr2_asio.git
+    version: 4323d9e930928d107b44fd35cbde8a5a14a24371
+
+- git:
     local-name: wr2_base
     uri: https://git.whoi.edu/whoi-ros/wr2_base.git
     version: 408ef15919ec34eb1d37804b08fd92ca01438654
