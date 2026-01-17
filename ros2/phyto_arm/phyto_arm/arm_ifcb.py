@@ -8,7 +8,7 @@ import actionlib
 import numpy as np
 import rospy
 
-from arm_base import ArmBase, Task
+from phyto_arm.arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
 from std_msgs.msg import Bool
 

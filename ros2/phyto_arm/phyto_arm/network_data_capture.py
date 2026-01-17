@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Tuple
 
 import rospy
 
-from ds_core_msgs.msg import RawData
+from wr2_msgs.msg import RawData
 from std_msgs.msg import Float64, String, Int64, Bool, Float64MultiArray, Int64MultiArray, Int8MultiArray
 
 class ConfigurationError(Exception):
@@ -590,10 +590,8 @@ def publish_messages(topic_name: str, parsed_data: dict, publishers: dict,
 
         msg = RawData()
         msg.data = list(parsed_data["data"])  # Convert bytes to list of ints
-        msg.data_direction = RawData.DATA_IN
-        current_time = rospy.Time.now()
-        msg.ds_header.io_time = current_time
-        msg.header.stamp = current_time
+        msg.data_direction = RawData.DIRECTION_DATA_IN
+        msg.io_stamp = rospy.Time.now()
 
         publishers[topic_name]["raw"].publish(msg)
     else:

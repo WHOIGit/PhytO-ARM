@@ -1,13 +1,9 @@
-import os
-import sys
 import unittest
 from unittest.mock import patch
 
+from phyto_arm import seatrac_starlink_manager as manager
 from rospy.timer import TimerEvent
 from seatrac.msg import OutletStatus
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-import seatrac_starlink_manager as manager
 
 
 class TestStarlinkReminder(unittest.TestCase):

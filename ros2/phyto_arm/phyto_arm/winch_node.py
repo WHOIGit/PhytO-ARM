@@ -282,7 +282,7 @@ async def move_to_depth(server, goal):
 
         # Publish feedback about our current progress
         feedback = MoveToDepthFeedback()
-        feedback.time_elapsed.data = elapsed
+        feedback.time_elapsed = elapsed
         feedback.depth = depth.value.depth
         feedback.velocity = velocity
         server.publish_feedback(feedback)
@@ -308,7 +308,7 @@ async def move_to_depth(server, goal):
     # Send a success message
     result = MoveToDepthResult()
     result.uuid = str(uuid.uuid4())  # for linking with simultaneous profile msg
-    result.time_elapsed.data = elapsed_time
+    result.time_elapsed = elapsed_time
     server.set_succeeded(result)
 
     # Suggest a new conversion factor

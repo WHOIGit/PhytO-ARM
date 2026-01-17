@@ -1,6 +1,0 @@
-# LockOperation
-# Used for managing locks on winch movement
-
-string arm_name
----
-bool success

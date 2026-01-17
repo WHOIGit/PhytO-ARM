@@ -8,7 +8,7 @@ from threading import Event, Condition
 import actionlib
 import rospy
 
-from ds_core_msgs.msg import RawData
+from wr2_msgs.msg import RawData
 from ifcbclient.protocol import parse_response as parse_ifcb_msg
 from ifcb.instrumentation import parse_marker as parse_ifcb_marker
 from ifcb.srv import RunRoutine
