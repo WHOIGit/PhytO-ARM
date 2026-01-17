@@ -1,17 +1,4 @@
-# Cache buster: 3 -- increment to force rebuild of the container image layer
-
-aiohttp==3.10.11
 pyModbusTCP==0.1.8
-scipy==1.10
-geopy==2.4.1
-# Workaround - eventually should move to ros-triton-classifier
-# and make PhytO-ARM triton agnostic
-tritonclient[all]==2.33.0
-
-git+https://github.com/WHOIGit/pyifcbclient.git@main#egg=pyifcbclient
-
-# Use an older version of grpcio that's available as a pre-built wheel.
-# TODO: Remove this when we move beyond Python 3.8 (Ubuntu 20.04).
-grpcio<1.71
-
+git+https://github.com/WHOIGit/pyifcbclient.git@9f9480370242c66ddee41aa6d616c2c89e94ff44
+websockets==13.1
 yaml-validator==0.3.0

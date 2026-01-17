@@ -1,0 +1,15 @@
+# Auto-generated rosdep apt requirements
+# DO NOT EDIT MANUALLY - regenerate with scripts/generate-rosdep-requirements.sh
+#
+# Last updated: 2026-11-25 23:24:58 UTC
+
+libboost-all-dev
+libboost-dev
+python3-aiohttp
+python3-flask
+python3-geopy
+python3-scipy
+ros-humble-backward-ros
+ros-humble-example-interfaces
+ros-humble-foxglove-msgs
+ros-humble-gps-msgs
