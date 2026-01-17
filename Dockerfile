@@ -254,6 +254,15 @@ RUN bash -c " \
     cd /app/ros2 && \
     colcon build --packages-select rbr_maestro3_ctd_msgs"
 
+FROM with-sources AS build-wr2_base
+COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+RUN bash -c " \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source /app/ros2/install/setup.bash && \
+    cd /app/ros2 && \
+    colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select wr2_base"
+
 FROM with-sources AS build-aml_ctd
 COPY ros2/aml_ctd ros2/src/aml_ctd
 COPY --from=build-aml_ctd_msgs /app/ros2/install/aml_ctd_msgs /app/ros2/install/aml_ctd_msgs
@@ -304,6 +313,16 @@ RUN bash -c " \
     cd /app/ros2 && \
     colcon build --packages-select rbr_maestro3_ctd"
 
+FROM with-sources AS build-wr2_asio
+COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+COPY --from=build-wr2_base /app/ros2/install/wr2_base /app/ros2/install/wr2_base
+COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+RUN bash -c " \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source /app/ros2/install/setup.bash && \
+    cd /app/ros2 && \
+    colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select wr2_asio"
+
 FROM with-sources AS build-phyto_arm
 COPY ros2/phyto_arm ros2/src/phyto_arm
 COPY --from=build-aml_ctd /app/ros2/install/aml_ctd /app/ros2/install/aml_ctd
@@ -321,6 +340,8 @@ COPY --from=build-phyto_arm_msgs /app/ros2/install/phyto_arm_msgs /app/ros2/inst
 COPY --from=build-rbr_maestro3_ctd /app/ros2/install/rbr_maestro3_ctd /app/ros2/install/rbr_maestro3_ctd
 COPY --from=build-rbr_maestro3_ctd_msgs /app/ros2/install/rbr_maestro3_ctd_msgs /app/ros2/install/rbr_maestro3_ctd_msgs
 COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
+COPY --from=build-wr2_asio /app/ros2/install/wr2_asio /app/ros2/install/wr2_asio
+COPY --from=build-wr2_base /app/ros2/install/wr2_base /app/ros2/install/wr2_base
 COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
