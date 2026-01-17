@@ -10,8 +10,8 @@ from typing import Dict
 
 from std_msgs.msg import Bool
 
-from api import DLIClient
-from dli_power_switch.msg import OutletStatus
+from dli_power_switch.api import DLIClient
+from dli_power_switch_msgs.msg import OutletStatus
 
 
 def control_outlet(client: DLIClient, number: int, msg: Bool) -> None:

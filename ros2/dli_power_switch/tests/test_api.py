@@ -4,9 +4,9 @@ import unittest
 
 from urllib.request import HTTPDigestAuthHandler
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import api
+from dli_power_switch import api
 
 
 class MockHTTPResponse:
