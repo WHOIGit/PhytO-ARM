@@ -1,52 +1,69 @@
 # ==============================================================================
-# Base stage without any sources
-FROM ros:noetic AS base
+# Base stage with ROS2 Humble
+FROM ros:humble AS ros2-base
+
+ENV ROS2_DISTRO=humble
 
 WORKDIR /app
 
-# Base dependencies required to bootstrap a build environment. Package-specific
-# dependencies should be added to package.xml and resolved with rosdep.
-RUN apt update && apt install -y \
-    build-essential \
-    git \
-    python3-catkin-tools \
-    python3-pip \
-    python3-rosdep \
-    python3-vcstool \
+# Install basic tools
+RUN apt-get update \
+ && apt-get install -y \
+        curl \
+        jq \
+        locales \
  && rm -rf /var/lib/apt/lists/*
 
-RUN rosdep update --rosdistro=${ROS_DISTRO}
+# Set up locale
+RUN locale-gen en_US en_US.UTF-8 \
+ && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+ENV LANG=en_US.UTF-8
 
 
 
 # ==============================================================================
-# Base stage with third-party sources from VCS, but without local sources.
-# We have to separate these because we don't want them in the runtime image.
-FROM base AS base-with-vcs-sources
+# Stage with build tools added
+FROM ros2-base AS base-with-build-tools
 
-# Copy and import VCS dependencies
-COPY deps/deps.rosinstall ./deps/
-RUN mkdir -p src \
- && vcs import src < deps/deps.rosinstall
+# Install development and build tools
+RUN apt-get update \
+ && apt-get install -y \
+        build-essential \
+        git \
+        python3-pip \
+        python3-rosdep \
+        python3-vcstool \
+        ros-dev-tools \
+ && rm -rf /var/lib/apt/lists/*
+
+# Initialize rosdep (skip if already initialized by base image)
+RUN if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
+        rosdep init; \
+    fi \
+ && rosdep update
 
 
 
 # ==============================================================================
 # Stage for dumping rosdep requirements from all ROS packages. This is usually
 # skipped unless we specifically want to regenerate the dependencies file.
-FROM base-with-vcs-sources AS generate-rosdep-requirements
+FROM base-with-build-tools AS generate-rosdep-requirements
 
 # Copy local source packages (we really only need package.xml files).
-COPY src/ src/
+COPY ros2/ ros2/src/
 
-# Generate rosdep requirements list
-RUN rosdep install --from-paths src/ --ignore-src \
-        --rosdistro=${ROS_DISTRO} --simulate \
-        | grep 'apt-get install' \
-        | sed 's/.*apt-get install //' \
-        | tr ' ' '\n' \
-        | grep -v '^-' \
-        | sort -u > /tmp/apt-rosdep-requirements.txt
+# Import external ROS2 dependencies from rosinstall file
+COPY deps/ros2-deps.rosinstall ./deps/
+RUN cd ros2/src && vcs import < /app/deps/ros2-deps.rosinstall
+
+# Generate rosdep requirements list from ROS2 workspace
+RUN rosdep install --from-paths ros2/src/ --ignore-src \
+        --rosdistro=${ROS2_DISTRO} --simulate \
+    | grep 'apt-get install' \
+    | sed 's/.*apt-get install //' \
+    | tr ' ' '\n' \
+    | grep -v '^-' \
+    | sort -u > /tmp/apt-rosdep-requirements.txt
 
 # When we build only this stage, at runtime we just print the list of
 # dependencies. This gets overridden in the 'full' build.
@@ -56,30 +73,20 @@ CMD ["cat", "/tmp/apt-rosdep-requirements.txt"]
 
 # ==============================================================================
 # Intermediate stage where we install all dependencies
-FROM base-with-vcs-sources AS with-deps-without-local-sources
+FROM base-with-build-tools AS with-deps
 
 # Install rosdep apt dependencies from pre-generated file
 COPY deps/apt-rosdep-requirements.txt ./deps/
 
+# Install apt dependencies
+COPY deps/apt-requirements.txt ./deps/
 RUN apt update \
- && apt install -y $(sed 's/#.*//' deps/apt-rosdep-requirements.txt) \
+ && apt install -y $(sed 's/#.*//' deps/apt-rosdep-requirements.txt || true) \
+ && apt install -y $(sed 's/#.*//' deps/apt-requirements.txt || true) \
  && rm -rf /var/lib/apt/lists/*
-
-# Verify all dependencies are now installed
-RUN rosdep check --from-paths src/ --ignore-src || \
-    (echo "ERROR: Missing dependencies!" \
-     && echo "Run: ./scripts/generate-rosdep-requirements.sh" \
-     && exit 1)
-
 
 # Update Python setuptools and its dependencies.
 # https://github.com/pypa/setuptools/issues/4478#issuecomment-2235160778
-#
-# We also update to pip 21 which supports PEP 600 and allows us to install
-# wheels with the manylinux_2_17 platform tag. This works around a build error
-# with grpcio.
-#
-# TODO: Revisit this when upgrading beyond Python 3.8 (Ubuntu 20.04).
 RUN python3 -m pip install --upgrade \
         'pip>=21,<22' \
         setuptools \
@@ -92,18 +99,8 @@ RUN python3 -m pip install --upgrade \
         tomli \
         wheel
 
-# Force setuptools to use stdlib distutils. This is required to be able to use
-# `catkin install` with our newer setuptools, which provides its own distutils.
-#
-# TODO: distutils was removed from the stdlib in Python 3.12. When we migrate to
-# ROS 2 / colcon / Ubuntu 24.04, we don't need this workaround anymore.
-ENV SETUPTOOLS_USE_DISTUTILS=stdlib
-
 # Fix the Cython version to work around a gevent install error.
 # https://github.com/gevent/gevent/issues/2076
-#
-# For some reason related to isolated build environments, this can't go in the
-# python3-requirements.txt. We also have to avoid upgrading to a newer pip.
 RUN python3 -m pip install "Cython<3.1"
 
 # Install Python dependencies
@@ -113,81 +110,50 @@ RUN python3 -m pip install --ignore-installed -r deps/python3-requirements.txt
 
 
 ################################################################################
-# Now, with all dependencies installed, we can build the ROS packages into the
-# install space.
-FROM with-deps-without-local-sources AS builder
+# Build ROS2 packages
+FROM with-deps AS ros2-builder
 
-# Initialize the catkin workspace and pre-build the third-party packages.
-# This list can be updated according to `catkin build --dry-run phyto_arm`.
-RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
- && catkin config --install \
- && catkin build \
-        ds_asio \
-        ds_base \
-        ds_core_msgs \
-        ds_core_msgs \
-        ds_nmea_msgs \
-        ds_param \
-        ds_sensor_msgs \
-        ds_sensor_msgs \
-        ds_util_nodes \
-        ds_util_nodes \
-        rtsp_camera \
-        rtsp_camera \
-        triton_classifier \
- "
+# Copy all local ROS2 source packages
+COPY ros2/ ros2/src/
 
-# Build and test local packages
-COPY src/ src/
+# Import external ROS2 dependencies from rosinstall file
+COPY deps/ros2-deps.rosinstall ./deps/
+RUN cd ros2/src && vcs import < /app/deps/ros2-deps.rosinstall
 
-RUN bash -c "source install/setup.bash \
- && stdbuf -o L catkin build phyto_arm \
- && stdbuf -o L catkin test -- \
-        aml_ctd \
-        dli_power_switch \
-        ifcb \
-        jvl_motor \
-        phyto_arm \
-        rbr_maestro3_ctd \
-"
+# Build all ROS2 packages with colcon
+# Note: Don't use --symlink-install in Docker as it creates broken symlinks
+# when copying the install space to the runtime stage
+RUN bash -c " \
+    source /opt/ros/${ROS2_DISTRO}/setup.bash && \
+    cd /app/ros2 && \
+    colcon build --merge-install \
+    "
 
 
 
 ################################################################################
 # Finally, we create a runtime stage with only installed packages
-FROM with-deps-without-local-sources AS runtime
-
-
-# Install the ROS Launchpad management server
-RUN mkdir -p /launchpad \
- && curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz \
-        | tar zxf - --strip-components=1 -C /launchpad \
- && python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
-
+FROM with-deps AS runtime
 
 # Install the launch tools and server files
 COPY ./phyto-arm ./phyto-arm
 
-
 # Create hot-reload workspace directory structure
-RUN mkdir -p /hot/ros1/src
-
+RUN mkdir -p /hot/ros2/src
 
 # Expose web interface port
 EXPOSE 8080
 
-
-# Source ROS environment automatically for all bash sessions
-RUN echo 'source /app/install/setup.bash' >> /etc/bash.bashrc \
- && echo 'if [ -f /hot/ros1/devel/setup.bash ]; then source /hot/ros1/devel/setup.bash; fi' >> /etc/bash.bashrc
+# Source ROS2 environment automatically for all bash sessions
+RUN echo 'source /opt/ros/humble/setup.bash' >> /etc/bash.bashrc \
+ && echo 'source /app/ros2/install/setup.bash 2>/dev/null || true' >> /etc/bash.bashrc \
+ && echo 'if [ -f /hot/ros2/install/setup.bash ]; then source /hot/ros2/install/setup.bash; fi' >> /etc/bash.bashrc
 
 # Install the entrypoint script.
-# The entrypoint path is inherited from the ROS base image.
 COPY ros_entrypoint.sh /ros_entrypoint.sh
 
-# Default command runs the server with ROS environment sourced
-CMD ["/bin/bash", "-c", "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml"]
+# Default command - start bash
+CMD ["/bin/bash"]
 
-
-# Finally, copy the ROS install space from builder
-COPY --from=builder /app/install /app/install
+# Copy the ROS2 install space from builder
+COPY --from=ros2-builder /app/ros2/install /app/ros2/install

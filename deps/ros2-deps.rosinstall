@@ -1,0 +1,26 @@
+# Cache buster: 5 -- increment to force rebuild of the container image layer
+
+- git:
+    local-name: rospy_too
+    uri: https://github.com/rgov/rospy-compat.git
+    version: main
+
+- git:
+    local-name: rtsp_camera
+    uri: https://github.com/rgov/ros2_rtsp_camera.git
+    version: main
+
+- git:
+    local-name: wr2_asio
+    uri: https://git.whoi.edu/whoi-ros/wr2_asio.git
+    version: main
+
+- git:
+    local-name: wr2_base
+    uri: https://git.whoi.edu/whoi-ros/wr2_base.git
+    version: main
+
+- git:
+    local-name: wr2_msgs
+    uri: https://git.whoi.edu/whoi-ros/wr2_msgs.git
+    version: main
