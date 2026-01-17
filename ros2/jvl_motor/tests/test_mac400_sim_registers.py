@@ -1,15 +1,11 @@
-import os
-import sys
 import unittest
 from unittest.mock import patch
 
 import rospy
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-import mac400
-from mac400_model import MotorModel
-from mac400_sim_node import MotorRegisters
+from jvl_motor import mac400
+from jvl_motor.mac400_model import MotorModel
+from jvl_motor.mac400_sim_node import MotorRegisters
 from rosgraph_msgs.msg import Clock
 
 

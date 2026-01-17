@@ -1,11 +1,7 @@
-import os
-import sys
 import unittest
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-import mac400 as reg
-from mac400_model import MotorModel
+from jvl_motor import mac400 as reg
+from jvl_motor.mac400_model import MotorModel
 
 
 # Clock inputs are integer nanoseconds

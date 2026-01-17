@@ -1,6 +1,6 @@
 import math
 
-import mac400
+from jvl_motor import mac400
 
 
 # Allow for floating-point roundoff at the braking point and target, in counts

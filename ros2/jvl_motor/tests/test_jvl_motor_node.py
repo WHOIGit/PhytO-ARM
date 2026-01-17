@@ -1,5 +1,3 @@
-import os
-import sys
 import unittest
 from unittest.mock import MagicMock
 
@@ -7,9 +5,7 @@ import rospy
 from jvl_motor.srv import SetPositionEnvelopeCmdRequest, \
     SetVelocityCmdRequest, ZeroCmdRequest
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from jvl_motor_node import cmd_set_position_envelope, cmd_set_velocity, \
+from jvl_motor.jvl_motor_node import cmd_set_position_envelope, cmd_set_velocity, \
     cmd_zero_position
 
 

@@ -1,12 +1,8 @@
 import enum
-import os
 import struct
-import sys
 import unittest
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-import mac400
+from jvl_motor import mac400
 
 
 class TestPackUnpack(unittest.TestCase):

@@ -5,8 +5,8 @@ import threading
 
 import rospy
 
-import mac400
-from mac400_model import MotorModel
+from jvl_motor import mac400
+from jvl_motor.mac400_model import MotorModel
 from pyModbusTCP import constants as modbus
 from rosgraph_msgs.msg import Clock
 from std_msgs.msg import Float64
