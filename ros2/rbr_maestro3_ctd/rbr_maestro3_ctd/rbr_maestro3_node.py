@@ -6,10 +6,10 @@ import re
 
 import rospy
 
-from ds_core_msgs.msg import RawData
 from ds_sensor_msgs.msg import Ctd, DepthPressure
+from wr2_msgs.msg import RawData
 
-from rbr_maestro3_ctd.msg import RbrMeasurement
+from rbr_maestro3_ctd_msgs.msg import RbrMeasurement
 
 
 # Converts an arbitrary string to a ROS-safe name per http://wiki.ros.org/Names.
@@ -159,7 +159,7 @@ async def main():
             # The standard ROS header timestamp reflects when the instrument
             # says the sample was taken. The DsHeader reflects the I/O time.
             m.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
-            m.ds_header.io_time = msg.ds_header.io_time
+            m.ds_header.io_time = msg.io_stamp
 
             publisher.publish(m)
 

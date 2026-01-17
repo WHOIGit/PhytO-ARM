@@ -5,8 +5,10 @@ import math
 
 import message_filters
 import rospy
-from ds_core_msgs.msg import RawData
+
 from ds_sensor_msgs.msg import Ctd, DepthPressure
+from rospy.impl.node import _get_node
+from wr2_msgs.msg import RawData
 
 
 def main():
@@ -27,13 +29,13 @@ def main():
         record = (f'{when:%Y-%m-%d %H:%M:%S.%f}, {conductivity_ms_per_cm:.6f}, '
                   f'{temperature:.6f}, {depth.pressure:.6f}, {depth.depth:.6f}\r\n')
 
-        msg = RawData(header=ctd.header, ds_header=ctd.ds_header)
-        msg.data_direction = RawData.DATA_IN
+        msg = RawData(io_stamp=ctd.ds_header.io_time)
+        msg.data_direction = RawData.DIRECTION_DATA_IN
         msg.data = record.encode('ascii')
         publisher.publish(msg)
 
-    ctd = message_filters.Subscriber('sim/ctd', Ctd)
-    depth = message_filters.Subscriber('sim/depth', DepthPressure)
+    ctd = message_filters.Subscriber(_get_node(), Ctd, 'sim/ctd')
+    depth = message_filters.Subscriber(_get_node(), DepthPressure, 'sim/depth')
     pairs = message_filters.TimeSynchronizer([ctd, depth], 5)
     pairs.registerCallback(publish_record)
     rospy.spin()
