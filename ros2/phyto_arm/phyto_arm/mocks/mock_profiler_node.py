@@ -4,7 +4,8 @@ import numpy as np
 from scipy.stats import norm
 
 from ds_sensor_msgs.msg import DepthPressure
-from phyto_arm.msg import MoveToDepthActionGoal, MoveToDepthActionResult, DepthProfile
+from phyto_arm_msgs.action import MoveToDepthActionGoal, MoveToDepthActionResult
+from phyto_arm_msgs.msg import DepthProfile
 
 class MockProfiler:
     def __init__(self):

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-import rospy
 import actionlib
-from phyto_arm.msg import RunIFCBAction, RunIFCBResult, ConductorState, ConductorStates
+import rospy
+
+from phyto_arm_msgs.action import RunIFCBAction, RunIFCBResult
+from phyto_arm_msgs.msg import ConductorState, ConductorStates
 
 class MockIFCBActionServer:
     def __init__(self, name):

@@ -8,10 +8,10 @@
 
 # Result
 
-std_msgs/Duration time_elapsed
+builtin_interfaces/Duration time_elapsed
 
 ---
 
 # Feedback
 
-std_msgs/Duration time_elapsed
+builtin_interfaces/Duration time_elapsed

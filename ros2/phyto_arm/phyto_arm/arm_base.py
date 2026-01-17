@@ -9,8 +9,8 @@ from geopy.distance import distance as vincenty_distance
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import String
 
-from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
-from phyto_arm.srv import LockCheck, LockCheckRequest, LockOperation, LockOperationRequest
+from phyto_arm_msgs.action import MoveToDepthAction, MoveToDepthGoal
+from phyto_arm_msgs.srv import LockCheck, LockCheckRequest, LockOperation, LockOperationRequest
 
 
 

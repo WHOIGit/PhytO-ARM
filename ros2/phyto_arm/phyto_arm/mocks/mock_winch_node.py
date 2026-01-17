@@ -4,7 +4,7 @@ import actionlib
 
 from std_msgs.msg import Float64  # Assuming depth is published as a simple float
 
-from phyto_arm.msg import MoveToDepthAction, MoveToDepthFeedback, MoveToDepthResult
+from phyto_arm_msgs.action import MoveToDepthAction, MoveToDepthFeedback, MoveToDepthResult
 
 class MockActionServer:
     def __init__(self, name, action_spec):
@@ -38,7 +38,7 @@ class MockActionServer:
             self._action_server.set_preempted()
         else:
             result = MoveToDepthResult()
-            result.time_elapsed.data = rospy.Duration.from_sec(10)  # Simulated duration
+            result.time_elapsed = rospy.Duration.from_sec(10)  # Simulated duration
             rospy.loginfo("Mocked action succeeded")
             self._action_server.set_succeeded(result)
 

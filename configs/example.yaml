@@ -343,10 +343,10 @@ digital_logger: #optional
 seatrac: #optional
   comms:
     connection:
-      type: "UDP"
-      udp_rx: 62001
-      udp_tx: 62001
-      udp_address: "10.1.20.88"
+      connection_type: "udp"
+      listen_port: 62001
+      destination_address: "10.1.20.88"
+      destination_port: 62001
 
   outlets:
     - name: "starlink"

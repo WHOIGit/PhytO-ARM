@@ -12,8 +12,8 @@ import scipy.signal
 
 from ds_sensor_msgs.msg import DepthPressure
 
-from phyto_arm.msg import MoveToDepthActionGoal, MoveToDepthActionResult, \
-                          DepthProfile
+from phyto_arm_msgs.action import MoveToDepthActionGoal, MoveToDepthActionResult
+from phyto_arm_msgs.msg import DepthProfile
 
 
 # This semaphore protects us from a data race when we get new data/depth

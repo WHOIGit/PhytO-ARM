@@ -3,7 +3,7 @@
 from threading import Lock, Semaphore
 
 import rospy
-from phyto_arm.srv import LockOperation, LockCheck, LockOperationResponse, LockCheckResponse
+from phyto_arm_msgs.srv import LockOperation, LockCheck, LockOperationResponse, LockCheckResponse
 
 class NamedLockManager:
     def __init__(self, max_concurrent_locks):

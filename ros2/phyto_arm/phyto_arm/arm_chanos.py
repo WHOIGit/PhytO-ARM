@@ -2,8 +2,8 @@
 
 import rospy
 
-from arm_base import ArmBase, Task
-from phyto_arm.msg import DepthProfile
+from phyto_arm.arm_base import ArmBase, Task
+from phyto_arm_msgs.msg import DepthProfile
 
 
 class ArmChanos(ArmBase):
