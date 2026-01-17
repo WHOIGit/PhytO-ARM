@@ -7,10 +7,10 @@ import re
 
 import rospy
 
-from ds_core_msgs.msg import RawData
 from ds_sensor_msgs.msg import Ctd, DepthPressure
+from wr2_msgs.msg import RawData
 
-from rbr_maestro3_ctd.msg import RbrMeasurement
+from rbr_maestro3_ctd_msgs.msg import RbrMeasurement
 
 
 # Converts an arbitrary string to a ROS-safe name per http://wiki.ros.org/Names.
