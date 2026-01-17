@@ -1,12 +1,12 @@
 #!/bin/bash
 set -eo pipefail
 
-source /opt/ros/noetic/setup.bash
-source /app/ros1/install/setup.bash
+source /opt/ros/humble/setup.bash
+source /app/ros2/install/setup.bash 2>/dev/null || true
 
-if [ -d /hot/ros1/src ] && [ -n "$(ls -A /hot/ros1/src 2>/dev/null)" ]; then
+if [ -d /hot/ros2/src ] && [ -n "$(ls -A /hot/ros2/src 2>/dev/null)" ]; then
     (
-        cd /hot/ros1
+        cd /hot/ros2
 
         # Check dependencies - fail if any are missing
         if ! rosdep check --from-paths ./src --ignore-src; then
@@ -21,12 +21,12 @@ if [ -d /hot/ros1/src ] && [ -n "$(ls -A /hot/ros1/src 2>/dev/null)" ]; then
         fi
 
         # Build packages in the hot-patch workspace
-        [ ! -f .catkin_workspace ] && catkin init
-        catkin config --extend /app/ros1/install --no-install --link-devel
-        catkin build
+        source /opt/ros/humble/setup.bash
+        source /app/ros2/install/setup.bash 2>/dev/null || true
+        colcon build --symlink-install
     )
 
-    source /hot/ros1/devel/setup.bash
+    source /hot/ros2/install/setup.bash
 fi
 
 exec "$@"
