@@ -3,8 +3,8 @@ import os
 import sys
 import unittest
 
-# Allow importing from the package's src directory
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Allow importing from the package directory
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from ifcb.instrumentation import (
     instrument_routine,
