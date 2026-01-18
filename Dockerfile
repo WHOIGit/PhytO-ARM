@@ -149,7 +149,9 @@ RUN echo 'source /opt/ros/humble/setup.bash' >> /etc/bash.bashrc \
  && echo 'source /app/ros2/install/setup.bash' >> /etc/bash.bashrc
 
 # Install the entrypoint script.
+# Also provide a trampoline so you can do `docker exec ... ros2 ...`
 COPY ros_entrypoint.sh /ros_entrypoint.sh
+RUN ln -s /ros_entrypoint.sh /usr/local/bin/ros2
 
 # Default command - start bash
 CMD ["/bin/bash"]
