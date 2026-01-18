@@ -43,6 +43,8 @@
     <exec_depend>python3-geopy</exec_depend>
     <exec_depend>python3-numpy</exec_depend>
 
+    <exec_depend>rosbridge_suite</exec_depend>
+
     <test_depend>ament_cmake_pytest</test_depend>
 
     <export>

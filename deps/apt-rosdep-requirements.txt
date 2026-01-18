@@ -13,3 +13,4 @@ ros-humble-backward-ros
 ros-humble-example-interfaces
 ros-humble-foxglove-msgs
 ros-humble-gps-msgs
+ros-humble-rosbridge-suite

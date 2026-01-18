@@ -5,7 +5,7 @@
     <!-- Most settings are in config.yaml, which is easier to edit. -->
     <rosparam command="load" file="$(arg config_file)" />
 
-    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+    <include file="$(find-pkg-share rosbridge_server)/launch/rosbridge_websocket_launch.xml">
         <arg name="use_compression" value="true" />
     </include>
 
