@@ -11,4 +11,5 @@ ros-humble-backward-ros
 ros-humble-control-msgs
 ros-humble-example-interfaces
 ros-humble-foxglove-msgs
+ros-humble-rosbridge-suite
 ros-humble-vision-msgs
