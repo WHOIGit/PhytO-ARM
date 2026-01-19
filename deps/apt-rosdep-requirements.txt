@@ -1,5 +1,5 @@
 # Auto-generated rosdep apt requirements
-# DO NOT EDIT MANUALLY - regenerate with scripts/generate-rosdep-requirements.sh
+# DO NOT EDIT MANUALLY - regenerate with scripts/generate-requirements.sh
 #
 # Last updated: 2026-11-25 23:24:58 UTC
 
