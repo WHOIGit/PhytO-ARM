@@ -1,7 +1,7 @@
 # Auto-generated rosdep apt requirements
-# DO NOT EDIT MANUALLY - regenerate with scripts/generate-rosdep-requirements.sh
+# DO NOT EDIT MANUALLY - regenerate with scripts/generate-requirements.sh
 #
-# Last updated: 2026-01-14 15:07:29 UTC
+# Last updated: 2026-01-18 23:48:33 UTC
 
 libboost-all-dev
 libboost-dev
