@@ -12,6 +12,7 @@ install(PROGRAMS
   phyto_arm/arm_base.py
   phyto_arm/arm_chanos.py
   phyto_arm/arm_ifcb.py
+  phyto_arm/rtsp_camera_node.py
   phyto_arm/ifcb_runner.py
   phyto_arm/lock_manager.py
   phyto_arm/network_data_capture.py

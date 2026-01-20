@@ -1,15 +1,21 @@
 # Auto-generated rosdep apt requirements
 # DO NOT EDIT MANUALLY - regenerate with scripts/generate-requirements.sh
 #
-# Last updated: 2026-01-18 23:48:33 UTC
+# Last updated: 2026-01-20 23:41:56 UTC
 
+gstreamer1.0-libav
+gstreamer1.0-plugins-good
 libboost-all-dev
 libboost-dev
+libgstreamer-plugins-good1.0-0
 python3-flask
 python3-geopy
 ros-humble-backward-ros
+ros-humble-compressed-image-transport
 ros-humble-control-msgs
 ros-humble-example-interfaces
 ros-humble-foxglove-msgs
+ros-humble-gscam
+ros-humble-image-transport
 ros-humble-rosbridge-suite
 ros-humble-vision-msgs

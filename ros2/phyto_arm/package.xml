@@ -41,6 +41,12 @@
 
     <exec_depend>rosbridge_suite</exec_depend>
 
+    <exec_depend>gscam</exec_depend>
+    <exec_depend>image_transport</exec_depend>
+    <exec_depend>compressed_image_transport</exec_depend>
+    <exec_depend>gstreamer1.0-plugins-good</exec_depend> <!-- for rtspsrc -->
+    <exec_depend>gstreamer1.0-libav</exec_depend> <!-- for h264 codec -->
+
     <export>
         <build_type>ament_cmake</build_type>
     </export>
