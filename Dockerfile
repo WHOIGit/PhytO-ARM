@@ -76,7 +76,7 @@ ENV PYTHONPATH=/opt/phyto-python
 FROM with-deps AS ros2-builder
 COPY --from=external-sources /app/ros2/src /app/ros2/src
 COPY ros2/ ros2/src/
-RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && cd /app/ros2 && colcon build --merge-install --packages-up-to phyto_arm"
+RUN bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && cd /app/ros2 && colcon build --merge-install --symlink-install --packages-up-to phyto_arm"
 
 ################################################################################
 # Finally, we create a runtime stage with only installed packages
@@ -99,5 +99,8 @@ COPY ros_entrypoint.sh /ros_entrypoint.sh
 # Default command - start bash
 CMD ["/bin/bash"]
 
-# Copy the ROS2 install space from builder
+# Copy the ROS2 workspace from the final build stage.
+# src and build subdirectories are only needed for a symlinked install space
 COPY --from=ros2-builder /app/ros2/install /app/ros2/install
+COPY --from=ros2-builder /app/ros2/build /app/ros2/build
+COPY --from=ros2-builder /app/ros2/src /app/ros2/src

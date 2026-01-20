@@ -72,6 +72,20 @@ Alternatively, the container image can be built with
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
 
 
+#### Testing a local ROS 2 package in the container
+
+To try changes to `ros2/aml_ctd`, mount the package into a separate colcon workspace in the image built from this branch.
+
+```bash
+docker run --rm -it \
+    --mount type=bind,source="$(pwd)/ros2/aml_ctd",target=/work/src/aml_ctd,readonly \
+    --workdir /work --entrypoint /bin/bash whoi/phyto-arm -c '
+        source /app/ros2/install/setup.bash &&
+        colcon build --packages-select aml_ctd &&
+        source install/setup.bash &&
+        exec bash --norc'
+```
+
 ### Install as a service
 
     sudo ln -sf $(pwd)/phyto-arm.service /etc/systemd/system/phyto-arm.service
