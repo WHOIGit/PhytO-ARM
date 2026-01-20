@@ -81,10 +81,14 @@ RUN rosdep check --from-paths ros2/src/ --ignore-src \
 # wheels with the manylinux_2_17 platform tag. This works around a build error
 # with grpcio.
 #
+# We pin setuptools<80 because newer versions break editable installs in
+# symlinked install spaces.
+# https://github.com/pypa/setuptools/issues/4971
+#
 # TODO: Revisit this when upgrading beyond Python 3.8 (Ubuntu 20.04).
 RUN python3 -m pip install --upgrade \
         'pip>=21,<22' \
-        setuptools \
+        'setuptools<80' \
         importlib_metadata \
         importlib_resources \
         more_itertools \
@@ -118,13 +122,14 @@ COPY ros2/ ros2/src/
 COPY deps/ros2-deps.rosinstall ./deps/
 RUN cd ros2/src && vcs import < /app/deps/ros2-deps.rosinstall
 
-# Build all ROS2 packages with colcon
-# Note: Don't use --symlink-install in Docker as it creates broken symlinks
-# when copying the install space to the runtime stage
+# Build all ROS2 packages with colcon.
+#
+# We use a symlinked install space so that we can mount over some files without
+# requiring a rebuild of the workspace. This is best-effort; you
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
     cd /app/ros2 && \
-    colcon build --merge-install \
+    colcon build --merge-install --symlink-install --packages-up-to phyto_arm \
     "
 
 
@@ -136,16 +141,12 @@ FROM with-deps AS runtime
 # Install the launch tools and server files
 COPY ./phyto-arm ./phyto-arm
 
-# Create hot-reload workspace directory structure
-RUN mkdir -p /hot/ros2/src
-
 # Expose web interface port
 EXPOSE 8080
 
 # Source ROS2 environment automatically for all bash sessions
 RUN echo 'source /opt/ros/humble/setup.bash' >> /etc/bash.bashrc \
- && echo 'source /app/ros2/install/setup.bash' >> /etc/bash.bashrc \
- && echo 'if [ -f /hot/ros2/install/setup.bash ]; then source /hot/ros2/install/setup.bash; fi' >> /etc/bash.bashrc
+ && echo 'source /app/ros2/install/setup.bash' >> /etc/bash.bashrc
 
 # Install the entrypoint script.
 COPY ros_entrypoint.sh /ros_entrypoint.sh
@@ -153,5 +154,8 @@ COPY ros_entrypoint.sh /ros_entrypoint.sh
 # Default command - start bash
 CMD ["/bin/bash"]
 
-# Copy the ROS2 install space from builder
+# Copy the ROS2 workspace from builder.
+# src and build subdirectories are only needed for a symlinked install space
 COPY --from=ros2-builder /app/ros2/install /app/ros2/install
+COPY --from=ros2-builder /app/ros2/build /app/ros2/build
+COPY --from=ros2-builder /app/ros2/src /app/ros2/src
