@@ -65,7 +65,7 @@ class ArmDutyCycle(ArmBase):
                 # Time to start up
                 return Task('startup_sampling', startup_sampling)
         elif last_task is None:
-            send_ifcb_auxpower_on()
+            power_ctd_and_wait_for_depth()
 
         # If we're not supposed to be sampling, just wait
         if not self.is_sampling_active:
@@ -249,16 +249,7 @@ def startup_sampling():
     power_on_ifcb()
 
     # Turn on IFCB auxiliary power
-    send_ifcb_auxpower_on()
-
-    # Wait to get a depth message
-    rospy.loginfo('Waiting for CTD depth message...')
-    timeout = 60  # Wait up to 60 seconds for depth message
-    if arm.ctd_depth_received.wait(timeout=timeout):
-        rospy.loginfo(f'CTD depth received: {arm.latest_ctd_depth:.2f} m')
-    else:
-        rospy.logerr('No CTD depth message received within timeout')
-        raise RuntimeError('No depth messages received after startup wait period')
+    power_ctd_and_wait_for_depth()
 
     # Reset session tracking
     arm.samples_in_current_session = 0
@@ -325,17 +316,55 @@ def power_off_ifcb():
     dl_ifcb_pub.publish(Bool(data=False))
 
 
-def send_ifcb_auxpower_on():
-    """Send command to turn on IFCB auxiliary power port 1"""
-    rospy.loginfo('Sending IFCB auxiliary power ON command')
+def set_auxpower(on):
+    state = 'ON' if on else 'OFF'
+    command_value = '1' if on else '0'
+    rospy.loginfo(f'Turning {state} auxiliary power')
     req = ifcb.srv.CommandRequest()
-    req.command = 'daq:switchauxpower1:1'
+    req.command = f'daq:switchauxpower1:{command_value}'
     response = ifcb_command_client(req)
     if response.success:
-        rospy.loginfo('IFCB auxiliary power ON command sent successfully')
+        rospy.loginfo(f'Auxiliary power {state} command sent successfully')
     else:
-        rospy.logwarn('IFCB auxiliary power ON command failed')
+        rospy.logwarn(f'Auxiliary power {state} command failed')
     return response.success
+
+
+def await_depth_msg(duration):
+    rospy.loginfo(f'Waiting for CTD depth message ({duration} second timeout)...')
+    if arm.ctd_depth_received.wait(timeout=duration):
+        rospy.loginfo(f'CTD depth received: {arm.latest_ctd_depth:.2f} m')
+        return True
+    return False
+
+
+def power_ctd_and_wait_for_depth():
+    """Turn on CTD power and wait for depth message.
+
+    Waits for CTD depth message to confirm power is working. If no depth
+    message is received within 30 seconds, power cycles the auxiliary port
+    and tries again. Raises an error if still no depth after the retry.
+    """
+    set_auxpower(True)
+
+    # Wait for CTD depth message to confirm power is working
+    if await_depth_msg(30):
+        return True
+
+    # No depth received, try power cycling
+    rospy.logwarn('No CTD depth received, attempting power cycle of auxiliary port')
+    set_auxpower(False)
+    rospy.sleep(5)
+    set_auxpower(True)
+
+    # Wait again for CTD depth message
+    if await_depth_msg(30):
+        return True
+
+    # Still no depth received after power cycle
+    error_msg = 'No CTD depth message received after power cycle. Check CTD sensor and connections.'
+    rospy.logerr(error_msg)
+    raise RuntimeError(error_msg)
 
 
 def send_ifcb_host_shutdown():
