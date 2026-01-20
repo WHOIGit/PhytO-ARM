@@ -29,19 +29,9 @@
 
     <node name="web" pkg="phyto_arm" type="web_node.py" />
 
-    <!-- NOTE: rtsp_camera dependency removed
-    <group ns="camera">
-        <node name="fore_camera" pkg="rtsp_camera" type="rtsp_camera_node">
-            <remap from="~image" to="~image/do_not_use" />
-            <remap from="~image/do_not_use/compressed" to="~image/compressed" />
-        </node>
-
-        <node name="aft_camera" pkg="rtsp_camera" type="rtsp_camera_node">
-            <remap from="~image" to="~image/do_not_use" />
-            <remap from="~image/do_not_use/compressed" to="~image/compressed" />
-        </node>
-    </group>
-    -->
+    <include file="$(find-pkg-share phyto_arm)/launch/main_devices.launch.py">
+        <arg name="config_file" value="$(var config_file)" />
+    </include>
 
     <node if="$(arg digital_logger)" name="digital_logger" pkg="dli_power_switch" type="dli_power_switch_node.py"/>
 </launch>

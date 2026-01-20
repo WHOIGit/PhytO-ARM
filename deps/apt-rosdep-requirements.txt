@@ -3,14 +3,20 @@
 #
 # Last updated: 2026-11-25 23:24:58 UTC
 
+gstreamer1.0-libav
+gstreamer1.0-plugins-good
 libboost-all-dev
 libboost-dev
+libgstreamer-plugins-good1.0-0
 python3-aiohttp
 python3-flask
 python3-geopy
 python3-scipy
 ros-humble-backward-ros
+ros-humble-compressed-image-transport
 ros-humble-example-interfaces
 ros-humble-foxglove-msgs
 ros-humble-gps-msgs
+ros-humble-gscam
+ros-humble-image-transport
 ros-humble-rosbridge-suite
