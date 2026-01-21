@@ -17,6 +17,7 @@ ros-humble-compressed-image-transport
 ros-humble-example-interfaces
 ros-humble-foxglove-msgs
 ros-humble-gps-msgs
+ros-humble-gpsd-client
 ros-humble-gscam
 ros-humble-image-transport
 ros-humble-rosbridge-suite
