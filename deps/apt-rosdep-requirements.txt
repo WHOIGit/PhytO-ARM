@@ -1,7 +1,7 @@
 # Auto-generated rosdep apt requirements
 # DO NOT EDIT MANUALLY - regenerate with scripts/generate-requirements.sh
 #
-# Last updated: 2026-01-20 23:41:56 UTC
+# Last updated: 2026-01-21 22:02:22 UTC
 
 gstreamer1.0-libav
 gstreamer1.0-plugins-good
@@ -15,6 +15,7 @@ ros-humble-compressed-image-transport
 ros-humble-control-msgs
 ros-humble-example-interfaces
 ros-humble-foxglove-msgs
+ros-humble-gpsd-client
 ros-humble-gscam
 ros-humble-image-transport
 ros-humble-rosbridge-suite

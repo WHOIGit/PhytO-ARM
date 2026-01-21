@@ -39,6 +39,8 @@
     <exec_depend>python3-geopy</exec_depend>
     <exec_depend>python3-numpy</exec_depend>
 
+    <exec_depend>gpsd_client</exec_depend>
+
     <exec_depend>rosbridge_suite</exec_depend>
 
     <exec_depend>gscam</exec_depend>
