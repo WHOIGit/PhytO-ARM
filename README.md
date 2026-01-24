@@ -72,6 +72,27 @@ Alternatively, the container image can be built with
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
 
 
+#### Hot-patching packages in the container
+
+The Docker container allows you to overlay modified versions of ROS packages without rebuilding the entire container image. This is useful for testing changes to individual packages during development or troubleshooting.
+
+To test changes to the `aml_ctd` package without rebuilding the container:
+
+1. Make your changes to the package source on your host machine under `src/aml_ctd/`.
+
+2. Mount the *entire* package directory (containing the `package.xml` file) into the hot-patch workspace using a read-only bind mount:
+
+    ```bash
+    docker run --rm -it \
+        --mount type=bind,source="$(pwd)"/src/aml_ctd,target=/hot/ros1/src/aml_ctd,readonly \
+        # ... other docker options ...
+    ```
+
+    (If your container runtime does not support bind mounts, you can create a volume mapping with `--volume "$(pwd)"/src/aml_ctd:/hot/ros1/src/aml_ctd:ro`.)
+
+3. The container will build `aml_ctd` on startup and use your modified version instead of the built-in one.
+
+
 ### Install as a service
 
     sudo ln -sf $(pwd)/phyto-arm.service /etc/systemd/system/phyto-arm.service
@@ -169,7 +190,7 @@ docker exec -it phyto-arm start mock_arm_chanos /configs/config.yaml
 
 To run unit tests, execute
 ```bash
-docker run -it --rm whoi/phyto-arm:latest /bin/bash -c "source devel/setup.bash && catkin test phyto_arm"
+docker run -it --rm whoi/phyto-arm:latest /bin/bash -c "source install/setup.bash && catkin test phyto_arm"
 ```
 
 ## Configuration
@@ -200,7 +221,7 @@ When running in a container, ensure the config YAML refers to the Docker host's 
 
 The entries in the config file are loaded into the ROS [Parameter Server][]. Some parameters can be dynamically changed while the nodes are running:
 
-    $ source devel/setup.bash
+    $ source install/setup.bash
     $ rosparam get /conductor/schedule/every
     60
     $ rosparam set /profiler/data_topic /ctd/aml/port3/chloroblue

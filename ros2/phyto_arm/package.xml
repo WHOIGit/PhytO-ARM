@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+    <name>phyto_arm</name>
+    <version>1.0.0</version>
+    <description>The PhytO-ARM project base package</description>
+    <license>TODO</license>
+
+    <url type="repository">https://github.com/whoigit/PhytO-ARM</url>
+
+    <maintainer email="mbrosnahan@whoi.edu">Michael Brosnahan</maintainer>
+    <maintainer email="rgovostes@whoi.edu">Ryan Govostes</maintainer>
+
+    <author email="mbrosnahan@whoi.edu">Michael Brosnahan</author>
+    <author email="rgovostes@whoi.edu">Ryan Govostes</author>
+    <author email="vlucke@whoi.edu">Verena Lucke</author>
+
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+    <depend>phyto_arm_msgs</depend>
+    <depend>builtin_interfaces</depend>
+    <depend>rclpy</depend>
+    <depend>sensor_msgs</depend>
+    <depend>std_msgs</depend>
+
+    <depend>ds_core_msgs</depend>
+    <depend>ds_sensor_msgs</depend>
+    <depend>wr2_msgs</depend>
+    <depend>wr2_asio</depend>
+
+    <depend>aml_ctd</depend>
+    <depend>dli_power_switch</depend>
+    <depend>ifcb</depend>
+    <depend>jvl_motor</depend>
+    <depend>rbr_maestro3_ctd</depend>
+
+    <exec_depend>python3-flask</exec_depend>
+    <exec_depend>python3-geopy</exec_depend>
+    <exec_depend>python3-numpy</exec_depend>
+
+    <exec_depend>gpsd_client</exec_depend>
+
+    <exec_depend>rosbridge_suite</exec_depend>
+
+    <exec_depend>gscam</exec_depend>
+    <exec_depend>image_transport</exec_depend>
+    <exec_depend>compressed_image_transport</exec_depend>
+    <exec_depend>gstreamer1.0-plugins-good</exec_depend> <!-- for rtspsrc -->
+    <exec_depend>gstreamer1.0-libav</exec_depend> <!-- for h264 codec -->
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>

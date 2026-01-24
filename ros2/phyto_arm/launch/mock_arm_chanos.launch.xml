@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Launch arguments -->
+    <arg name="config_file" description="Path to the configuration YAML file"/>
+    <arg name="params_file" description="Path to ROS2 params file (converted from config)"/>
+    <arg name="chanos_winch" default="true" description="Enable the winch for chanos arm"/>
+
+    <!-- Mock CTD node -->
+    <node pkg="phyto_arm" exec="mock_ctd.py" name="ctd" namespace="arm_chanos" output="screen"/>
+
+    <!-- Arm controller node with params from converted config -->
+    <node pkg="phyto_arm" exec="arm_chanos.py" name="arm" namespace="arm_chanos" output="screen">
+        <param from="$(var params_file)"/>
+        <param name="winch_enabled" value="$(var chanos_winch)" type="bool"/>
+    </node>
+
+    <!-- Conditional winch node (only when chanos_winch is true) -->
+    <node pkg="phyto_arm" exec="mock_winch_node.py" name="winch" namespace="arm_chanos" output="screen"
+          if="$(var chanos_winch)"/>
+</launch>
