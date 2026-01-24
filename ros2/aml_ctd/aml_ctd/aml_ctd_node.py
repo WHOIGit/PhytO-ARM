@@ -92,9 +92,9 @@ async def main():
         # Parse the message data
         # FIXME: Unsure if we ought to decode to a string or leave as bytes
         try:
-            parsed = amlxparser.parseAMLx(msg.data.decode())
+            parsed = amlxparser.parseAMLx(bytes(msg.data).decode())
         except:
-            rospy.logerr(f'Failed to parse: {msg.data.decode()}')
+            rospy.logerr(f'Failed to parse: {bytes(msg.data).decode()}')
             continue
 
         # Create a lookup table of measurements
@@ -120,12 +120,12 @@ async def main():
         aml_msgs = []
         for obj in data.values():
             aml_msg = AmlMeasurement()
-            for field in set(obj._fields) - {'rawvalue'}:
+            for field in set(obj._fields) - {'rawname', 'rawunit', 'rawvalue'}:
                 setattr(aml_msg, field, getattr(obj, field))
 
             # Special case: String fields cannot be None
-            aml_msg.rawname = aml_msg.rawname or ''
-            aml_msg.rawunit = aml_msg.rawunit or ''
+            aml_msg.rawname = obj.rawname or ''
+            aml_msg.rawunit = obj.rawunit or ''
 
             # Special case: rawvalue might be an integer or a float or None
             if obj.rawvalue is None:
@@ -152,7 +152,7 @@ async def main():
 
         # Set covariance fields to -1, the standard "not valid" value
         ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
-            ctd.salinity_covar = ctd.sound_speed_covar = -1
+            ctd.salinity_covar = ctd.sound_speed_covar = -1.0
 
         # Construct the DepthPressure message
         dp = DepthPressure()
@@ -173,7 +173,7 @@ async def main():
             # The standard ROS header timestamp reflects when the instrument
             # says the sample was taken. The DsHeader reflects the I/O time.
             m.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
-            m.ds_header.io_time = msg.ds_header.io_time
+            m.ds_header.io_time = msg.io_stamp
 
         # Publish the messages
         publishers['~ctd'].publish(ctd)
