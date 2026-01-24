@@ -135,6 +135,13 @@ RUN bash -c " \
     cd /app/ros2 && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select ds_nmea_msgs"
 
+FROM with-sources AS build-foxglove_msgs
+RUN bash -c " \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source /app/ros2/install/setup.bash && \
+    cd /app/ros2 && \
+    colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select foxglove_msgs"
+
 FROM with-sources AS build-ifcb_msgs
 COPY ros2/ifcb_msgs ros2/src/ifcb_msgs
 RUN bash -c " \
@@ -257,6 +264,7 @@ RUN bash -c " \
 FROM with-sources AS build-ifcb
 COPY ros2/ifcb ros2/src/ifcb
 COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+COPY --from=build-foxglove_msgs /app/ros2/install/foxglove_msgs /app/ros2/install/foxglove_msgs
 COPY --from=build-ifcb_msgs /app/ros2/install/ifcb_msgs /app/ros2/install/ifcb_msgs
 COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
 COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
@@ -326,6 +334,7 @@ COPY --from=build-dli_power_switch_msgs /app/ros2/install/dli_power_switch_msgs 
 COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
 COPY --from=build-ds_nmea_msgs /app/ros2/install/ds_nmea_msgs /app/ros2/install/ds_nmea_msgs
 COPY --from=build-ds_sensor_msgs /app/ros2/install/ds_sensor_msgs /app/ros2/install/ds_sensor_msgs
+COPY --from=build-foxglove_msgs /app/ros2/install/foxglove_msgs /app/ros2/install/foxglove_msgs
 COPY --from=build-ifcb /app/ros2/install/ifcb /app/ros2/install/ifcb
 COPY --from=build-ifcb_msgs /app/ros2/install/ifcb_msgs /app/ros2/install/ifcb_msgs
 COPY --from=build-jvl_motor /app/ros2/install/jvl_motor /app/ros2/install/jvl_motor

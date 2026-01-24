@@ -17,3 +17,8 @@
     local-name: wr2_msgs
     uri: https://git.whoi.edu/whoi-ros/wr2_msgs.git
     version: 5712cca06b294aa370efb3ceb53a2cdd2e971b9f
+
+- git:
+    local-name: foxglove_schemas
+    uri: https://github.com/foxglove/schemas.git
+    version: 3bac3cab1aad594eeb8404ea0338e7eaedfb0a22
