@@ -5,7 +5,7 @@
     <!-- RBR winch namespace. Important for separating similar nodes on different arms -->
     <group ns="arm_chanos">
         <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
-            <remap from="~in" to="udp_stream" />
+            <remap from="~/in" to="udp_stream" />
         </node>
 
         <node name="arm" pkg="phyto_arm" type="arm_chanos.py" />

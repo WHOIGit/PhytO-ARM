@@ -16,11 +16,12 @@
         <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
         <group if="$(arg ifcb_winch)">
             <node name="ctd_comms" pkg="wr2_asio" type="adapter_node">
-                <remap from="ros_connection/transmit" to="~in" />
+                <remap from="ros_connection/receive" to="ctd_comms/in" />
+                <remap from="ros_connection/transmit" to="ctd_comms/out" />
             </node>
 
             <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
-                <remap from="~in" to="ctd_comms/in" />
+                <remap from="~/in" to="ctd_comms/out" />
             </node>
 
             <node name="profiler" pkg="phyto_arm" type="profiler_node.py" />

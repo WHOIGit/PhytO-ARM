@@ -4,8 +4,8 @@
 
     <group ns="seatrac">
         <node name="comms" pkg="wr2_asio" type="adapter_node">
-            <remap from="ros_connection/transmit" to="~in" />
-            <remap from="ros_connection/receive" to="~out" />
+            <remap from="ros_connection/receive" to="~/in" />
+            <remap from="ros_connection/transmit" to="~/out" />
         </node>
     </group>
 
@@ -18,11 +18,12 @@
         <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
 
         <node name="ctd_comms" pkg="wr2_asio" type="adapter_node">
-            <remap from="ros_connection/transmit" to="~in" />
+            <remap from="ros_connection/receive" to="~/in" />
+            <remap from="ros_connection/transmit" to="~/out" />
         </node>
 
         <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
-            <remap from="~in" to="ctd_comms/in" />
+            <remap from="~/in" to="ctd_comms/out" />
         </node>
 
         <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
