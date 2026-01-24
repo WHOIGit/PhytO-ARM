@@ -12,12 +12,10 @@ import ifcb.srv as srv
 
 from ifcbclient import IFCBClient
 
-from wr2_msgs.msg import RawData
-from foxglove_msgs.msg import ImageMarkerArray
-from geometry_msgs.msg import Point
+from foxglove_msgs.msg import ImageAnnotations, PointsAnnotation, Point2, Color
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import Bool, ColorRGBA
-from visualization_msgs.msg import ImageMarker
+from std_msgs.msg import Bool
+from wr2_msgs.msg import RawData
 
 from .instrumentation import instrument_routine
 
@@ -89,8 +87,8 @@ def send_command(pub, command):
 
     # Construct the message we are going to publish
     msg = RawData()
-    msg.header.stamp = msg.ds_header.io_time = rospy.Time.now()
-    msg.data_direction = RawData.DATA_OUT
+    msg.header.stamp = msg.io_stamp = rospy.Time.now()
+    msg.data_direction = RawData.DIRECTION_DATA_OUT
     msg.data = command.encode()
 
     # Send the command with error handling
@@ -112,9 +110,8 @@ def on_any_message(pub, data):
 
     # Publish a copy of the incoming message
     msg = RawData()
-    msg.header.seq = seqno
-    msg.header.stamp = msg.ds_header.io_time = rospy.Time.now()
-    msg.data_direction = RawData.DATA_IN
+    msg.header.stamp = msg.io_stamp = rospy.Time.now()
+    msg.data_direction = RawData.DIRECTION_DATA_IN
     msg.data = data.encode()
     pub.publish(msg)
 
@@ -160,7 +157,7 @@ def on_triggercontent(roi_pub, mkr_pub, _, daq, rois):
 
 def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     timestamp = timestamp or rospy.Time.now()
-    markers = ImageMarkerArray()
+    markers = ImageAnnotations()
     for i, (top, left, image) in enumerate(rois):
         # IFCB does not give us the width and height so we must extract from
         # the IHDR chunks.
@@ -175,19 +172,19 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
         roi.data = image
         roi_pub.publish(roi)
 
-        # Add a marker to the array
-        mkr = ImageMarker()
-        mkr.header.stamp = timestamp
-        mkr.type = ImageMarker.POLYGON
-        mkr.scale = 1.0
-        mkr.outline_color = ColorRGBA(0, 1, 1, 1)
+        # Add a polygon annotation for the ROI bounding box
+        mkr = PointsAnnotation()
+        mkr.timestamp = timestamp
+        mkr.type = PointsAnnotation.LINE_LOOP
+        mkr.thickness = 1.0
+        mkr.outline_color = Color(r=0.0, g=1.0, b=1.0, a=1.0)
         mkr.points = [
-            Point(left,     top,     0),
-            Point(left + w, top,     0),
-            Point(left + w, top + h, 0),
-            Point(left,     top + h, 0),
+            Point2(x=float(left),     y=float(top)),
+            Point2(x=float(left + w), y=float(top)),
+            Point2(x=float(left + w), y=float(top + h)),
+            Point2(x=float(left),     y=float(top + h)),
         ]
-        markers.markers.append(mkr)
+        markers.points.append(mkr)
 
     # Publish all the markers together
     mkr_pub.publish(markers)
@@ -272,7 +269,7 @@ def main():
                               queue_size=5)
     roi_pub = rospy.Publisher('~roi/image/compressed', CompressedImage,
                               queue_size=5)
-    mkr_pub = rospy.Publisher('~roi/markers', ImageMarkerArray, queue_size=5)
+    mkr_pub = rospy.Publisher('~roi/markers', ImageAnnotations, queue_size=5)
 
     # Publisher for connection status (latched so new subscribers get current state)
     status_pub = rospy.Publisher('~connected', Bool, queue_size=1, latch=True)
