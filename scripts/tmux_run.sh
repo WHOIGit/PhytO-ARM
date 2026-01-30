@@ -17,7 +17,7 @@ else
   tmux new-session -d -s phyto-arm -n docker
 
   # Split the window into three panes
-  tmux split-window -v
+  # tmux split-window -v
   # Uncomment if a second arm is to be launched, e.g. arm_chanos.
   # Also uncomment commands below and last line in tmux_kill.sh
   # tmux split-window -v
@@ -28,9 +28,9 @@ else
   tmux send-keys -t phyto-arm:0.0 "./phyto-arm start main mounted_config.yaml" C-m
 
   # Launch the IFCB arm in pane 1
-  tmux send-keys -t phyto-arm:0.1 "sleep 8" C-m
-  tmux send-keys -t phyto-arm:0.1 "docker exec -it phyto-arm bash" C-m
-  tmux send-keys -t phyto-arm:0.1 "./phyto-arm start arm_ifcb ./mounted_config.yaml" C-m
+  # tmux send-keys -t phyto-arm:0.1 "sleep 8" C-m
+  # tmux send-keys -t phyto-arm:0.1 "docker exec -it phyto-arm bash" C-m
+  # tmux send-keys -t phyto-arm:0.1 "./phyto-arm start arm_ifcb ./mounted_config.yaml" C-m
 
   # Select pane 3 and launch the Chanos arm in the same container
   # tmux send-keys -t phyto-arm:0.2 "sleep 10" C-m
