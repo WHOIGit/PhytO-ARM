@@ -238,8 +238,13 @@ arm_duty_cycle: #optional
         profiler_peak:
             # Minimum level of the profiled sensor data to trigger a sample at depth
             threshold: 0.0
-        # Default depth to use when profiler peak is not found or below threshold
-        default_depth: 5.0  # m
+        # List of depths to sample at after the peak depth sample.
+        # Each cycle will: downcast -> sample at peak (if found) -> sample at each scheduled depth -> repeat.
+        # If not set or empty, the cycle goes directly back to upcast after the peak sample.
+        scheduled_depths: #optional
+            - 2.0  # m
+            - 4.0
+            - 6.0
 
     ctd_topic: '/arm_duty_cycle/ctd/depth'
 
