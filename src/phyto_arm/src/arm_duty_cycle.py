@@ -55,6 +55,9 @@ class ArmDutyCycle(ArmBase):
         self.target_samples_per_session = 0
         self.reference_start_time = None  # Fixed reference time for interval calculations
 
+        # Scheduled depths tracking
+        self.scheduled_depth_index = 0
+
     def get_next_task(self, last_task):
         # Check duty cycle schedule
         if self.should_transition_duty_state():
@@ -74,9 +77,8 @@ class ArmDutyCycle(ArmBase):
         if not rospy.get_param('winch_enabled'):
             return Task('no_winch', handle_nowinch)
 
-        # Start off at min depth for upcast
-        preupcast_tasks = ['profiler_peak_depth', 'default_depth', 'await_ifcb_connection',
-                          'startup_sampling', 'await_duty_cycle']
+        # Start off at min depth
+        preupcast_tasks = ['await_ifcb_connection', 'startup_sampling', 'await_duty_cycle']
         if last_task is None or last_task.name in preupcast_tasks:
             return Task('upcast', self.start_next_task, rospy.get_param('winch/range/min'))
 
@@ -84,17 +86,30 @@ class ArmDutyCycle(ArmBase):
         if last_task.name == 'upcast':
             return Task('downcast', handle_downcast, rospy.get_param('winch/range/max'))
 
-        # Then go to peak depth if found and above threshold, otherwise use default depth
+        # Go to peak depth if found and above threshold
         if last_task.name == 'downcast':
+            # Reset scheduled depth index for the new cycle
+            self.scheduled_depth_index = 0
+
             threshold = rospy.get_param('tasks/profiler_peak/threshold', 0.0)
             if self.profiler_peak_depth is not None and self.profiler_peak_value >= threshold:
                 rospy.loginfo(f'Using profiler peak depth: {self.profiler_peak_depth:.2f} m')
                 return Task('profiler_peak_depth', handle_target_depth, self.profiler_peak_depth)
 
-            # Peak not found or below threshold, use default depth
-            default_depth = rospy.get_param('tasks/default_depth', 1.0)
-            rospy.loginfo(f'Using default depth: {default_depth:.2f} m')
-            return Task('default_depth', handle_target_depth, default_depth)
+            # No peak found, fall through to scheduled depths
+            rospy.loginfo('No profiler peak above threshold, skipping to scheduled depths')
+
+        # After peak sample (or downcast with no peak), run through scheduled depths
+        if last_task.name in ('profiler_peak_depth', 'downcast', 'scheduled_depth'):
+            scheduled_depths = rospy.get_param('tasks/scheduled_depths', [])
+            if scheduled_depths and self.scheduled_depth_index < len(scheduled_depths):
+                depth = scheduled_depths[self.scheduled_depth_index]
+                self.scheduled_depth_index += 1
+                rospy.loginfo(f'Scheduled depth {self.scheduled_depth_index}/{len(scheduled_depths)}: {depth:.2f} m')
+                return Task('scheduled_depth', handle_target_depth, depth)
+
+            # All scheduled depths done (or none configured), loop back to upcast
+            return Task('upcast', self.start_next_task, rospy.get_param('winch/range/min'))
 
         raise ValueError(f'Unhandled next-task state where last task={last_task.name}')
 
