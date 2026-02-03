@@ -9,7 +9,8 @@ Type=simple
 Restart=on-failure
 RestartSec=10
 WorkingDirectory=/home/hablab/PhytO-ARM
-ExecStart=/bin/bash scripts/docker_run_daemon.sh
+ExecStart=/bin/bash ./scripts/docker_run.sh ./configs/azmp_fall.yaml
+ExecStop=/usr/bin/docker stop phyto-arm
 
 [Install]
 WantedBy=multi-user.target

@@ -66,7 +66,7 @@ lock_manager:
     # Use this to control how many motors can be in motion at once.
     max_moving_winches: 1
 
-ifcb:
+ifcb: #optional
     address: "172.17.0.1"
     port: 8092
     serial: "111-111-111"
@@ -76,7 +76,7 @@ ifcb:
     data_dir: "/data/ifcbdata"
 
 
-arm_ifcb:
+arm_ifcb: #optional
     # Configuration related to tasks
     tasks: #optional
         profiler_peak:
