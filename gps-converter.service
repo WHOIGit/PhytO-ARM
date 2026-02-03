@@ -1,0 +1,33 @@
+[Unit]
+Description=GPS Data Converter Service
+Documentation=Custom GPS to NMEA converter for GPSD
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=gps
+Group=gps
+ExecStartPre=/bin/bash -c 'mkfifo -m 666 /tmp/gps_nmea_pipe || true'
+ExecStart=/bin/bash -c '/usr/local/bin/gps-converter.py udp://localhost:19002 > /tmp/gps_nmea_pipe'
+ExecStartPost=/bin/sleep 2
+ExecStartPost=/usr/bin/gpsd -N -D 2 /tmp/gps_nmea_pipe
+Restart=always
+RestartSec=5
+StandardOutput=null
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/tmp /var/log
+SupplementaryGroups=dialout
+
+# Environment
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

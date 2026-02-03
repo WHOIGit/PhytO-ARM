@@ -11,6 +11,7 @@ __pycache__
 logs
 configs
 !configs/example.yaml
+!configs/azmp_fall.yaml
 
 # Build artifacts in devcontainer after mount
 apt-requirements.txt
