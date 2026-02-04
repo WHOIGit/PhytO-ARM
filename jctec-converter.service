@@ -1,3 +1,5 @@
+# Copy or link this file into /etc/systemd/system
+
 [Unit]
 Description=JCTEC to NMEA GPS Converter
 After=network.target
