@@ -305,19 +305,25 @@ def power_on_ifcb():
         rospy.loginfo('IFCB already connected, proceeding')
         return
 
-    rospy.loginfo('Turning on IFCB power')
-    dl_ifcb_pub.publish(Bool(data=True))
-
-    # Wait for IFCB to connect
+    max_attempts = 3
     restart_duration = rospy.get_param('tasks/duty_cycle/restart_wait_duration', 120)
-    rospy.loginfo(f'Waiting for IFCB to connect (timeout: {restart_duration} seconds)')
 
+    for attempt in range(1, max_attempts + 1):
+        rospy.loginfo(f'Turning on IFCB power (attempt {attempt}/{max_attempts})')
+        dl_ifcb_pub.publish(Bool(data=True))
 
-    # Wait for connection with timeout
-    if arm.ifcb_connection_event.wait(timeout=restart_duration):
-        rospy.loginfo('IFCB connected successfully')
-    else:
-        rospy.logerr('IFCB failed to connect within timeout')
+        rospy.loginfo(f'Waiting for IFCB to connect (timeout: {restart_duration} seconds)')
+
+        if arm.ifcb_connection_event.wait(timeout=restart_duration):
+            rospy.loginfo('IFCB connected successfully')
+            return
+
+        if attempt < max_attempts:
+            rospy.logwarn(f'IFCB failed to connect on attempt {attempt}, power cycling')
+            dl_ifcb_pub.publish(Bool(data=False))
+            rospy.sleep(5)
+        else:
+            rospy.logerr(f'IFCB failed to connect after {max_attempts} attempts')
 
 
 def power_off_ifcb():
