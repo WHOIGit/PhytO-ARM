@@ -265,15 +265,39 @@ network_data_capture: #optional.
                     field_id: 2
                     type: "str"
 ```
-Next, restart PhytO-ARM `sudo systemctl restart phyto-arm`. Open the network_data_capture.log on the ROS Launcher.
-
-Example log if UDP message packets are being properly parsed and published via network_data_capture:
-![Properly parsed and published](images_README/network-data-capture-log.png)
-
-Example log if no UDP messages are recieved at assigned ports:
-![No messages recieved](images_README/network-data-capture-log_error.png)
-
-If there are parsing or publishing errors for specific topics (data fields), the error counts will be non zero. Check those specific tpics in the config file for typos or syntax errors.
+Next, restart PhytO-ARM `sudo systemctl restart phyto-arm`. Use `curl` commands in terminal to compare values of individual fields to data provided through ship reporting systems. 
+Example 1 - show all ship data topics published by RPi5 in terminal:
+```
+curl -s http://localhost:8098 | jq
+```
+Output:
+```
+{
+  "commitHash": "No hash",
+  "ctdChloroblue_ugpL": 11.522180557250977,
+  "ctdDO_umolpL": 655.3499755859375,
+  "ctdDepth": 5.973657131195068,
+  "ctdModelSN": "AML6(A60021), CT(451318), CHL(900244), DO(700115), P(307217), PE(900249), Turb(900511), PAR(Q10489)",
+  "ctdPAR_V": 0.0006089999806135893,
+  "ctdPhycoerythrin_ppb": 8.039987564086914,
+  "ctdSal_psu": 32.2109260559082,
+  "ctdTemp_ct_C": 1.9942690134048462,
+  "ctdTurbidity_ntu": 3.0364251136779785,
+  "gpsLatitude": 41.83554,
+  "gpsLongitude": -69.97094,
+  "gpsSource": "SierraWireless MP70 Hestia"
+}
+```
+Example 2 - show data from only a single topic:
+```
+curl -s http://localhost:8098 | jq '{gpsLatitude}'
+```
+Output:
+```
+{
+  "gpsLatitude": 41.83554
+}
+```
 
 3. **Is data publishing to the webnode but not captured in the IFCB .hdr files?**
 Open the IFCB Settings.txt file. Confirm the following:
