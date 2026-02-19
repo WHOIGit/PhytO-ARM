@@ -14,7 +14,7 @@ If deployed on the RRS *James Cook* with the same UDP ship data streams, few (if
 ## Table of Contents
 
 - [System Components](#system-components)
-- [Raspberry Pi 5 Set Up](#raspberry-pi-5-set-up)
+- [Raspberry Pi 5 Set Up](#raspberry-pi-5-setup)
 - [PhytO-ARM Installation on the RPi5](#phyto-arm-installation-on-the-rpi5)
 - [GPS configuration](#gps-configuration)
 - [Capturing Ship Data using Network Data Capture](#capturing-ship-data-using-network-data-capture)
@@ -29,7 +29,7 @@ If deployed on the RRS *James Cook* with the same UDP ship data streams, few (if
 2. Raspberry Pi 5 (RPi5)
 3. Netgear ProSafe 5-Port Gigabit Switch
 4. YINLEADER VTUS-2000 Step-Up / Step-Down Voltage Transformer
-5. Digital Logger Power Switch
+5. Digital Logger Power Switch (requires 120 VAC)
 6. Sierra Wireless Router (optional; local network / remote access)
 7. Starlink (optional; pushing data to shore)
 
@@ -47,8 +47,55 @@ The following packages need to be installed with apt-get:
 - `gpiod`
 - `gpsd`
 - `gpsd-clients`
+- `curl`
 
-The file `/etc/ssh/sshd_config` was edited to allow RSA key and password authentication. The OpenSSH service was enabled with: `sudo systemctl endable ssh`.
+Then, enable OpenSSH service:
+
+```bash
+sudo systemctl endable ssh
+sudo systemctl start ssh
+sudo systemctl status ssh
+```
+
+And edit `/etc/ssh/sshd_config` to allow RSA key and password authentication:
+```bash
+sudo nano /etc/ssh/sshd_config
+```
+
+Ensure:
+```bash
+PubkeyAuthentication yes
+PasswordAuthentication yes
+```
+Restart SSH after making changes:
+```bash
+sudo systemctl restart ssh
+```
+
+Operators will need to establish remote access to the RPi if operating/accessing PhytO-ARM off ship. This could be a VPN service like wireguard/tailscale or a remote desktop service like AnyDesk.
+
+To install Tailscale on the RPi:
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+tailscale status
+```
+Tailscale install documentation: https://tailscale.com/docs/install
+
+### RPi5 Network Configuration
+
+Prior to installation aboard the RRS James Cook, obtain and provide the appropriate MAC address to the ship technician so a static IP assignment can be configured in advance:
+
+- Ethernet MAC address if connecting directly to the ship network via ethernet cable.
+- WLAN (Wi-Fi) MAC address if connecting to a non-ship router and accessing ship data via Wi-Fi (prefered).
+
+Retrieve MAC addresses with:
+```bash
+ip link show
+```
+eth0 → Ethernet MAC address (link/ether)\
+wlan0 → Wi-Fi MAC address (link/ether)
 
 ---
 
@@ -77,7 +124,7 @@ The file `/etc/ssh/sshd_config` was edited to allow RSA key and password authent
   docker pull whoi/phyto-arm:latest
   ```
 2. Clone PhytO-ARM on the RPi5
-3. Checkout James Cook branch: checkout -b vhaggans/james-cook-fall-2025
+3. Checkout James Cook branch: `checkout -b vhaggans/james-cook-fall-2025`
 4. Install PhytO-ARM as a service on the rPi
     
     ```
@@ -88,7 +135,7 @@ The file `/etc/ssh/sshd_config` was edited to allow RSA key and password authent
     ```
 5. In a web browser on the ship's network, go to http://<RPi5_IP>:8098. You should see output like the following returned in your browser window:
 ```
-{"commitHash": "No hash", "ctdChloroblue_ugpL": 7.764212131500244, "ctdDO_umolpL": 655.3499755859375, "ctdDepth": 5.97090482711792, "ctdModelSN": "AML6(A60021), CT(451318), CHL(900244), DO(700115), P(307217), PE(900249), Turb(900511), PAR(Q10489)", "ctdPAR_V": 0.0006040000007487833, "ctdPhycoerythrin_ppb": 7.334681987762451, "ctdSal_psu": 32.22605895996094, "ctdTemp_ct_C": 2.0041470527648926, "ctdTurbidity_ntu": 1.8069770336151123, "gpsLatitude": 41.83554, "gpsLongitude": -69.97094, "gpsSource": "SierraWireless MP70 Hestia"}
+{"commitHash": "c203cb925f2f9a2792f49589d15834c48a8008c7", "cruiseID": "RRS James Cook", "ifcbLocation": "Deck Lab, main sink", "ifcbWaterSource": "Flow through seawater intake, 6 m below water line (Bornemann Pumps SLH80-40 Hygienic Twin-Screw Pump). Tapped from Deck Lab sink.", "ctdDepth": 6.0, "gpsLatitude": 43.713016667, "gpsLongitude": -60.812275, "gpsSource": "RRS James Cook", "SBE45ModelSN": "SBE 45, SN:0231", "SBE45LastCal": "16 October, 2024", "SBE38ModelSN": "SBE 38, SN:0490", "SBE38LastCal": "03 January, 2024", "ctdTempSBE45_c": 24.584, "ctdTempSBE38_c": 25.5821, "ctdSal_psu": 0.0165, "ctdCond_sm": 0.00168, "ctdSound_mps": 1498.266, "metFlowRate_lmin": 1.49468, "metFluorescence_v": 0.0497, "metTransmissivity_v": 4.6016, "metSurfaceWindSpeed_ms": 9.319, "metSurfaceWindDirection_deg": 17.316, "metSurfaceAirTemp_c": 22.97, "metSurfaceAirHumid_pct": 71.27, "metSurfaceAirPressure_mbar": 1011.4268, "metPortPAR_v": 222.9, "metStarPAR_v": 213.3, "metPortTIR_v": 552.7, "metStarTIR_v": 549.3}
 ```
 
 ## GPS configuration
@@ -206,12 +253,51 @@ On the Fall 2025 cruise, a list of available UDP streams were provided (see tabl
 |21 | heading | Heading, true degrees | `$GPHDT` |
 
 
-All three UDP streams may be simulated from script `jamescook_sim.sh`, which can be run on an IFCB (or on any device on the same network as the RPi) to test UDP capture off the ship or when the ship streams are down. Additionally,function `udp_regexp_test.py` can be used to check for correct parsing by selected delimiter in the config for the network_data_capture node. Example checking regular expression ',\s*|\s+':
+All three UDP streams may be simulated from script `jamescook_sim.sh`, which can be run on an IFCB (or on any device on the same network as the RPi) to test UDP capture off the ship or when the ship streams are down. 
+
+```bash
+chmod u+x jamescook_sim.sh
+./jamescook_sim.sh
+```
+Additionally, the function `udp_regexp_test.py` can be used to check for correct parsing by selected delimiter in the config for the network_data_capture node. Example checking regular expression ',\s*|\s+':
 
 ```bash
 $ nc -ulp 19015 |python3 udp_regexp_test.py ',\s*|\s+'
 > Split result: ['$PRTAS', 'JCMES', '10/04/17', '20:40:00.135', 'SBE45', '0', '24.58400', '0.00168', '0.01650', '1498.26600', '25.58210', '']
 ```
+
+### Modifying network_data_capture 
+
+The network_data_capture node is configured in the deployment YAML file (e.g., configs/azmp_fall.yaml).
+
+Use this configuration to:
+
+- Change how incoming ship data is parsed
+- Add or remove extracted fields
+- Modify port, protocol, or delimiter settings
+
+First, open the deployment config:
+
+```bash
+nano configs/azmp_fall.yaml
+```
+
+**How Parsing Works**
+
+```yaml
+network_data_capture:
+  topics:
+```
+Each entry defines:
+
+- A network listener (udp or tcp)
+- The port it listens on (must match the systemd service configuration)
+- The parsing strategy:
+    - raw – publish full sentence
+    - json_dict
+    - json_array
+    - delimited – split sentence into indexed fields
+
 
 ### Troubleshooting Ship Flowthrough Data
 If data is not appearing in IFCB .hdr files, identify where the pipeline is failing.
@@ -273,19 +359,35 @@ curl -s http://localhost:8098 | jq
 Output:
 ```
 {
-  "commitHash": "No hash",
-  "ctdChloroblue_ugpL": 11.522180557250977,
-  "ctdDO_umolpL": 655.3499755859375,
-  "ctdDepth": 5.973657131195068,
-  "ctdModelSN": "AML6(A60021), CT(451318), CHL(900244), DO(700115), P(307217), PE(900249), Turb(900511), PAR(Q10489)",
-  "ctdPAR_V": 0.0006089999806135893,
-  "ctdPhycoerythrin_ppb": 8.039987564086914,
-  "ctdSal_psu": 32.2109260559082,
-  "ctdTemp_ct_C": 1.9942690134048462,
-  "ctdTurbidity_ntu": 3.0364251136779785,
-  "gpsLatitude": 41.83554,
-  "gpsLongitude": -69.97094,
-  "gpsSource": "SierraWireless MP70 Hestia"
+  "commitHash": "c203cb925f2f9a2792f49589d15834c48a8008c7",
+  "cruiseID": "RRS James Cook",
+  "ifcbLocation": "Deck Lab, main sink",
+  "ifcbWaterSource": "Flow through seawater intake, 6 m below water line (Bornemann Pumps SLH80-40 Hygienic Twin-Screw Pump). Tapped from Deck Lab sink.",
+  "ctdDepth": 6.0,
+  "gpsLatitude": 43.713016667,
+  "gpsLongitude": -60.812275,
+  "gpsSource": "RRS James Cook",
+  "SBE45ModelSN": "SBE 45, SN:0231",
+  "SBE45LastCal": "16 October, 2024",
+  "SBE38ModelSN": "SBE 38, SN:0490",
+  "SBE38LastCal": "03 January, 2024",
+  "ctdTempSBE45_c": 24.584,
+  "ctdTempSBE38_c": 25.5821,
+  "ctdSal_psu": 0.0165,
+  "ctdCond_sm": 0.00168,
+  "ctdSound_mps": 1498.266,
+  "metFlowRate_lmin": 1.49468,
+  "metFluorescence_v": 0.0497,
+  "metTransmissivity_v": 4.6016,
+  "metSurfaceWindSpeed_ms": 9.319,
+  "metSurfaceWindDirection_deg": 17.316,
+  "metSurfaceAirTemp_c": 22.97,
+  "metSurfaceAirHumid_pct": 71.27,
+  "metSurfaceAirPressure_mbar": 1011.4268,
+  "metPortPAR_v": 222.9,
+  "metStarPAR_v": 213.3,
+  "metPortTIR_v": 552.7,
+  "metStarTIR_v": 549.3
 }
 ```
 Example 2 - show data from only a single topic:
@@ -295,7 +397,7 @@ curl -s http://localhost:8098 | jq '{gpsLatitude}'
 Output:
 ```
 {
-  "gpsLatitude": 41.83554
+  "gpsLatitude": 43.713016667
 }
 ```
 
@@ -309,6 +411,7 @@ Save the Settings.txt file if any changes are made and restart IFCBAcquire. Conf
 
 ## Options for Power Control
 _Power control enables remote power cycling of the IFCB and RPi5 (especially helpful when operating these systems from off ship)._
+**Note: Digital Logger Switches require 120VAC. Use with a voltage converter if plugged into outlet with 240VAC.**
 >
 **A.** Power control via bash script on the Raspberry Pi 5 that controls an AC/DC relay from Digital Loggers: https://www.digital-loggers.com/iot2.html
 > 
