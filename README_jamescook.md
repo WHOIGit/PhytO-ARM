@@ -39,17 +39,14 @@ If deployed on the RRS *James Cook* with the same UDP ship data streams, few (if
 
 The RPi5 is running **Ubuntu 24.04**. The system microSD card (SanDisk 256 GB Extreme PRO®) was flashed using **Raspberry Pi Imager v1.9.4** on macOS.
 
-The following packages were installed to enable remote access and data transfer:
+The following packages need to be installed with apt-get:
 
 - `openssh-server`
 - `rsync`
-- `wireguard`
 - `git`
 - `gpiod`
 - `gpsd`
 - `gpsd-clients`
-- `screen`
-- `tmux`
 
 The file `/etc/ssh/sshd_config` was edited to allow RSA key and password authentication. The OpenSSH service was enabled with: `sudo systemctl endable ssh`.
 
@@ -89,9 +86,10 @@ The file `/etc/ssh/sshd_config` was edited to allow RSA key and password authent
     sudo systemctl enable phyto-arm
     sudo systemctl start phyto-arm
     ```
-5. In a web browser on the RPi5 (or via port forwarding), navigate to the ROS Launchpad to confirm proper PhytO-ARM installation: http://<RPi5_IP>:8080. The ROS Launchpad provides a web dashboard for managing ROS processes and configurations.
-
-> Note: Config changes made in ROS Launchpad are not persistent. To make permanent changes, edit config files directly.
+5. In a web browser on the ship's network, go to http://<RPi5_IP>:8098. You should see output like the following returned in your browser window:
+```
+{"commitHash": "No hash", "ctdChloroblue_ugpL": 7.764212131500244, "ctdDO_umolpL": 655.3499755859375, "ctdDepth": 5.97090482711792, "ctdModelSN": "AML6(A60021), CT(451318), CHL(900244), DO(700115), P(307217), PE(900249), Turb(900511), PAR(Q10489)", "ctdPAR_V": 0.0006040000007487833, "ctdPhycoerythrin_ppb": 7.334681987762451, "ctdSal_psu": 32.22605895996094, "ctdTemp_ct_C": 2.0041470527648926, "ctdTurbidity_ntu": 1.8069770336151123, "gpsLatitude": 41.83554, "gpsLongitude": -69.97094, "gpsSource": "SierraWireless MP70 Hestia"}
+```
 
 ## GPS configuration
 
@@ -101,7 +99,7 @@ GPS tracking is provided via [gpsd][].
 
 With the format of the James Cook NAV data (referenced as JCTEC for the Fall 2025 deployment), a seperate service runs on the RPi5 to convert the ship GPS feed (broadcasted on port 19002) into NMEA format to be digested by GPSD and published inside the PhytO-ARM container. On the RPi5, copy or link `jctec-converter.service` to /etc/systemd/system. Also copy or link `jctec_converter.py` to usr/local/bin. Enable and start `jctec-converter.service`. The converted GPS feed in NMEA will then be sent over port 22336 on the RPi5. 
 
-On Ubuntu, edit `/etc/default/gpsd` to configure the GPS device or network source. For example, to listen for UDP packets on port 22336:
+In a terminal, use a text editor like `vim` or `nano` to edit `/etc/default/gpsd` so that `gspd` listens to the correct port for GPS data. For example, to configure to listen to port 22336:
 
 ```
 # Default settings for the gpsd init script and the hotplug wrapper.
@@ -122,7 +120,7 @@ GPSD_OPTIONS=""
 
 Monitor that GPS updates are being received using `gpsmon`.
 
-When running in a container, the gpsd service on the host needs to be modified to accept inbound connections from the container. Use `systemctl edit gpsd.socket` to create an override file:
+When running in a container, the gpsd service on the host needs to be modified to accept inbound connections from the container. In terminal, use `systemctl edit gpsd.socket` to create an override file:
 
     # Allow clients to connect to gpsd from Docker.
     # Based on https://stackoverflow.com/q/42240757
@@ -220,9 +218,11 @@ If data is not appearing in IFCB .hdr files, identify where the pipeline is fail
 
 Ship --[UDP]--> RPi5 --[PhytO-ARM network_data_capture]--> topics --[ros]--> webnode --> IFCB .hdr files.
 
-Check web_node output:
+Check web_node output in terminal:
 
 `curl http://localhost:8098`
+
+Alternatively, in a browser, go to url http://[RPi5_IP]:8098
 
 - If defaults (e.g., -999.99) are shown, start with step #1.
 - If data is publishing properly, the issue is isolated to the IFCB settings.txt file (skip to step #3).
@@ -284,7 +284,7 @@ PhytoArmDataSource:1:http://<RPi5_IP>:8098
 Save the Settings.txt file if any changes are made and restart IFCBAcquire. Confirm settings took effect. 
 
 ## Options for Power Control
-_Power control is primarily needed for remote power management of IFCB/RPi5. The following is optional for continuously monitored deployments._
+_Power control enables remote power cycling of the IFCB and RPi5 (especially helpful when operating these systems from off ship)._
 >
 **A.** Power control via bash script on the Raspberry Pi 5 that controls an AC/DC relay from Digital Loggers: https://www.digital-loggers.com/iot2.html
 > 
@@ -320,15 +320,6 @@ _Power control is primarily needed for remote power management of IFCB/RPi5. The
     sudo systemctl status phyto-arm
 ```
 
-3. Open ROS Launchpad in a browser:
-http://<RPi5_IP>:8080
-![ROS Launchpad](images_README/ros-launchpad.png)
-Note: roscore, rosbag, and main will start automatically. This can be modified in docker_run.sh (see exerpt below), with the exception of roscore which must start on launch of the ROS Launchpad.
-
-```bash
-/bin/bash -c "cd /launchpad && python3 server.py --package phyto_arm --config /app/mounted_config.yaml /app/configs/example.yaml --start roscore,main,rosbag"
-```
-
 ### Verify Ship Data Ingest
 1. Confirm ship data is publishing via the web node:
 ```bash
@@ -347,10 +338,6 @@ Note: roscore, rosbag, and main will start automatically. This can be modified i
 
 ### Stop Operations
 - Stop IFCB sampling via the WebUI.
-- Stop PhytO-ARM if needed:
-```bash
-    sudo systemctl stop phyto-arm
-```
 
 For help, refer to [Troubleshooting Ship Flowthrough Data](#troubleshooting-ship-flowthrough-data).
 
