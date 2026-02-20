@@ -273,10 +273,9 @@ The network_data_capture node is configured in the deployment YAML file (e.g., c
 Use this configuration to:
 
 - Change how incoming ship data is parsed
-- Add or remove extracted fields
-- Modify port, protocol, or delimiter settings
+- Add or remove data fields
 
-First, open the deployment config:
+First, open the deployment config.yaml:
 
 ```bash
 nano configs/azmp_fall.yaml
@@ -292,12 +291,70 @@ Each entry defines:
 
 - A network listener (udp or tcp)
 - The port it listens on (must match the systemd service configuration)
-- The parsing strategy:
-    - raw – publish full sentence
-    - json_dict
-    - json_array
-    - delimited – split sentence into indexed fields
+- The parsing strategy
+- Subtopics for specific data fields
 
+**Adding or Modifying Parsed Fields**
+
+To capture a new data field, add a new entry under subtopics for the relevant data field:
+
+```yaml
+subtopics:
+  ctdDate:
+    field_id: 2
+    type: "str"
+```
+
+Parameters
+- field_id — zero-based index of the parsed field
+- type — "str" or "float"
+
+Example from ship_ctd:
+```yaml
+ctdTempSBE45_c:
+  field_id: 6
+  type: "float"
+```
+
+This creates a ROS topic:
+
+`/ship_ctd/ctdTempSBE45_c`
+
+**Important: Update the Web Node Configuration**
+
+If you add a new subtopic and want it to publish to the metadata, you must also update:
+
+```yaml
+web:
+  field_map:
+```
+
+Example:
+
+```yaml
+ctdTempSBE45_c:
+  topic: /ship_ctd/ctdTempSBE45_c
+  topic_field: data
+  default: -999.999
+```
+
+If this mapping is missing, the topic will NOT appear in the metadata output.
+
+**After Making Changes**
+
+After editing and saving the config.yaml:
+
+1. Restart the PhytO-ARM systemd service: `sudo systemctl restart phyto-arm`
+
+2. Confirm the new data topics are publishing via the webnode: curl http://localhost:8098
+
+**Common Issues**
+
+- Errors in field_id
+- Delimiter mismatch (use_regex_delimiter must match format)
+- Incorrect data type (float on non-numeric field)
+- Port mismatch between config.yaml and systemd service
+- Forgetting to update web node field map
 
 ### Troubleshooting Ship Flowthrough Data
 If data is not appearing in IFCB .hdr files, identify where the pipeline is failing.
