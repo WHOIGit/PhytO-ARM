@@ -356,7 +356,9 @@ After editing and saving the config.yaml:
 - Port mismatch between config.yaml and systemd service
 - Forgetting to update web node field map
 
-### Troubleshooting Ship Flowthrough Data
+--- 
+
+## Troubleshooting Ship Flowthrough Data
 If data is not appearing in IFCB .hdr files, identify where the pipeline is failing.
 
 Ship --[UDP]--> RPi5 --[PhytO-ARM network_data_capture]--> topics --[ros]--> webnode --> IFCB .hdr files.
@@ -466,6 +468,8 @@ PhytoArmDataSource:1:http://<RPi5_IP>:8098
 ```
 Save the Settings.txt file if any changes are made and restart IFCBAcquire. Confirm settings took effect. 
 
+---
+
 ## Options for Power Control
 _Power control enables remote power cycling of the IFCB and RPi5 (especially helpful when operating these systems from off ship)._
 **Note: Digital Logger Switches require 120VAC. Use with a voltage converter if plugged into outlet with 240VAC.**
@@ -479,6 +483,8 @@ _Power control enables remote power cycling of the IFCB and RPi5 (especially hel
 **B.** Power control via the web interface from the Digital Logger Pro Switch: https://www.digital-loggers.com/pro.html
 
 > User's guide found here: https://www.digital-loggers.com/lpc9man.pdf
+
+---
 
 ## Operation
 
