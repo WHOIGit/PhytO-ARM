@@ -1,6 +1,6 @@
 # Deployment Configuration for RRS *James Cook*
 
-Notes from setup of **PhytO-ARM** for shipboard IFCB observing on the RRS *James Cook* during the Fall 2025 AZMP cruise. 
+Notes from setup of **PhytO-ARM** for capture of shipboard data by IFCBacquire on the RRS *James Cook* during the Fall 2025 AZMP cruise. 
 
 This PhytO-ARM deplopyment configuration is compatible with an IFCB running the stock McLane disk image (Debian 10 OS) or containerized IFCBacquire. PhytO-ARM is installed and runs on a **Raspberry Pi 5 (RPi5)**. GPS data and flow-through SBE and meteorological tower observations from the RRS *James Cook* are written to IFCB hdr files via the `web_node`.
 
@@ -13,25 +13,23 @@ If deployed on the RRS *James Cook* with the same UDP ship data streams, few (if
 
 ## Table of Contents
 
-- [System Components](#system-components)
-- [Raspberry Pi 5 Set Up](#raspberry-pi-5-setup)
+- [Hardware Components](#hardware-components)
+- [Raspberry Pi 5 Setup](#raspberry-pi-5-setup)
+- [IFCB Setup](#ifcb-setup)
 - [PhytO-ARM Installation on the RPi5](#phyto-arm-installation-on-the-rpi5)
 - [GPS configuration](#gps-configuration)
 - [Capturing Ship Data using Network Data Capture](#capturing-ship-data-using-network-data-capture)
 - [Troubleshooting Ship Flowthrough Data](#troubleshooting-ship-flowthrough-data)
-- [Options for Power Control](#options-for-power-control)
+- [Optional remote power cycling](#optional-remote-power-cycling)
 - [Operation](#operation)
 
 ---
-## System Components
+## Hardware Components
 
 1. IFCB
 2. Raspberry Pi 5 (RPi5)
 3. Netgear ProSafe 5-Port Gigabit Switch
-4. YINLEADER VTUS-2000 Step-Up / Step-Down Voltage Transformer
-5. Digital Logger Power Switch (requires 120 VAC)
-6. Sierra Wireless Router (optional; local network / remote access)
-7. Starlink (optional; pushing data to shore)
+4. [Optional] Digital Loggers IoT Power Relay (for outlet control via RPi5)
 
 ---
 
@@ -74,15 +72,6 @@ sudo systemctl restart ssh
 
 Operators will need to establish remote access to the RPi if operating/accessing PhytO-ARM off ship. This could be a VPN service like wireguard/tailscale or a remote desktop service like AnyDesk.
 
-To install Tailscale on the RPi:
-
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up
-tailscale status
-```
-Tailscale install documentation: https://tailscale.com/docs/install
-
 ### RPi5 Network Configuration
 
 Prior to installation aboard the RRS James Cook, obtain and provide the appropriate MAC address to the ship technician so a static IP assignment can be configured in advance:
@@ -98,6 +87,10 @@ eth0 → Ethernet MAC address (link/ether)\
 wlan0 → Wi-Fi MAC address (link/ether)
 
 ---
+## IFCB Setup
+Configure IFCBacquire software on the IFCB to look for PhytO-ARM metadata. Open file `Settings.txt` in `/home/ifcb/IFCBacquire/Host/Settings.txt`. Change line `PhytoArmDataSource: 0` to `PhytoArmDataSource: http://<RPi5_IP address on ship network>:8098` and save.
+
+This change will cause the IFCB to poll the RPi5 for ship data before it writes header data (.hdr file). Ship datastreams that are captured by PhytO-ARM and republished by `web_node` will be written as new fields within the .hdr files. 
 
 ## PhytO-ARM Installation on the RPi5
 1. On the RPi5, install PhytO-ARM with docker:
@@ -123,24 +116,27 @@ wlan0 → Wi-Fi MAC address (link/ether)
   ```bash
   docker pull whoi/phyto-arm:latest
   ```
-2. Clone PhytO-ARM on the RPi5
-3. Checkout James Cook branch: `checkout -b vhaggans/james-cook-fall-2025`
-4. Install PhytO-ARM as a service on the rPi
-    
-    ```
+2. Clone PhytO-ARM in home directory on the RPi5 and checkout James Cook branch:
+   ```bash
+   cd ~
+   git clone https://github.com/WHOIGit/PhytO-ARM.git
+   checkout -b vhaggans/james-cook-fall-2025
+   ```
+3. Install PhytO-ARM as a service on the rPi
+    ```bash
     sudo ln -sf $(pwd)/phyto-arm.service /etc/systemd/system/phyto-arm.service
     sudo systemctl daemon-reload
     sudo systemctl enable phyto-arm
     sudo systemctl start phyto-arm
     ```
-5. In a web browser on the ship's network, go to http://<RPi5_IP>:8098. You should see output like the following returned in your browser window:
+4. In a web browser on the ship's network, go to http://<RPi5_IP>:8098. You should see output like the following returned in your browser window:
 ```
 {"commitHash": "c203cb925f2f9a2792f49589d15834c48a8008c7", "cruiseID": "RRS James Cook", "ifcbLocation": "Deck Lab, main sink", "ifcbWaterSource": "Flow through seawater intake, 6 m below water line (Bornemann Pumps SLH80-40 Hygienic Twin-Screw Pump). Tapped from Deck Lab sink.", "ctdDepth": 6.0, "gpsLatitude": 43.713016667, "gpsLongitude": -60.812275, "gpsSource": "RRS James Cook", "SBE45ModelSN": "SBE 45, SN:0231", "SBE45LastCal": "16 October, 2024", "SBE38ModelSN": "SBE 38, SN:0490", "SBE38LastCal": "03 January, 2024", "ctdTempSBE45_c": 24.584, "ctdTempSBE38_c": 25.5821, "ctdSal_psu": 0.0165, "ctdCond_sm": 0.00168, "ctdSound_mps": 1498.266, "metFlowRate_lmin": 1.49468, "metFluorescence_v": 0.0497, "metTransmissivity_v": 4.6016, "metSurfaceWindSpeed_ms": 9.319, "metSurfaceWindDirection_deg": 17.316, "metSurfaceAirTemp_c": 22.97, "metSurfaceAirHumid_pct": 71.27, "metSurfaceAirPressure_mbar": 1011.4268, "metPortPAR_v": 222.9, "metStarPAR_v": 213.3, "metPortTIR_v": 552.7, "metStarTIR_v": 549.3}
 ```
 
 ## GPS configuration
 
-GPS tracking is provided via [gpsd][].
+GPS data is captured and republished via [gpsd][].
 
   [gpsd]: https://gpsd.gitlab.io/gpsd/index.html
 
@@ -268,7 +264,29 @@ $ nc -ulp 19015 |python3 udp_regexp_test.py ',\s*|\s+'
 
 ### Modifying network_data_capture 
 
-The network_data_capture node is configured in the deployment YAML file (e.g., configs/azmp_fall.yaml).
+First, ensure that target UDP stream from the ship is being republished to PhytO-ARM. In `~/PhytO-ARM/scripts/docker_run.sh`, UDP ports are exposed to the container using `--publish` port mappings. 
+Example:
+```bash
+docker run "${DOCKER_FLAGS[@]}" \
+    --name phyto-arm \
+    --publish 8080:8080/tcp \
+    --publish 9090:9090/tcp \
+    --publish 8098:8098/tcp \
+    --publish 12345:12345/udp \
+    --publish 19015:19015/udp \
+    --publish 19023:19023/udp \
+    --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
+    --mount type=bind,source="$(pwd)"/src/phyto_arm,target=/app/src/phyto_arm,readonly \
+    --mount type=bind,source="$CONFIG",target=/app/mounted_config.yaml,readonly \
+    --volume /data:/data \
+    whoi/phyto-arm:latest \
+    $COMMAND
+```
+
+Above maps republishes TCP traffic from ports `8080`, `9090`, and `8098` and UDP traffic from ports `12345`, `19015`, and `19023`.
+
+
+Next, ensure that the `network_data_capture` node is configured in the deployment YAML file (e.g., configs/azmp_fall.yaml).
 
 Use this configuration to:
 
@@ -277,8 +295,8 @@ Use this configuration to:
 
 First, open the deployment config.yaml:
 
-```bash
-nano configs/azmp_fall.yaml
+```
+nano ~/PhytO-ARM/configs/azmp_fall.yaml
 ```
 
 **How Parsing Works**
@@ -322,7 +340,7 @@ This creates a ROS topic:
 
 **Important: Update the Web Node Configuration**
 
-If you add a new subtopic and want it to publish to the metadata, you must also update:
+If you add a new subtopic and want it to publish to the metadata, you must also update configuration of `web node`. In yaml file, update under key `web`:
 
 ```yaml
 web:
@@ -338,7 +356,7 @@ ctdTempSBE45_c:
   default: -999.999
 ```
 
-If this mapping is missing, the topic will NOT appear in the metadata output.
+If this mapping is missing, the topic will NOT be republished for ingestion by IFCBacquire.
 
 **After Making Changes**
 
@@ -374,19 +392,7 @@ Alternatively, in a browser, go to url http://[RPi5_IP]:8098
 1. **Can the RPi5 see the shipboard data/is the ship streaming data at the expected ports?**
 To test, first stop PhytO-ARM using a RPi5 terminal window `sudo systemctl stop phyto-arm`. Then, listen on the expected port(s): eg. `nc -lup 19015`. If no data is recieved, there is an issue between the RPi5 and the ship or the simulation script. If deploying on the ship, confirm the RPi is properly on the ship network (especially if also using a local network, there could be IP assignment issues. It is best to ask the ship for a static IP assignment). If using `jamescook_sim.sh`, confirm that the simulation script has the proper IP address of the RPi5 and is sending to that address.
 
-Also, verify UDP ports are exposed in docker_run.sh:
-
-```
-docker run "${DOCKER_FLAGS[@]}" \
-    --name phyto-arm \
-    -e NO_VIRTUALENV=1 \
-    --publish 8080:8080/tcp \
-    --publish 9090:9090/tcp \
-    --publish 8098:8098/tcp \
-    --publish 12345:12345/udp \
-    --publish 19015:19015/udp \
-    --publish 19023:19023/udp \
-```
+Next, verify that UDP traffic is being republished to the PhytO-ARM docker container. These are `--publish` commands within the `docker_run.sh` script.
 
 2. **Is there an issue with the configuration of the `network_data_capture` node?**
 Use `udp_regexp_test.py` to check the parsing configuration and delimeter as set in the network_data_capture node. Also check the field IDs for each subtopic to confirm they match with the parsing output.
@@ -470,8 +476,8 @@ Save the Settings.txt file if any changes are made and restart IFCBAcquire. Conf
 
 ---
 
-## Options for Power Control
-_Power control enables remote power cycling of the IFCB and RPi5 (especially helpful when operating these systems from off ship)._
+## Optional remote power cycling
+_Remote power cycling of the IFCB and RPi5 is especially valuable when operating these systems from off ship._
 **Note: Digital Logger Switches require 120VAC. Use with a voltage converter if plugged into outlet with 240VAC.**
 >
 **A.** Power control via bash script on the Raspberry Pi 5 that controls an AC/DC relay from Digital Loggers: https://www.digital-loggers.com/iot2.html
