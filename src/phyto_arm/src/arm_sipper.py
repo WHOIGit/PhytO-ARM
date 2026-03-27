@@ -53,9 +53,7 @@ class ArmSipper(ArmBase):
         if (last_task is not None and
             last_task.name == 'postsample_drain' and
             self.sample_index == rospy.get_param('starting_sample_index')):
-            rospy.logwarn(
-                'Completed full sample cycle - running biocide'
-            )
+            rospy.logwarn('Completed full sample cycle - running biocide')
             return Task('maintenance', run_manual_maintenance())
 
         next_sample = samples[self.sample_index]
@@ -71,34 +69,55 @@ class ArmSipper(ArmBase):
         # Just publish sample metadata every time
         publish_sample_metadata(next_sample)
 
-        # Start at presample_pump if no previous task or after drain
-        if last_task is None or last_task.name == 'postsample_drain':
-            rospy.logwarn(f'Sample {next_sample_name}: starting presample seawater flush')
+        # Initial run: presample flush sequence
+        if last_task is None:
+            rospy.logwarn(f'Sample {next_sample_name}: starting presample seawater flush (first run)')
             return Task('flush_pump', pump_seawater_for(task_durations['flush_pump']))
 
+        # After presample flush, drain the manifold
         if last_task.name == 'flush_pump':
             rospy.logwarn(f'Sample {next_sample_name}: starting presample flush drain')
             return Task('presample_drain', drain_for(task_durations['drain_valve_open']))
 
+        # After presample drain, pull the sample into the manifold
         if last_task.name == 'presample_drain':
             rospy.logwarn(f'Sample {next_sample_name}: starting sample pump')
             return Task('sample_pump', pump_sample_for(next_sample, task_durations['sample_pump']))
 
+        # After sample is in manifold, open IFCB valve for sampling
         if last_task.name == 'sample_pump':
             rospy.logwarn(f'Sample {next_sample_name}: opening IFCB valve')
             return Task('ifcb_valve_open', open_valve_and_run_ifcb_for(next_sample, task_durations['ifcb_valve_open']))
 
+        # After IFCB has taken the sample (and is processing), drain the sample, then advance the sample index.
         if last_task.name == 'ifcb_valve_open':
             rospy.logwarn(f'Sample {next_sample_name}: starting post-sample drain')
             self.sample_index = (self.sample_index + 1) % len(samples)
             return Task('postsample_drain', drain_for(task_durations['drain_valve_open']))
 
+        # After post-sample drain, fill the reservoir with seawater
+        if last_task.name == 'postsample_drain':
+            rospy.logwarn(f'Sample {next_sample_name}: filling reservoir with seawater (hold-wet step)')
+            return Task('postsample_fill', pump_seawater_for(task_durations['flush_pump']))
+
+        # Keep reservoir filled with seawater during IFCB processing, then drain
+        if last_task.name == 'postsample_fill':
+            pause = task_durations.get('inter_sample_pause', 0)
+            if pause > 0:
+                rospy.logwarn(f'Sample {next_sample_name}: holding seawater in reservoir for {pause}s before presample drain')
+                return Task('inter_sample_wait', wait_between_samples(pause))
+            else:
+                rospy.logwarn(f'Sample {next_sample_name}: no inter-sample pause configured, starting presample drain')
+                return Task('presample_drain', drain_for(task_durations['drain_valve_open']))
+
+        if last_task.name == 'inter_sample_wait':
+            rospy.logwarn(f'Sample {next_sample_name}: hold complete, starting presample drain')
+            return Task('presample_drain', drain_for(task_durations['drain_valve_open']))
+
         if last_task.name == 'wait':
-            # Stay in wait mode
             return Task('wait', wait_for_intervention())
-
+            
         raise ValueError(f'Unhandled next-task state where last task={last_task.name}')
-
 
 # Global references
 ifcb_runner = None
@@ -363,7 +382,13 @@ def run_manual_maintenance():
             rospy.signal_shutdown("Runtime error")
     return manual_maintenance_callback
 
-
+def wait_between_samples(duration):
+    def wait_callback():
+        rospy.loginfo(f'Waiting {duration} seconds between samples to let manifold clear...')
+        rospy.sleep(duration)
+        arm.start_next_task()
+    return wait_callback
+  
 def wait_for_intervention():
     """Wait indefinitely for user intervention."""
     def wait_callback():
