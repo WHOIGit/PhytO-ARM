@@ -95,16 +95,32 @@ class ArmSipper(ArmBase):
             self.sample_index = (self.sample_index + 1) % len(samples)
             return Task('postsample_drain', drain_for(task_durations['drain_valve_open']))
 
-        # After post-sample drain, fill the reservoir with seawater
+        # After post-sample drain, begin 3x rinse cycle
         if last_task.name == 'postsample_drain':
-            rospy.logwarn(f'Sample {next_sample_name}: filling reservoir with seawater (hold-wet step)')
-            return Task('postsample_fill', pump_seawater_for(task_durations['flush_pump']))
+            rospy.logwarn(f'Sample {next_sample_name}: rinse 1/3 - filling reservoir with seawater')
+            return Task('rinse1_fill', pump_seawater_for(task_durations['flush_pump']))
 
-        # Keep reservoir filled with seawater during IFCB processing, then drain
-        if last_task.name == 'postsample_fill':
+        if last_task.name == 'rinse1_fill':
+            rospy.logwarn(f'Sample {next_sample_name}: rinse 1/3 - draining')
+            return Task('rinse1_drain', drain_for(task_durations['drain_valve_open']))
+
+        if last_task.name == 'rinse1_drain':
+            rospy.logwarn(f'Sample {next_sample_name}: rinse 2/3 - filling reservoir with seawater')
+            return Task('rinse2_fill', pump_seawater_for(task_durations['flush_pump']))
+
+        if last_task.name == 'rinse2_fill':
+            rospy.logwarn(f'Sample {next_sample_name}: rinse 2/3 - draining')
+            return Task('rinse2_drain', drain_for(task_durations['drain_valve_open']))
+
+        if last_task.name == 'rinse2_drain':
+            rospy.logwarn(f'Sample {next_sample_name}: rinse 3/3 - filling reservoir with seawater (hold volume)')
+            return Task('rinse3_fill', pump_seawater_for(task_durations['flush_pump']))
+
+        # Hold the 3rd rinse volume in the reservoir during the inter-sample wait, then drain
+        if last_task.name == 'rinse3_fill':
             pause = task_durations.get('inter_sample_pause', 0)
             if pause > 0:
-                rospy.logwarn(f'Sample {next_sample_name}: holding seawater in reservoir for {pause}s before presample drain')
+                rospy.logwarn(f'Sample {next_sample_name}: holding rinse 3 volume for {pause}s before presample drain')
                 return Task('inter_sample_wait', wait_between_samples(pause))
             else:
                 rospy.logwarn(f'Sample {next_sample_name}: no inter-sample pause configured, starting presample drain')
