@@ -74,7 +74,7 @@ Operators will need to establish remote access to the RPi if operating/accessing
 
 ### RPi5 Network Configuration
 
-Prior to installation aboard the RRS James Cook, obtain and provide the appropriate MAC address to the ship technician so a static IP assignment can be configured in advance:
+Prior to installation aboard the R/V Sikuliaq, obtain and provide the appropriate MAC address to the ship technician so a static IP assignment can be configured in advance:
 
 - Ethernet MAC address if connecting directly to the ship network via ethernet cable.
 - WLAN (Wi-Fi) MAC address if connecting to a non-ship router and accessing ship data via Wi-Fi (prefered).
@@ -116,7 +116,7 @@ This change will cause the IFCB to poll the RPi5 for ship data before it writes 
   ```bash
   docker pull whoi/phyto-arm:latest
   ```
-2. Clone PhytO-ARM in home directory on the RPi5 and checkout James Cook branch:
+2. Clone PhytO-ARM in home directory on the RPi5 and checkout Sikuliaq branch:
    ```bash
    cd ~
    git clone https://github.com/WHOIGit/PhytO-ARM.git
