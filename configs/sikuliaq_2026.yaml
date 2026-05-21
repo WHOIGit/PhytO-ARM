@@ -1,0 +1,302 @@
+name: sikuliaq_2026
+
+launch_args:
+    log_dir: /data/roslogs/
+    rosbag_prefix: /data/rosbags/phyto-arm_CRUISEID
+    classifier: false
+    ifcb_winch: false
+    chanos_winch: false
+    digital_logger: false
+    network_data_capture: true
+
+alerts:
+    # You can post alert messages to Slack by creating an Incoming Webhook for your channel:
+    - type: slack
+      url: https://hooks.slack.com/services
+# Node-specific configuration
+network_data_capture: #optional.
+    stats_interval: 60 #optional. Default is 60 seconds.
+    print_stats: false #optional. Default is false. Useful for debugging connections
+    topics:
+        ship_cid:
+            connection_type: "udp"
+            port: 54000
+            parsing_strategy: "delimited"
+            delimiter: ',\s*|\s+' # ,?\\s+' #optional. Only used if parsing_strategy is "delimited"
+            use_regex_delimiter: true
+            subtopics:
+                cruiseID:
+                    field_id: 1
+                    type: "str"
+        ship_met: # Name of the topic
+            connection_type: "udp" # Can be "udp" or "tcp"
+            port: 53118 # this is the port your systemD service is pointing to
+            parsing_strategy: "delimited" # Can be "json_dict", "json_array", "raw", or "delimited"
+            delimiter: ',\s*|\s+' #optional. Only used if parsing_strategy is "delimited"
+            use_regex_delimiter: true
+            # Field Descriptions: [0] LDS Logger ID, [1] LDS Time Stamp [UTC], [2] ID [NMEA-style tag], ...
+            # [4] Barometric Pressure [bar], [6] Digiquartz pressure sensor serial number, [8] Air Temperature ...
+            # [deg C], [11] Relative Humidity [%], [13] RH/temperature probe serial number, [15] Fan Status ...
+            # [0 = not acceptable, 1 = acceptable speed]
+            subtopics: #optional. If parsing_strategy is not raw, this will parse the data into subtopics
+                metTime:
+                    field_id: 1
+                    type: "str"
+                metP_bar:
+                    field_id: 4
+                    type: "float"
+                metT_C:
+                    field_id: 8
+                    type: "float"
+                metH_perc:
+                    field_id: 11
+                    type: "float"
+        ship_par: # Name of the topic
+            connection_type: "udp" # Can be "udp" or "tcp"
+            port: 53104 # this is the port your systemD service is pointing to
+            parsing_strategy: "delimited" # Can be "json_dict", "json_array", "raw", or "delimited"
+            delimiter: ',\s*|\s+' #optional. Only used if parsing_strategy is "delimited"
+            use_regex_delimiter: true
+            # Field Descriptions: [0] LDS Logger ID, [1] LDS Time Stamp [UTC], [2] PAR [uE/m2 sec], ...
+            # [3] Sensor Temperature [C], [4] Line voltage [volts]
+            subtopics: #optional. If parsing_strategy is not raw, this will parse the data into subtopics
+                qsrTime:
+                    field_id: 1
+                    type: "str"
+                qsrPAR_uEm2:
+                    field_id: 2
+                    type: "float"
+                qsrT_C:
+                    field_id: 3
+                    type: "float"
+                qsrV:
+                    field_id: 4
+                    type: "float"
+        ship_suna: # Name of the topic
+            connection_type: "udp" # Can be "udp" or "tcp"
+            port: 53133 # this is the port your systemD service is pointing to
+            parsing_strategy: "delimited" # Can be "json_dict", "json_array", "raw", or "delimited"
+            delimiter: ',\s*|\s+' #optional. Only used if parsing_strategy is "delimited"
+            use_regex_delimiter: true
+            # Field Descriptions: [0] LDS Logger ID, [1] LDS Time Stamp [UTC], [2] Header and serial number, ...
+            # [3] Date, year and day-of-year, [4] Time, hours of day, [5] Nitrate concentration, µM, [6] Nitrogen ...
+            # in nitrate, mgN/L, [7] Absorbance, 254 nm, [8] Absorbance, 350 nm, ... [269] Internal temperature ...
+            # °C, [270] Spectrometer temperature, ...
+            subtopics: #optional. If parsing_strategy is not raw, this will parse the data into subtopics
+                sunaTime:
+                    field_id: 1
+                    type: "str"
+                sunaNO3_uM:
+                    field_id: 5
+                    type: "float"
+        ship_oxygen: # Name of the topic
+            connection_type: "udp" # Can be "udp" or "tcp"
+            port: 54132 # this is the port your systemD service is pointing to
+            parsing_strategy: "delimited" # Can be "json_dict", "json_array", "raw", or "delimited"
+            delimiter: ',\s*|\s+' #optional. Only used if parsing_strategy is "delimited"
+            use_regex_delimiter: true
+            # Field Descriptions: [0] Log Name, [1] Log Time, [2] ModelNo., [3] SerialNo., [4] O2Concentration[uM], ...
+            # [5] salinty corrected O2Concentration[uM], [6] AirSaturation[%], [7] Optode Temp[C], [8] reference ...
+            # salinity[psu], [9] TSG Temp[C], [10] TSG Salinity[psu], [11] latitude, [12] longitude
+            subtopics: #optional. If parsing_strategy is not raw, this will parse the data into subtopics
+                oxygTime:
+                    field_id: 1
+                    type: "str"
+                oxygCorr_uM:
+                    field_id: 5
+                    type: "float"
+                oxygAirsat:
+                    field_id: 6
+                    type: "float"
+                oxygTemp_C:
+                    field_id: 7
+                    type: "float"
+                oxygRefsal:
+                    field_id: 8
+                    type: "float"
+                oxygLat:
+                    field_id: 11
+                    type: "float"
+                oxygLong:
+                    field_id: 12
+                    type: "float"
+        ship_ctd: # Name of the topic
+            connection_type: "udp" # Can be "udp" or "tcp"
+            port: 53110 # this is the port your systemD service is pointing to
+            parsing_strategy: "delimited" # Can be "json_dict", "json_array", "raw", or "delimited"
+            delimiter: ',\s*|\s+' #optional. Only used if parsing_strategy is "delimited"
+            use_regex_delimiter: true
+            # Field Descriptions: [0] Log Name, [1] LDS Time Stamp [UTC], [2] Temperature [C], [3] ...
+            # Conductivity [S/m], [4] Salinity [psu], [5] Speed of Sound [m/s]
+            subtopics: #optional. If parsing_strategy is not raw, this will parse the data into subtopics
+                ctdTime:
+                    field_id: 1
+                    type: "str"
+                ctdTemp_c:
+                    field_id: 2
+                    type: "float"
+                ctdCond_sm:
+                    field_id: 3
+                    type: "float"
+                ctdSal_psu:
+                    field_id: 4
+                    type: "float"
+                ctdSound_mps:
+                    field_id: 5
+                    type: "float"
+        ship_opt: # Name of the topic
+            connection_type: "udp" # Can be "udp" or "tcp"
+            port: 53138 # this is the port your systemD service is pointing to
+            parsing_strategy: "delimited" # Can be "json_dict", "json_array", "raw", or "delimited"
+            delimiter: ',\s*|\s+' #optional. Only used if parsing_strategy is "delimited"
+            use_regex_delimiter: true
+            # Field Descriptions: [0] Log Name, [1] Log Time, [2] Sensor_Date, [3] Sensor_Time, ...
+            # [4] Scattering_Wavelength_EM(650nm), [5] Signal(counts), [6] Chlor_Wavelength_EM(695nm), ...
+            # [7] Signal(counts), [8] FDOM_Wavelength_EM(460nm), [9] Signal(counts), [10] CPU thermistor, ...
+            subtopics: #optional. If parsing_strategy is not raw, this will parse the data into subtopics
+                optTime:
+                    field_id: 1
+                    type: "str"
+                optScatter:
+                    field_id: 5
+                    type: "int"
+                optChl_em695: # Name of the subtopic
+                    field_id: 7 # Index of the field, or key if parsing_strategy is "json_dict"
+                    type: "int"
+                optFDOM_em460:
+                    field_id: 9
+                    type: "int"
+
+gps:
+    host: "172.17.0.1"
+    check_fix_by_variance: false
+
+lock_manager:
+    # Use this to control how many motors can be in motion at once.
+    max_moving_winches: 1
+
+
+web:
+    field_map:
+       #optional
+        commitHash: #optional
+            # Will get value from COMMIT_HASH environment variable
+            environment: COMMIT_HASH #optional
+            # Default is optional for environment variables. Will error
+            # if variable does not exist and no default provided
+            default: 674c09863ed72cb89b570444d5e924000774e6ed #optional
+        cruiseID:
+            default: "Unassigned"
+            topic: /ship_cid/cruiseID
+            topic_field: data
+        ifcbLocation:
+            default: "Wet Lab, starboard sink"
+        ifcbWaterSource:
+            default: "Flow through seawater intake, 6 m below water line (MET-PRO Fybroc 2530 mag-drive impeller pump). Tapped from Weet Lab fume hood sink."
+        ctdDepth: #optional
+            # Must have 'default' if not 'environment'
+            default: 6.0 #optional
+            # Optional 'topic' to update value
+        gpsLatitude: #optional
+            topic: /gps/fix #optional
+            topic_field: latitude #optional
+            # Replace with desired default lat/long
+            default: -999.999 #optional
+            #default: -99999 #optional
+        gpsLongitude: #optional
+            topic: /gps/fix #optional
+            topic_field: longitude #optional
+            default: -999.999 #optional
+            #default: -99999 #optional
+        gpsSource: #optional
+            default: "RV Sikuliaq C-NavX1 GcDGPS" #optional
+        ctdModelSN: #optional
+            default: "SBE 45 MicroTSG, SN:0454"
+        ctdLastCal:  #optional
+            default: "UPDATE" #optional
+        ctdTemp: #optional
+            topic: /ship_ctd/ctdTemp_c #optional
+            topic_field: data #optional
+            default: -999.999 #optional
+        ctdTemp_unit: #optional
+            default: "c" #optional
+        ctdSal: #optional
+            topic: /ship_ctd/ctdSal_psu #optional
+            topic_field: data #optional
+            default: -999.999 #optional
+        ctdSal_unit: #optional
+            default: "psu" #optional
+        optModelSN: #optional
+            default: "WET Labs Eco Triplet, Red scatter (650nm), Chlorophyll EX/EM(470/695nm), FDOM EX/EM (370/460nm), SN:6919"
+        optLastCal:  #optional
+            default: "UPDATE" #optional
+        optChl_em695: #optional
+            topic: /ship_opt/optChl_em695 #optional
+            topic_field: data #optional
+            default: -999 #optional
+        optFDOM_em460: #optional
+            topic: /ship_opt/optFDOM_em460 #optional
+            topic_field: data #optional
+            default: -999 #optional
+        optScatter: #optional
+            topic: /ship_opt/optScatter #optional
+            topic_field: data #optional
+            default: -999 #optional
+        oxyModelSN: #optional
+            default: "Aanderaa Oxygen Optode, SN:4330"
+        oxyLastCal:  #optional
+            default: "UPDATE" #optional
+        oxyCorr:
+            default: "Salinity compensated O2 concentration [sbe45 T and S]"
+        oxyConc: #optional
+            topic: /ship_oxygen/oxygCorr_uM #optional
+            topic_field: data #optional
+            default: -999.999 #optional
+        oxyConc_unit: #optional
+            default: "uM" #optional
+        sunaModelSN: #optional
+            default: "Sea-Bird Submersible Ultraviolet Nitrate Analyzer (SUNA V2), SN:NTR-2182"
+        sunaLastCal:  #optional
+            default: "UPDATE" #optional
+        sunaNO3: #optional
+            topic: /ship_suna/sunaNO3_uM #optional
+            topic_field: data #optional
+            default: -999.999 #optional
+        sunaNO3_unit: #optional
+            default: "uM" #optional
+        parModelSN: #optional
+            default: "Biospherical QSR2150, SN50172"
+        parLastCal:  #optional
+            default: "UPDATE" #optional
+        par: #optional
+            topic: /ship_par/qsrPAR_uEm2 #optional
+            topic_field: data #optional
+            default: -999.999 #optional
+        par_unit: #optional
+            default: "uEm2" #optional
+        metModelSN: #optional
+            default: "Paroscientific MET4A, P SN:146582, TRH SN:20668816"
+        metLastCal:  #optional
+            default: "UPDATE" #optional
+        metTemp: #optional
+            topic: /ship_met/metT_C #optional
+            topic_field: data #optional
+            default: -999.999 #optional
+        metTemp_unit: #optional
+            default: "c" #optional
+        metP: #optional
+            topic: /ship_met/metP_bar #optional
+            topic_field: data #optional
+            default: -999.999 #optional
+        metP_unit: #optional
+            default: "bar" #optional
+        metHum: #optional
+            topic: /ship_met/metH_perc #optional
+            topic_field: data #optional
+            default: -999.999 #optional
+        metHum_unit: #optional
+            default: "perc" #optional
+        #defaultOnly: #optional
+        #    # No topic means this default value is permanent
+        #    default: 'static_value' #optional
+
