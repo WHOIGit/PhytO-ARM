@@ -1,15 +1,15 @@
-# Deployment Configuration for RRS *James Cook*
+# Deployment Configuration for R/V *Sikuliaq*
 
-Notes from setup of **PhytO-ARM** for capture of shipboard data by IFCBacquire on the RRS *James Cook* during the Fall 2025 AZMP cruise. 
+Notes from setup of **PhytO-ARM** for capture of shipboard data by IFCBacquire on the R/V *Sikuliaq*. 
 
-This PhytO-ARM deplopyment configuration is compatible with an IFCB running the stock McLane disk image (Debian 10 OS) or containerized IFCBacquire. PhytO-ARM is installed and runs on a **Raspberry Pi 5 (RPi5)**. GPS data and flow-through SBE and meteorological tower observations from the RRS *James Cook* are written to IFCB hdr files via the `web_node`.
+This PhytO-ARM deplopyment configuration is compatible with an IFCB running the stock McLane disk image (Debian 10 OS) or containerized IFCBacquire. PhytO-ARM is installed and runs on a **Raspberry Pi 5 (RPi5)**. GPS data, flow-through seawater sensor data, and meteorological tower observations from the R/V Sikuliaq are written to IFCB HDR files via the web_node.
 
 Operation of PhytO-ARM has been streamlined to capture ship data streams and re-publish this data for inclusion in IFCB header files. The script `docker_run.sh` has been updated to launch only the **master node**. 
 
 
 PhytO-ARM starts automatically on boot of the RPi5 when installed as a `systemd` service. The IFCB does **not** begin sampling until an operator logs into the IFCBacquire WebUI and clicks **Start Acquisition**. Sampling is stopped via **Stop Acquisition** in the WebUI, and other IFCBacquire settings may be modified as usual, independent of PhytO-ARM operation.
 
-If deployed on the RRS *James Cook* with the same UDP ship data streams, few (if any) changes should be required for a successful deployment.
+If deployed on the R/V *Sikuliaq* with the same UDP ship data streams, few (if any) changes should be required for a successful deployment.
 
 ## Table of Contents
 
@@ -70,7 +70,7 @@ Restart SSH after making changes:
 sudo systemctl restart ssh
 ```
 
-Operators will need to establish remote access to the RPi if operating/accessing PhytO-ARM off ship. This could be a VPN service like wireguard/tailscale or a remote desktop service like AnyDesk.
+Operators will need to establish remote access to the RPi if operating/accessing PhytO-ARM off ship. This could be a remote desktop service like AnyDesk.
 
 ### RPi5 Network Configuration
 
@@ -88,7 +88,7 @@ wlan0 → Wi-Fi MAC address (link/ether)
 
 ---
 ## IFCB Setup
-Configure IFCBacquire software on the IFCB to look for PhytO-ARM metadata. Open file `Settings.txt` in `/home/ifcb/IFCBacquire/Host/Settings.txt`. Change line `PhytoArmDataSource: 0` to `PhytoArmDataSource: http://<RPi5_IP address on ship network>:8098` and save.
+Configure IFCBacquire software on the IFCB to look for PhytO-ARM metadata. Open file `Settings.txt` in `/home/ifcb/IFCBacquire/Host/Settings.txt`. Change line `PhytoArmDataSource:0` to `PhytoArmDataSource:1:http://<RPi5_IP address on ship network>:8098` and save.
 
 This change will cause the IFCB to poll the RPi5 for ship data before it writes header data (.hdr file). Ship datastreams that are captured by PhytO-ARM and republished by `web_node` will be written as new fields within the .hdr files. 
 
@@ -120,7 +120,7 @@ This change will cause the IFCB to poll the RPi5 for ship data before it writes 
    ```bash
    cd ~
    git clone https://github.com/WHOIGit/PhytO-ARM.git
-   checkout -b vhaggans/james-cook-fall-2025
+   checkout -b vhaggans/sikuliaq
    ```
 3. Install PhytO-ARM as a service on the rPi
     ```bash
@@ -138,11 +138,9 @@ This change will cause the IFCB to poll the RPi5 for ship data before it writes 
 
 GPS data is captured and republished via [gpsd][].
 
-  [gpsd]: https://gpsd.gitlab.io/gpsd/index.html
+  [gpsd]: https://gpsd.gitlab.io/gpsd/index.html 
 
-With the format of the James Cook NAV data (referenced as JCTEC for the Fall 2025 deployment), a seperate service runs on the RPi5 to convert the ship GPS feed (broadcasted on port 19002) into NMEA format to be digested by GPSD and published inside the PhytO-ARM container. On the RPi5, copy or link `jctec-converter.service` to /etc/systemd/system. Also copy or link `jctec_converter.py` to usr/local/bin. Enable and start `jctec-converter.service`. The converted GPS feed in NMEA will then be sent over port 22336 on the RPi5. 
-
-In a terminal, use a text editor like `vim` or `nano` to edit `/etc/default/gpsd` so that `gspd` listens to the correct port for GPS data. For example, to configure to listen to port 22336:
+In a terminal on the RPi, use a text editor like `vim` or `nano` to edit `/etc/default/gpsd` so that `gspd` listens to the correct UDP port that is streaming GPS data. For example, to configure to listen to port 53121 on the ship:
 
 ```
 # Default settings for the gpsd init script and the hotplug wrapper.
@@ -155,7 +153,7 @@ USBAUTO="false"
 
 # Devices gpsd should collect to at boot time.
 # They need to be read/writeable, either by user gpsd or the group dialout.
-DEVICES="udp://127.0.0.1:22336"
+DEVICES="udp://[RPi IP Address]:53121"
 
 # Other options you want to pass to gpsd
 GPSD_OPTIONS=""
@@ -177,89 +175,87 @@ PhytO-ARM is also able to capture and parse UDP streams for capturing ship-based
 
 Shipboard data flow: Ship --[UDP]--> rPi --[PhytO-ARM network_data_capture]--> topics --[ros]--> webnode --> IFCB .hdr files.
 
-On the Fall 2025 cruise, a list of available UDP streams were provided (see table below). From these, a subset were chosen for ingestion by PhytO-ARM via the network_data_capture node.
+On the Summer 2025 cruise, a list of available UDP streams were provided (see table below). From these, a subset were chosen for ingestion by PhytO-ARM via the network_data_capture node.
 
-### SBE45 (port 19015)
+## Resources for capture of streaming data aboard ship
+See table below for UDP streams available Summer 2025.
 
-| Column # | Name | Description | Source |
-|--------:|------|-------------|--------|
-| 1 | Sentence Identifier | `$PRTAS` | |
-| 2 | Message Type | JCMES | |
-| 3 | Date | Date (MM/DD/YY) | |
-| 4 | Time | Time (hh:mm:ss.000) | |
-| 5 | Instrument ID | SBE45 | |
-| 6 | NULL | 0 | |
-| 7 | temp_h | Temperature from SBE45 | SBE45 |
-| 8 | cond | Conductivity | SBE45 |
-| 9 | salin | Salinity | SBE45 |
-|10 | sndspeed | Sound velocity | SBE45 |
-|11 | temp_r | Temperature from SBE38 | |
+| Sensor                      | Measurement                                     | Rpi   | LDS    | Direct from Sensor |
+|----------------------------|--------------------------------------------------|-------|--------|---------------------|
+| cruiseid                   | Cruise ID                                       | none  | 54000  |                     |
+| adcp_speedlog              | ADCP Speedlog                                   | 53135 | 54135  |                     |
+| ais_r4-navigator_bridge    | Bridge AIS                                      | 53134 | 54134  |                     |
+| ctd_sea_bird               | CTD serial out                                  | 53113 | 54113  |                     |
+| ek80_depth                 | EK80 depth                                      | none  | 55006  |                     |
+| flow_krohne_fwd            | Krohne sensor flow, Wet Wall                    | 53129 | 54129  |                     |
+| flow_krohne_pco2           | Krohne sensor flow pco2, Wet Lab                | 53116 | 54116  |                     |
+| fluoro_triplet_ctd         | SBE Eco-Triplet Fluorometer, CTD               | 53139 | none   |                     |
+| fluoro_triplet_ctd_mrg     | Eco-Triplet and CTD data                        | none  | 54139  |                     |
+| fluoro_triplet_fwd         | SBE Eco-Triplet Fluorometer, Wet Wall          | 53138 | 54138  |                     |
+| gnss_cnav                  | CNAV gps                                        | 53121 | 54121  |                     |
+| gnss_mps865                | Trimble MPS865 GNSS Heading                     | 53120 | 54120  |                     |
+| grav_dgs_33_proc           | DGS-AT1M Gravimeter                             | 53149 | none   |                     |
+| gyro_1                     | Gyro 1                                          | 53122 | 54122  |                     |
+| gyro_2                     | Gyro 2                                          | 53123 | 54123  |                     |
+| ins_seapath_position       | SeaPath Nav                                     | 53119 | none   | 52119              |
+| mb_em304_centerbeam        | EM304 Centerbeam Depth                          | none  | none   | 55005              |
+| mb_em710_centerbeam        | EM710 Centerbeam Depth                          | none  | none   | 55004              |
+| met_met4a_fwdmast          | MET4A Met System, fwdmast                       | 53118 | 54118  |                     |
+| nitrate_suna_fwd           | SBE SUNA Nitrate Sensor, Wet Wall              | 53133 | 54133  |                     |
+| oxygen_optode4330          | Oxygen Optode 4330 Sensor, Wet Wall            | 53132 | none   |                     |
+| oxygen_optode4330_cor      | Salinity Corrected Oxygen, Optode              | none  | 54132  |                     |
+| pco2_ldeo_merge            | LDEO PCO2 System + ship data                    | none  | 54109  |                     |
+| rad_qsr2150a               | PAR Sensor, above SCR                           | 53104 | 54104  |                     |
+| rad_sgr4                   | Pyrgeometer, above SCR                          | 53136 | 54136  |                     |
+| rad_smp21                  | Pyranometer, above SCR                          | 53137 | 54137  |                     |
+| rain_org815ds              | Optical Rain Gauge, Main Mast                  | 53102 | 54102  |                     |
+| sb_echosounder_1           | Bridge echosounder 1                            | 53126 | 54126  |                     |
+| sb_echosounder_2           | Bridge echosounder 2                            | 53127 | 54127  |                     |
+| speedlog                   | Doppler speedlog                                | 53125 | 54125  |                     |
+| ssv-aml-cb                 | AML Sound Velocity Sensor, Centerboard         | 53105 | 54105  |                     |
+| tdgp                       | Total Dissolved Gas Pressure, Wet Wall         | 53147 | 54147  |                     |
+| thermo_pyrometer-ct15      | Pyrometer CT15.10, fwd of SCR                   | 53106 | 54106  |                     |
+| thermo_sbe38_cb            | SBE38, Centerboard                              | 53107 | 54107  |                     |
+| thermo_sbe38_fwd           | SBE38, bow thruster room intake                 | 53111 | 54111  |                     |
+| tsg_emssv                  | Calculated SSV for EM304,710                    | none  | none   |                     |
+| tsg_sbe45_fwd              | SBE45, Wet Wall                                 | 53110 | 54110  |                     |
+| tsg_sbe45_fwd_2            | SBE45, secondary, Wet Wall                      | 53114 | 54114  |                     |
+| wave_wamos                 | NMEA output from WAMOS                          | none  | none   |                     |
+| wh300_xducer_depth         | WH300 pressure sensor, centerboard             | none  | none   | 55007              |
+| winch_rapp                 | RAPP winches                                    | 53128 | none   |                     |
+| wind_gill_fwdmast          | Ultrasonic Wind Sensor rel                      | 53124 | none   |                     |
+| wind_gill_fwdmast_true     | Ultrasonic Wind Sensor true                     | none  | 54124  |                     |
+| wind_mast_port             | Ship Wind Sensor mast rel                       | 53130 | none   |                     |
+| wind_mast_port_true        | Ship Wind Sensor true                           | none  | 54130  |                     |
+| wind_mast_stbd             | Ship Wind Sensor mast rel                       | 53131 | none   |                     |
+| wind_mast_stbd_true        | Ship Wind Sensor true                           | none  | 54131  |                     |
+| wind_metek_fwdmast         | Metek uSonic-3 Omni 3D Wind Sensor              | 53145 | 54145  |                     |
 
----
+\**Note:** Use the Rpi ports unless there isn't one, then use the LDS port.
 
-### Surfmet (port 19023)
+From these, a subset were chosen for ingestion by PhytO-ARM and rebroadcast via `web_node`:
+* cruiseid
+* fluoro_triplet_fwd
+* met_met4a_fwdmast
+* nitrate_suna_fwd
+* oxygen_optode4330_cor
+* rad_qsr2150a 
+* tsg_sbe45_fwd 
 
-| Column # | Name | Description | Source |
-|--------:|------|-------------|--------|
-| 1 | Sentence Identifier | `$PRTSA` | |
-| 2 | Message Type | JCMES | |
-| 3 | Date | Date (DD/MM/YY) | |
-| 4 | Time | Time (hh:mm:ss.000) | |
-| 5 | Instrument ID | surfm | |
-| 6 | NULL | 0 | |
-| 7 | flow | Surface water instrument flow rate (l/min) | `$GPXSM` |
-| 8 | flou | Surface water fluorescence (V) | `$GPXSM` |
-| 9 | trans | Surface water transmissivity (V) | `$GPXSM` |
-|10 | speed | Surface wind relative speed (m/s) | `$GPXSM` |
-|11 | direct | Surface wind relative direction (°) | `$GPXSM` |
-|12 | airtemp | Surface air temperature (°C) | `$GPXSM` |
-|13 | humid | Surface air humidity (%) | `$GPXSM` |
-|14 | press | Surface air pressure (mbar) | `$GPXSM` |
-|15 | ppar | Port side PAR sensor (volt × 10⁻⁵) | `$GPXSM` |
-|16 | spar | Starboard side PAR sensor (volt × 10⁻⁵) | `$GPXSM` |
-|17 | ptir | Port side TIR sensor (volt × 10⁻⁵) | `$GPXSM` |
-|18 | stir | Starboard side TIR sensor (volt × 10⁻⁵) | `$GPXSM` |
-
----
-
-### GPS (port 19002)
-
-| Column # | Name | Description | Source |
-|--------:|------|-------------|--------|
-| 1 | Sentence Identifier | `$JCMES` | |
-| 2 | Date | Date (MM/DD/YY) | |
-| 3 | Time | Time (hh:mm:ss.000) | |
-| 4 | Instrument ID | mvpos | |
-| 5 | NULL | 0 | |
-| 6 | nbseen | Number of satellites seen (not logged) | |
-| 7 | nbused | Number of satellites used to compute position fix | `$GPGGA` |
-| 8 | hdop | Horizontal Dilution of Precision | `$GPGGA` |
-| 9 | vdop | Vertical Dilution of Precision (not logged) | |
-|10 | pdop | Position Dilution of Precision (not logged) | |
-|11 | gps time | GPS timestamp applied by the GPS unit | `$GPGGA` |
-|12 | Latitude | Latitude degrees | `$GPGGA` |
-|13 | Longitude | Longitude minutes | `$GPGGA` |
-|14 | alt | Height of vessel reference point above sea level (m) | `$GPGGA` |
-|15 | perc | Horizontal position code  | `$GPGGA` |
-|16 | mode | GNSS quality indicator | `$GPGGA` |
-|17 | gndcrs | Course over ground (degrees) | `$GPVTG` |
-|18 | gndspeed | Speed over ground (knots) | `$GPVTG` |
-|19 | NULL |  | |
-|20 | NULL |  | |
-|21 | heading | Heading, true degrees | `$GPHDT` |
+Several of these UDP streams may be simulated from script `sikuliaq_sim.sh`. Additionally, function `udp_regexp_test.py` can be used to check for correcty parsing by selected delimiter in config of `network_data_capture` node. Example checking regular expression `',\s*|\s+'`:
 
 
-All three UDP streams may be simulated from script `jamescook_sim.sh`, which can be run on an IFCB (or on any device on the same network as the RPi) to test UDP capture off the ship or when the ship streams are down. 
+These UDP streams may be simulated from script `sikuliaq_sim.sh`, which can be run on an IFCB (or on any device on the same network as the RPi) to test UDP capture off the ship or when the ship streams are down. 
 
 ```bash
-chmod u+x jamescook_sim.sh
-./jamescook_sim.sh
+chmod u+x sikuliaq_sim.sh
+./sikuliaq.sh
 ```
 Additionally, the function `udp_regexp_test.py` can be used to check for correct parsing by selected delimiter in the config for the network_data_capture node. Example checking regular expression ',\s*|\s+':
 
 ```bash
-$ nc -ulp 19015 |python3 udp_regexp_test.py ',\s*|\s+'
-> Split result: ['$PRTAS', 'JCMES', '10/04/17', '20:40:00.135', 'SBE45', '0', '24.58400', '0.00168', '0.01650', '1498.26600', '25.58210', '']
+$ nc -ulp 53110 |python3 udp_regexp_test.py ',\s*|\s+'
+Split result: ['tsg_sbe45_fwd', '2025-06-29T03:19:39.2070Z', '11.7122', '3.60899', '31.4546', '1491.595']
 ```
 
 ### Modifying network_data_capture 
@@ -273,8 +269,13 @@ docker run "${DOCKER_FLAGS[@]}" \
     --publish 9090:9090/tcp \
     --publish 8098:8098/tcp \
     --publish 12345:12345/udp \
-    --publish 19015:19015/udp \
-    --publish 19023:19023/udp \
+    --publish 54000:54000/udp \
+    --publish 53110:53110/udp \
+    --publish 53138:53138/udp \
+    --publish 53104:53104/udp \
+    --publish 53118:53118/udp \
+    --publish 53133:53133/udp \
+    --publish 54132:54132/udp \
     --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
     --mount type=bind,source="$(pwd)"/src/phyto_arm,target=/app/src/phyto_arm,readonly \
     --mount type=bind,source="$CONFIG",target=/app/mounted_config.yaml,readonly \
@@ -283,10 +284,10 @@ docker run "${DOCKER_FLAGS[@]}" \
     $COMMAND
 ```
 
-Above maps republishes TCP traffic from ports `8080`, `9090`, and `8098` and UDP traffic from ports `12345`, `19015`, and `19023`.
+Above maps republishes TCP traffic from ports `8080`, `9090`, and `8098` and UDP traffic from port `12345` and the selected ship data ports (54000, 53110, 53138, 53104, 53118, 53133, and 54132).
 
 
-Next, ensure that the `network_data_capture` node is configured in the deployment YAML file (e.g., configs/azmp_fall.yaml).
+Next, ensure that the `network_data_capture` node is configured in the deployment YAML file (e.g., configs/sikuliaq_2026.yaml).
 
 Use this configuration to:
 
@@ -296,7 +297,7 @@ Use this configuration to:
 First, open the deployment config.yaml:
 
 ```
-nano ~/PhytO-ARM/configs/azmp_fall.yaml
+nano ~/PhytO-ARM/configs/sikuliaq_2026.yaml
 ```
 
 **How Parsing Works**
@@ -350,7 +351,7 @@ web:
 Example:
 
 ```yaml
-ctdTempSBE45_c:
+ctdTempSBE45:
   topic: /ship_ctd/ctdTempSBE45_c
   topic_field: data
   default: -999.999
@@ -390,7 +391,7 @@ Alternatively, in a browser, go to url http://[RPi5_IP]:8098
 - If defaults (e.g., -999.99) are shown, start with step #1.
 - If data is publishing properly, the issue is isolated to the IFCB settings.txt file (skip to step #3).
 1. **Can the RPi5 see the shipboard data/is the ship streaming data at the expected ports?**
-To test, first stop PhytO-ARM using a RPi5 terminal window `sudo systemctl stop phyto-arm`. Then, listen on the expected port(s): eg. `nc -lup 19015`. If no data is recieved, there is an issue between the RPi5 and the ship or the simulation script. If deploying on the ship, confirm the RPi is properly on the ship network (especially if also using a local network, there could be IP assignment issues. It is best to ask the ship for a static IP assignment). If using `jamescook_sim.sh`, confirm that the simulation script has the proper IP address of the RPi5 and is sending to that address.
+To test, first stop PhytO-ARM using a RPi5 terminal window `sudo systemctl stop phyto-arm`. Then, listen on the expected port(s): eg. `nc -lup 54139`. If no data is recieved, there is an issue between the RPi5 and the ship or the simulation script. If deploying on the ship, confirm the RPi is properly on the ship network (especially if also using a local network, there could be IP assignment issues. It is best to ask the ship for a static IP assignment). If using `sikuliaq_sim.sh`, confirm that the simulation script has the proper IP address of the RPi5 and is sending to that address.
 
 Next, verify that UDP traffic is being republished to the PhytO-ARM docker container. These are `--publish` commands within the `docker_run.sh` script.
 
@@ -499,7 +500,7 @@ _Remote power cycling of the IFCB and RPi5 is especially valuable when operating
  - Confirm that "input voltage selector" is set to 220V on the voltage transformer if using a 240V outlet. 
  - Plug in the DL into the 110-120V outlet on the voltage transformer if using the Pro Switch or AC/DC relay. Assign IFCB and RPi5 to an outlet on the DL switch. 
 2. Ensure the RPi5 is connected to the ship network and taking a known IP address.
-3. Confirm ship UDP data streams are available (e.g., ports 19015, 19023, 19002).
+3. Confirm ship UDP data streams are available.
 
 ### Start PhytO-ARM
 1. On the RPi5, start the PhytO-ARM service:
@@ -509,7 +510,7 @@ _Remote power cycling of the IFCB and RPi5 is especially valuable when operating
     sudo systemctl start phyto-arm
 ```
 
-> Note: `azmp_fall.yaml` was used for the Fall 2025 deployment on the RRS *James Cook* and is currently referenced by `phyto-arm.service`. Operators should only need to modify config files and systemD services to update port assignments following proper install of PhytO-ARM.
+> Note: `sikuliaq.yaml` is currently referenced by `phyto-arm.service`. Operators should only need to modify config files and systemD services to update port assignments following proper install of PhytO-ARM.
 
 2. Confirm PhytO-ARM is running:
 ```bash
@@ -524,7 +525,7 @@ _Remote power cycling of the IFCB and RPi5 is especially valuable when operating
 2. If values are not updating, stop PhytO-ARM and verify UDP streams manually:
 ```bash
     sudo systemctl stop phyto-arm
-    nc -lup 19015
+    nc -lup 54139
 ```
 ### Start IFCB Sampling
 1. Open the IFCBacquire WebUI.

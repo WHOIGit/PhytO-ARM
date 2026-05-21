@@ -46,8 +46,13 @@ docker run "${DOCKER_FLAGS[@]}" \
     --publish 9090:9090/tcp \
     --publish 8098:8098/tcp \
     --publish 12345:12345/udp \
-    --publish 19015:19015/udp \
-    --publish 19023:19023/udp \
+    --publish 54000:54000/udp \
+    --publish 53110:53110/udp \
+    --publish 53138:53138/udp \
+    --publish 53104:53104/udp \
+    --publish 53118:53118/udp \
+    --publish 53133:53133/udp \
+    --publish 54132:54132/udp \
     --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
     --mount type=bind,source="$(pwd)"/src/phyto_arm,target=/app/src/phyto_arm,readonly \
     --mount type=bind,source="$CONFIG",target=/app/mounted_config.yaml,readonly \
