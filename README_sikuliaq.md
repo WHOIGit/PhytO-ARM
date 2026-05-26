@@ -50,7 +50,7 @@ The following packages need to be installed with apt-get:
 Then, enable OpenSSH service:
 
 ```bash
-sudo systemctl endable ssh
+sudo systemctl enable ssh
 sudo systemctl start ssh
 sudo systemctl status ssh
 ```
