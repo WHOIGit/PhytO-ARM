@@ -153,7 +153,7 @@ USBAUTO="false"
 
 # Devices gpsd should collect to at boot time.
 # They need to be read/writeable, either by user gpsd or the group dialout.
-DEVICES="udp://[RPi IP Address]:53121"
+DEVICES="udp://0.0.0.0:53121"
 
 # Other options you want to pass to gpsd
 GPSD_OPTIONS=""
