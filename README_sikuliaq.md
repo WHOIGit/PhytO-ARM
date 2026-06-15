@@ -123,12 +123,28 @@ This change will cause the IFCB to poll the RPi5 for ship data before it writes 
    checkout -b vhaggans/sikuliaq
    ```
 3. Install PhytO-ARM as a service on the rPi
-    ```bash
+   ```bash
     sudo ln -sf $(pwd)/phyto-arm.service /etc/systemd/system/phyto-arm.service
     sudo systemctl daemon-reload
     sudo systemctl enable phyto-arm
     sudo systemctl start phyto-arm
-    ```
+   ```
+    **Note:** users may need to update phyto-arm.service to change the working directory path for PhytO-ARM or the config in use. To update the service file:
+   ```bash
+    nano /etc/systemd/system/phyto-arm.service
+   ```
+     
+   **Only edit the following lines:**
+   ```text
+    WorkingDirectory=/home/[USER, eg. hablab]/PhytO-ARM
+    ExecStart=/bin/bash ./scripts/docker_run.sh ./configs/[CONFIG, eg. sikuliaq_2026].yaml
+   ```
+
+   To restart PhytO-ARM after making changes to the service:
+   ```bash
+    sudo systemctl restart phyto-arm
+   ```
+     
 4. In a web browser on the ship's network, go to http://<RPi5_IP>:8098. You should see output like the following returned in your browser window:
 ```
 {"commitHash": "c203cb925f2f9a2792f49589d15834c48a8008c7", "cruiseID": "RRS James Cook", "ifcbLocation": "Deck Lab, main sink", "ifcbWaterSource": "Flow through seawater intake, 6 m below water line (Bornemann Pumps SLH80-40 Hygienic Twin-Screw Pump). Tapped from Deck Lab sink.", "ctdDepth": 6.0, "gpsLatitude": 43.713016667, "gpsLongitude": -60.812275, "gpsSource": "RRS James Cook", "SBE45ModelSN": "SBE 45, SN:0231", "SBE45LastCal": "16 October, 2024", "SBE38ModelSN": "SBE 38, SN:0490", "SBE38LastCal": "03 January, 2024", "ctdTempSBE45_c": 24.584, "ctdTempSBE38_c": 25.5821, "ctdSal_psu": 0.0165, "ctdCond_sm": 0.00168, "ctdSound_mps": 1498.266, "metFlowRate_lmin": 1.49468, "metFluorescence_v": 0.0497, "metTransmissivity_v": 4.6016, "metSurfaceWindSpeed_ms": 9.319, "metSurfaceWindDirection_deg": 17.316, "metSurfaceAirTemp_c": 22.97, "metSurfaceAirHumid_pct": 71.27, "metSurfaceAirPressure_mbar": 1011.4268, "metPortPAR_v": 222.9, "metStarPAR_v": 213.3, "metPortTIR_v": 552.7, "metStarTIR_v": 549.3}
