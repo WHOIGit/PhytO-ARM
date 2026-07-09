@@ -1,4 +1,41 @@
-FROM ros:noetic
+# Build our own slimmed-down version of ros:noetic
+FROM ubuntu:20.04
+
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV ROS_DISTRO=noetic
+
+# ROS Noetic reached end of life in May 2025, so packages are installed from
+# the final snapshot of the package archive.
+RUN echo 'Etc/UTC' > /etc/timezone \
+ && ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg2 \
+        tzdata \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /usr/share/keyrings \
+ && curl -fsSL 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA' \
+        | gpg --dearmor > /usr/share/keyrings/ros1-snapshots-archive-keyring.gpg \
+ && rm -rf /root/.gnupg \
+ && echo "deb [ signed-by=/usr/share/keyrings/ros1-snapshots-archive-keyring.gpg ] http://snapshots.ros.org/noetic/final/ubuntu focal main" \
+        > /etc/apt/sources.list.d/ros1-snapshots.list
+
+# OpenMPI, a ROS dependency by way of Boost, requires a Fortran compiler, so
+# apt pulls in the LLVM Fortran compiler, which is massive. Block it so apt
+# selects GFortran instead (-1.11 GB).
+RUN printf 'Package: flang-18 libflang-18-dev\nPin: release *\nPin-Priority: -1\n' \
+        > /etc/apt/preferences.d/no-flang
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        python3-rosdep \
+        ros-noetic-ros-base=1.5.0-1* \
+ && rm -rf /var/lib/apt/lists/* \
+ && rosdep init \
+ && rosdep update --rosdistro $ROS_DISTRO
 
 WORKDIR /app
 
