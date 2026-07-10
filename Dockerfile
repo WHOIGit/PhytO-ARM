@@ -5,6 +5,9 @@ ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 ENV ROS_DISTRO=noetic
 
+# Only install packages we explicitly request
+RUN echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/99-no-recommends
+
 # ROS Noetic reached end of life in May 2025, so packages are installed from
 # the final snapshot of the package archive.
 RUN echo 'Etc/UTC' > /etc/timezone \
