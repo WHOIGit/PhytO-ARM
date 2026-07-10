@@ -1,5 +1,5 @@
 # Build our own slimmed-down version of ros:noetic
-FROM ubuntu:20.04
+FROM ubuntu:20.04 AS ros-base
 
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
@@ -42,6 +42,9 @@ RUN apt-get update \
 
 WORKDIR /app
 
+
+# Use an intermediate builder stage to compile dependencies
+FROM ros-base AS builder
 
 # Install apt package dependencies
 COPY deps/apt-requirements.txt ./
@@ -134,6 +137,22 @@ RUN bash -c "source devel/setup.bash \
 RUN mkdir -p /launchpad
 RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz | tar zxf - --strip-components=1 -C /launchpad
 RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
+
+
+# Final build stage, leaving behind build-time dependencies
+FROM ros-base
+
+# Install only the dependencies needed to run the workspace
+COPY --from=builder /app/src ./src
+RUN apt update \
+ && rosdep install --default-yes --dependency-types exec --from-paths ./src --ignore-src \
+ && rm -rf /var/lib/apt/lists/*
+
+# Copy the built workspace, Python packages installed by pip, and the ROS
+# Launchpad management server
+COPY --from=builder /app/devel ./devel
+COPY --from=builder /usr/local /usr/local
+COPY --from=builder /launchpad /launchpad
 
 # Copy the launch tools and server files
 COPY ./phyto-arm ./phyto-arm
