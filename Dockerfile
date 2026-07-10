@@ -32,6 +32,52 @@ RUN echo 'Etc/UTC' > /etc/timezone \
 RUN printf 'Package: flang-18 libflang-18-dev\nPin: release *\nPin-Priority: -1\n' \
         > /etc/apt/preferences.d/no-flang
 
+# Install a shim package that satisfies dependencies on -dev packages that
+# aren't really needed at runtime. The builder stage removes the shim and
+# installs the real packages. To maintain this list, find any -dev packages
+# in the final image and use 'apt-cache rdepends --installed' to see what
+# requires them.
+RUN mkdir -p /tmp/shim/DEBIAN \
+ && provides=$(echo \
+        cmake \
+        google-mock \
+        libapr1-dev \
+        libaprutil1-dev \
+        libboost-all-dev \
+        libboost-chrono-dev \
+        libboost-date-time-dev \
+        libboost-dev \
+        libboost-filesystem-dev \
+        libboost-program-options-dev \
+        libboost-regex-dev \
+        libboost-system-dev \
+        libboost-thread-dev \
+        libbz2-dev \
+        libconsole-bridge-dev \
+        libgpgme-dev \
+        libgtest-dev \
+        liblog4cxx-dev \
+        liblz4-dev \
+        libopencv-dev \
+        libpoco-dev \
+        libssl-dev \
+        libtinyxml2-dev \
+        libturbojpeg0-dev \
+        python3-dev \
+        uuid-dev \
+    | sed 's/ /, /g') \
+ && printf '%s\n' \
+        'Package: dev-dependency-shim' \
+        'Version: 1.0' \
+        'Architecture: all' \
+        'Maintainer: PhytO-ARM developers' \
+        "Provides: $provides" \
+        'Description: Stand-in for build-time dependencies of ROS packages' \
+        > /tmp/shim/DEBIAN/control \
+ && dpkg-deb --build /tmp/shim /tmp/shim.deb \
+ && dpkg -i /tmp/shim.deb \
+ && rm -rf /tmp/shim /tmp/shim.deb
+
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
         python3-rosdep \
@@ -45,6 +91,14 @@ WORKDIR /app
 
 # Use an intermediate builder stage to compile dependencies
 FROM ros-base AS builder
+
+# The shim hides development packages that the builder needs, so remove it
+# and let apt install the real packages.
+RUN dpkg --remove --force-depends dev-dependency-shim \
+ && apt-get update \
+ && apt-get install -y --fix-broken --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
+
 
 # Install apt package dependencies
 COPY deps/apt-requirements.txt ./
