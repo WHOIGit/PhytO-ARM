@@ -196,10 +196,12 @@ RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
 # Final build stage, leaving behind build-time dependencies
 FROM ros-base
 
-# Install only the dependencies needed to run the workspace
+# Install only runtime dependencies
 COPY --from=builder /app/src ./src
 RUN apt update \
- && rosdep install --default-yes --dependency-types exec --from-paths ./src --ignore-src \
+ && rosdep install --default-yes --dependency-types exec \
+        --skip-keys boost `# ds_asio wrongly declares exec dependency` \
+        --from-paths ./src --ignore-src \
  && rm -rf /var/lib/apt/lists/*
 
 # Copy the built workspace, Python packages installed by pip, and the ROS
