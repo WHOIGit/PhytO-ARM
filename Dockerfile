@@ -1,6 +1,103 @@
-FROM ros:noetic
+# Build our own slimmed-down version of ros:noetic
+FROM ubuntu:20.04 AS ros-base
+
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV ROS_DISTRO=noetic
+
+# Only install packages we explicitly request
+RUN echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/99-no-recommends
+
+# ROS Noetic reached end of life in May 2025, so packages are installed from
+# the final snapshot of the package archive.
+RUN echo 'Etc/UTC' > /etc/timezone \
+ && ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg2 \
+        tzdata \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /usr/share/keyrings \
+ && curl -fsSL 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA' \
+        | gpg --dearmor > /usr/share/keyrings/ros1-snapshots-archive-keyring.gpg \
+ && rm -rf /root/.gnupg \
+ && echo "deb [ signed-by=/usr/share/keyrings/ros1-snapshots-archive-keyring.gpg ] http://snapshots.ros.org/noetic/final/ubuntu focal main" \
+        > /etc/apt/sources.list.d/ros1-snapshots.list
+
+# OpenMPI, a ROS dependency by way of Boost, requires a Fortran compiler, so
+# apt pulls in the LLVM Fortran compiler, which is massive. Block it so apt
+# selects GFortran instead (-1.11 GB).
+RUN printf 'Package: flang-18 libflang-18-dev\nPin: release *\nPin-Priority: -1\n' \
+        > /etc/apt/preferences.d/no-flang
+
+# Install a shim package that satisfies dependencies on -dev packages that
+# aren't really needed at runtime. The builder stage removes the shim and
+# installs the real packages. To maintain this list, find any -dev packages
+# in the final image and use 'apt-cache rdepends --installed' to see what
+# requires them.
+RUN mkdir -p /tmp/shim/DEBIAN \
+ && provides=$(echo \
+        cmake \
+        google-mock \
+        libapr1-dev \
+        libaprutil1-dev \
+        libboost-all-dev \
+        libboost-chrono-dev \
+        libboost-date-time-dev \
+        libboost-dev \
+        libboost-filesystem-dev \
+        libboost-program-options-dev \
+        libboost-regex-dev \
+        libboost-system-dev \
+        libboost-thread-dev \
+        libbz2-dev \
+        libconsole-bridge-dev \
+        libgpgme-dev \
+        libgtest-dev \
+        liblog4cxx-dev \
+        liblz4-dev \
+        libopencv-dev \
+        libpoco-dev \
+        libssl-dev \
+        libtinyxml2-dev \
+        libturbojpeg0-dev \
+        python3-dev \
+        uuid-dev \
+    | sed 's/ /, /g') \
+ && printf '%s\n' \
+        'Package: dev-dependency-shim' \
+        'Version: 1.0' \
+        'Architecture: all' \
+        'Maintainer: PhytO-ARM developers' \
+        "Provides: $provides" \
+        'Description: Stand-in for build-time dependencies of ROS packages' \
+        > /tmp/shim/DEBIAN/control \
+ && dpkg-deb --build /tmp/shim /tmp/shim.deb \
+ && dpkg -i /tmp/shim.deb \
+ && rm -rf /tmp/shim /tmp/shim.deb
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        python3-rosdep \
+        ros-noetic-ros-base=1.5.0-1* \
+ && rm -rf /var/lib/apt/lists/* \
+ && rosdep init \
+ && rosdep update --rosdistro $ROS_DISTRO
 
 WORKDIR /app
+
+
+# Use an intermediate builder stage to compile dependencies
+FROM ros-base AS builder
+
+# The shim hides development packages that the builder needs, so remove it
+# and let apt install the real packages.
+RUN dpkg --remove --force-depends dev-dependency-shim \
+ && apt-get update \
+ && apt-get install -y --fix-broken --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
 
 
 # Install apt package dependencies
@@ -94,6 +191,24 @@ RUN bash -c "source devel/setup.bash \
 RUN mkdir -p /launchpad
 RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz | tar zxf - --strip-components=1 -C /launchpad
 RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
+
+
+# Final build stage, leaving behind build-time dependencies
+FROM ros-base
+
+# Install only runtime dependencies
+COPY --from=builder /app/src ./src
+RUN apt update \
+ && rosdep install --default-yes --dependency-types exec \
+        --skip-keys boost `# ds_asio wrongly declares exec dependency` \
+        --from-paths ./src --ignore-src \
+ && rm -rf /var/lib/apt/lists/*
+
+# Copy the built workspace, Python packages installed by pip, and the ROS
+# Launchpad management server
+COPY --from=builder /app/devel ./devel
+COPY --from=builder /usr/local /usr/local
+COPY --from=builder /launchpad /launchpad
 
 # Copy the launch tools and server files
 COPY ./phyto-arm ./phyto-arm
