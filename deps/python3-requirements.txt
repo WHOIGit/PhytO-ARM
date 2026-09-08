@@ -8,10 +8,8 @@ geopy==2.4.1
 # and make PhytO-ARM triton agnostic
 tritonclient[all]==2.33.0
 
-# pyifcbclient does not pin signalrcore; <1.0.2 truncates WebSocket frames
-# larger than one TCP segment.
-signalrcore>=1.0.2
-git+https://github.com/WHOIGit/pyifcbclient.git#egg=pyifcbclient
+# pyifcbclient, signalrcore and msgpack are installed from the Dockerfile
+# because they need --no-deps. See the comment there.
 
 # Use an older version of grpcio that's available as a pre-built wheel.
 # TODO: Remove this when we move beyond Python 3.8 (Ubuntu 20.04).
