@@ -96,6 +96,7 @@ RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz | tar
 RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
 
 # Copy the launch tools and server files
+ENV NO_VIRTUALENV=1
 COPY ./phyto-arm ./phyto-arm
 
 # Expose web interface port
