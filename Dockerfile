@@ -40,6 +40,17 @@ RUN python3 -m pip install "Cython<3.1"
 COPY deps/python3-requirements.txt ./
 RUN python3 -m pip install --ignore-installed -r python3-requirements.txt
 
+# pyifcbclient does not pin signalrcore, and signalrcore >=1.0.1 hard-pins
+# msgpack==1.1.2, which requires Python 3.9. Install these without dependency
+# resolution so we can pin msgpack ourselves. signalrcore <1.0.2 truncates
+# WebSocket frames larger than one TCP segment, which breaks the IFCB client.
+#
+# TODO: Revisit this when upgrading beyond Python 3.8 (Ubuntu 20.04).
+RUN python3 -m pip install --ignore-installed --no-deps \
+        msgpack==1.1.1 \
+        signalrcore==1.0.2 \
+        'git+https://github.com/WHOIGit/pyifcbclient.git#egg=pyifcbclient'
+
 
 # Clone third-party dependencies from VCS
 COPY deps/deps.rosinstall ./
@@ -94,6 +105,10 @@ RUN bash -c "source devel/setup.bash \
 RUN mkdir -p /launchpad
 RUN curl -L http://github.com/WHOIGit/ros-launchpad/archive/v1.0.14.tar.gz | tar zxf - --strip-components=1 -C /launchpad
 RUN python3 -m pip install --ignore-installed -r /launchpad/requirements.txt
+
+# ROS Launchpad otherwise sources /launchpad/.venv before each launch, which
+# this image does not have -- dependencies are installed system-wide.
+ENV NO_VIRTUALENV=1
 
 # Copy the launch tools and server files
 COPY ./phyto-arm ./phyto-arm

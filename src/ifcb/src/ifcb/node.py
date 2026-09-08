@@ -132,6 +132,25 @@ def on_connection_lost(status_pub):
     # Publish connection status
     status_pub.publish(Bool(data=False))
 
+
+# Callback for when signalrcore recovers the connection on its own
+def on_connection_restored(status_pub):
+    rospy.loginfo('IFCB connection restored')
+    ifcb_ready.set()
+    status_pub.publish(Bool(data=True))
+
+
+# Shut down the current client so its socket and keepalive thread are released
+def stop_client():
+    global ifcb_client
+    if ifcb_client is None:
+        return
+    try:
+        ifcb_client.hub_connection.stop()
+    except Exception:
+        rospy.logwarn('Failed to stop previous IFCB client', exc_info=True)
+    ifcb_client = None
+
 # Reset the data folder to the configured data directory
 def on_interactive_stopped(pub, *_):
     if not send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}'):
@@ -205,6 +224,7 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
         try:
             # Create a new IFCB client instance for each connection attempt
             rospy.loginfo('Creating new IFCB client...')
+            stop_client()
             try:
                 ifcb_client = IFCBClient(
                     f'ws://{rospy.get_param("~address")}'\
@@ -216,8 +236,10 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
 
             # Set up callbacks for the new client
             ifcb_client.on_started(on_started)
-            ifcb_client.on_reconnect(
+            ifcb_client.hub_connection.on_close(
                         functools.partial(on_connection_lost, publishers['status']))
+            ifcb_client.on_reconnect(
+                        functools.partial(on_connection_restored, publishers['status']))
             ifcb_client.on_any_message(
                         functools.partial(on_any_message, publishers['rx']))
             ifcb_client.on(('triggerimage',),
@@ -250,7 +272,7 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
             rospy.logwarn(f"Unable to establish connection to IFCB: {connect_error}")
 
             # Clean up the failed client
-            ifcb_client = None
+            stop_client()
 
             # Exponential backoff with jitter
             rospy.loginfo(f'Retrying IFCB connection in {current_retry_interval} seconds...')
