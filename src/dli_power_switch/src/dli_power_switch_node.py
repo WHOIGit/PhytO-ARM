@@ -3,6 +3,7 @@
 Functionality for monitoring and controlling a Digital Loggers Web Power Switch Pro model.
 """
 import functools
+import traceback
 
 import rospy
 
@@ -72,5 +73,6 @@ def run_dli_power_switch_node() -> None:
 if __name__ == '__main__':
     try:
         run_dli_power_switch_node()
-    except rospy.ROSInterruptException:
-        pass
+    except Exception:
+        rospy.logerr("Error in digital_logger:\n%s", traceback.format_exc())
+        rospy.signal_shutdown("Digital Logger failed")
