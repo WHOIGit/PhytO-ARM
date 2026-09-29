@@ -236,13 +236,6 @@ arm_duty_cycle: #optional
 
     ctd_topic: '/arm_duty_cycle/ctd/depth'
 
-    ctd_comms: #optional
-        connection:
-            type: "SERIAL"
-            port: "/dev/ttyS3"
-            baud: 115200
-            data_bits: 8
-
     # Determines peak value sought by both scheduled depth
     profiler:
         resolution: 0.02  # m

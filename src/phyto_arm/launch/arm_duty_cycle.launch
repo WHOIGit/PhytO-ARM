@@ -18,9 +18,6 @@
             <remap from="~in" to="/aml_udp_stream" />
         </node>
 
-
-        <!-- <node name="ctd_comms" pkg="ds_util_nodes" type="bridge_node" />  -->
-
         <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
         <group if="$(arg duty_cycle_winch)">
 
