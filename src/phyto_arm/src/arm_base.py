@@ -206,10 +206,10 @@ class ArmBase:
         while not rospy.is_shutdown():
             # Don't block so that we can keeping checking for shutdowns
             if self.task_lock.acquire(blocking=False):
+                task = self.get_next_task(task)
                 # If no movement is required
-                if self.winch_client is None:
-                    task = self.get_next_task(task)
-                    rospy.logwarn(f'No winch; running {task.name}')
+                if self.winch_client is None or task.depth is None:
+                    rospy.logwarn(f'No movement requested; running {task.name}')
                     self.publish_current_task(task.name)
                     task.callback()
 
@@ -226,12 +226,6 @@ class ArmBase:
                         # Wait until central semaphore clears us to move
                         rospy.sleep(1)
 
-                    # TODO: Optimize task evaluation. Currently we are blocking on the assumption that
-                    # movement will be needed; this is not always the case. Not a problem for 1 or 2
-                    # winches, but could get slow if the number of winches greatly exceeds the
-                    # max_moving_winches limit.
-
-                    task = self.get_next_task(task)
                     rospy.logwarn(f'Goal depth {task.depth} for task {task.name}')
                     self.publish_current_task(task.name)
                     self.send_winch_goal(task.depth, task.speed, task.callback)
