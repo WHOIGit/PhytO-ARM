@@ -80,14 +80,15 @@ stateDiagram-v2
     BeginProfiling --> Upcast
     Upcast --> Downcast
     Downcast --> ProcessProfile
-    ProcessProfile --> MoveToTargetDepth: Peak found
-    ProcessProfile --> MoveToDefaultDepth: Peak not found
+    ProcessProfile --> MoveToPeakDepth: Peak found
+    ProcessProfile --> MoveToScheduledDepth: Peak not found
 
-    MoveToTargetDepth --> TakeSample
-    MoveToDefaultDepth --> TakeSample
+    MoveToPeakDepth --> TakeSample
+    MoveToScheduledDepth --> TakeSample
     TakeSample --> CheckSampleCount
 
-    CheckSampleCount --> Upcast: More samples needed
+    CheckSampleCount --> MoveToScheduledDepth: Scheduled depths remaining
+    CheckSampleCount --> Upcast: Scheduled depths done
     CheckSampleCount --> ShutdownSampling: Target reached
 
     ShutdownSampling --> SyncFiles
@@ -133,7 +134,7 @@ The system will operate as follows:
 | `check_interval` | How often to check if duty transition needed (sec) | 60 |
 | `shutdown_wait_duration` | Wait for current sample before shutdown (sec) | 180 |
 | `restart_wait_duration` | Wait for IFCB connection after power-on (sec) | 180 |
-| `default_depth` | Sampling depth when no profiler peak found | 5.0 m |
+| `scheduled_depths` | Depths to sample after the peak each cycle (under `tasks`, not `duty_cycle`) | None |
 | `file_sync.enabled` | Enable file syncing from IFCB to Pi | false |
 | `file_sync.source_path` | Path on IFCB host to sync from | /data/ifcbdata |
 | `file_sync.destination_path` | Path on Pi to sync to | /mnt/data/ifcb_sync |
