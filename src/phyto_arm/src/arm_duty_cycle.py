@@ -6,7 +6,7 @@ a configurable schedule while performing profiling and sampling tasks.
 """
 import subprocess
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from threading import Event
 
 import actionlib
@@ -32,10 +32,6 @@ class ArmDutyCycle(ArmBase):
         self.profiler_peak_depth = None
         self.profiler_peak_value = None
 
-        # Maintenance tracking
-        self.last_cart_debub_time = None
-        self.last_bead_time = None
-
         # IFCB connection tracking
         self.ifcb_connected = False
         self.ifcb_connection_event = Event()
@@ -51,7 +47,6 @@ class ArmDutyCycle(ArmBase):
 
         # Sample session tracking
         self.samples_in_current_session = 0
-        self.last_session_start_time = None
         self.target_samples_per_session = 0
         self.reference_start_time = None  # Fixed reference time for interval calculations
 
@@ -78,7 +73,7 @@ class ArmDutyCycle(ArmBase):
             return Task('no_winch', handle_nowinch)
 
         # Start off at min depth
-        preupcast_tasks = ['await_ifcb_connection', 'startup_sampling', 'await_duty_cycle']
+        preupcast_tasks = ['startup_sampling', 'await_duty_cycle']
         if last_task is None or last_task.name in preupcast_tasks:
             return Task('upcast', self.start_next_task, rospy.get_param('winch/range/min'))
 
@@ -233,17 +228,6 @@ def on_ctd_depth(msg):
     arm.ctd_depth_received.clear()
 
 
-def await_ifcb_connection():
-    """Wait for IFCB connection to be established."""
-    while not arm.ifcb_connected and not rospy.is_shutdown():
-        rospy.loginfo('Waiting for IFCB connection...')
-        arm.ifcb_connection_event.wait(30)
-
-    if arm.ifcb_connected:
-        rospy.loginfo('IFCB connection restored, resuming tasks')
-        arm.start_next_task()
-
-
 def await_duty_cycle():
     """Wait for the next duty cycle transition"""
     rospy.loginfo('Outside sampling window, waiting for next duty cycle')
@@ -268,7 +252,6 @@ def startup_sampling():
 
     # Reset session tracking
     arm.samples_in_current_session = 0
-    arm.last_session_start_time = rospy.Time.now()
 
     # Update duty cycle state
     arm.is_sampling_active = True
@@ -548,11 +531,6 @@ def main():
     if rospy.get_param('winch_enabled') is True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
     arm = ArmDutyCycle(rospy.get_name(), winch_name)
-
-    # Set a fake timestamp for having run beads and cartridge debubble, so that
-    # we don't run it every startup and potentially waste time or bead supply.
-    arm.last_cart_debub_time = rospy.Time.now()
-    arm.last_bead_time = rospy.Time.now()
 
     # Subscribe to profiler messages that follow each transit
     rospy.Subscriber('profiler', DepthProfile, on_profile_msg)
