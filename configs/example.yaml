@@ -138,7 +138,7 @@ arm_ifcb: #optional
         # Should we flush sample tube after each sample?
         flush_after_sample: false
 
-    ctd_topic: '/aml/ctd/depth'
+    ctd_topic: '/arm_ifcb/ctd/depth'
 
 
     #  Note these values are not read by PhytO-ARM, they are sought by
