@@ -77,18 +77,6 @@ ifcb:
     data_dir: "/data/ifcbdata"
 
 
-aml: #optional - useful if launching on another device
-    #  Note these values are not read by PhytO-ARM, they are sought by
-    #  the included ds_util_nodes package, which publishes CTD data reads.
-    #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
-    ctd_comms:
-        connection:
-            type: "SERIAL"
-            port: "/dev/ttyS3"
-            baud: 115200
-            data_bits: 8
-
-
 arm_ifcb: #optional
     # Configuration related to tasks
     tasks: #optional
