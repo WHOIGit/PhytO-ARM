@@ -17,7 +17,7 @@
         <node name="classifier" pkg="triton_classifier" type="classifier_node.py" />
 
         <node name="image_converter" pkg="image_transport" type="republish"
-              args="compressed in:=/ifcb/roi/image raw out:=/ifcb/roi/image" />
+              args="compressed in:=/ifcb/roi/image raw out:=/ifcb/roi/image/raw" />
     </group>
 
     <node name="gps" pkg="gpsd_client" type="gpsd_client">
