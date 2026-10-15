@@ -39,6 +39,7 @@ generate_messages(
 
 if (CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(src/tests.py)
+  catkin_add_nosetests(src/test_thermal.py)
 endif()
 
 catkin_package()
