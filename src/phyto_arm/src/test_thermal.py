@@ -14,7 +14,9 @@ def make_monitor(**kwargs):
     args = dict(max_temperature=40.0, trip_duration=300, min_readings=3,
                 stale_timeout=900, now=0.0)
     args.update(kwargs)
-    return ThermalMonitor(**args)
+    m = ThermalMonitor(**args)
+    m.set_connected(True, args['now'])
+    return m
 
 
 class TestThermalMonitor(unittest.TestCase):
@@ -90,6 +92,24 @@ class TestThermalMonitor(unittest.TestCase):
         m.set_powered(True, 5000)
         self.assertIsNone(m.check(5899))
         self.assertIsNotNone(m.check(5900))
+
+    def test_stale_ignored_when_disconnected(self):
+        m = make_monitor(stale_timeout=900)
+        m.reading(25.0, 50.0, 0)
+        m.set_connected(False, 10)
+        self.assertIsNone(m.check(5000))
+
+    def test_stale_clock_restarts_at_reconnect(self):
+        m = make_monitor(stale_timeout=900)
+        m.reading(25.0, 50.0, 0)
+        m.set_connected(False, 10)
+        m.set_connected(True, 5000)
+        self.assertIsNone(m.check(5899))
+        self.assertIsNotNone(m.check(5900))
+
+    def test_stale_waits_for_first_connection(self):
+        m = ThermalMonitor(40.0, 300, 3, 900, now=0.0)
+        self.assertIsNone(m.check(5000))
 
     def test_stale_disabled(self):
         m = make_monitor(stale_timeout=0)

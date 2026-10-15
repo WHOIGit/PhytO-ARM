@@ -339,7 +339,7 @@ When running in a container, the gpsd service on the host needs to be modified t
 
 `arm_oleander` can power off the IFCB when the temperature from its housekeeping sensor (the one recorded in `.hdr` files) stays too high. See `arm_oleander.thermal_shutdown` in `configs/example.yaml`.
 
-The `ifcb` node reads the sensor every `ifcb.environment_poll_interval` seconds by sending `daq:getenvironment`. The `thermal_watchdog` node trips when readings stay over `max_temperature` for `trip_duration` seconds (and at least `min_readings` readings). It also trips if the IFCB outlet is on but no valid reading arrives for `stale_timeout` seconds. When it trips, it:
+The `ifcb` node reads the sensor every `ifcb.environment_poll_interval` seconds by sending `daq:getenvironment`. The `thermal_watchdog` node trips when readings stay over `max_temperature` for `trip_duration` seconds (and at least `min_readings` readings). It also trips if the IFCB is powered and connected but no valid reading arrives for `stale_timeout` seconds (off by default until polling during a sample is verified). When it trips, it:
 
 1. Writes the lockout file (`lockout_file`)
 2. Turns off the pump
@@ -351,7 +351,7 @@ While the lockout file exists, the arm will not turn the pump or IFCB back on, i
 
 Setup on the IFCB side:
 
-- Put a private key where the container can read it (e.g. under `/data`, which `docker_run.sh` mounts) and set `ssh.key_file`. Add the public key to `~/.ssh/authorized_keys` for `ssh.user` on the IFCB.
+- Put a private key where the container can read it (e.g. under `/data`, which `docker_run.sh` mounts), `chmod 600` it (ssh refuses keys others can read), and set `ssh.key_file`. Add the public key to `~/.ssh/authorized_keys` for `ssh.user` on the IFCB.
 - Give `ssh.user` passwordless sudo for shutdown, e.g. `ifcb ALL=(root) NOPASSWD: /sbin/shutdown` in `/etc/sudoers.d/`.
 - Test from the container with `ssh -i <key> <user>@<ifcb address> true`.
 
@@ -584,6 +584,7 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
     - Subscribes:
       - `/ifcb/temperature` and `/ifcb/humidity` for sensor readings
       - `/digital_logger/outlet/{ifcb outlet}/status` to know whether the IFCB is powered
+      - `/ifcb/connected` so a lost connection is not mistaken for a sensor failure
     - Publishes:
       - `~lockout` (latched) true once a thermal shutdown has happened
       - `/digital_logger/outlet/{outlet}/control` to turn off the pump and IFCB

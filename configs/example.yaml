@@ -106,9 +106,11 @@ arm_oleander: #optional
         # many readings, before tripping. Prevents tripping on a blip.
         trip_duration: 300 # seconds
         min_readings: 3
-        # Trip if the IFCB outlet is on but no valid temperature arrives for
-        # this long (sensor error, IFCB unresponsive). 0 = never.
-        stale_timeout: 900 # seconds
+        # Trip if the IFCB is powered and connected but no valid temperature
+        # arrives for this long (sensor error). A lost connection does not count.
+        # 0 = never. Leave at 0 until daq:getenvironment is confirmed to reply
+        # while a sample is running, or long samples will trip it.
+        stale_timeout: 0 # seconds
         # Temperatures outside this range are treated as sensor errors
         valid_temperature_range: [-20.0, 85.0] #optional
         lockout_file: "/data/phyto-arm/thermal_lockout"

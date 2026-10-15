@@ -17,8 +17,10 @@ class ThermalMonitor:
       - every valid temperature (or humidity, if enabled) reading has been over
         the limit for at least `trip_duration` seconds and `min_readings`
         readings, so that a single blip does not trip it; or
-      - the IFCB is powered but no valid temperature reading has arrived for
-        `stale_timeout` seconds (0 disables this check).
+      - the IFCB is powered and connected but no valid temperature reading has
+        arrived for `stale_timeout` seconds (0 disables this check). A lost
+        connection is left to the arm's own handling rather than treated as a
+        thermal problem.
 
     Temperatures outside `valid_range`, humidities outside 0-100 %, and
     non-finite values are treated as sensor
@@ -38,6 +40,8 @@ class ThermalMonitor:
 
         self.powered = True  # assume powered until told otherwise
         self.powered_since = now
+        self.connected = False
+        self.connected_since = now
         self.last_valid_time = None
         self.last_temperature = None
         self.last_humidity = None
@@ -63,6 +67,11 @@ class ThermalMonitor:
             self._streaks = {k: None for k in self._streaks}
         self.powered = powered
 
+    def set_connected(self, connected, now):
+        if connected and not self.connected:
+            self.connected_since = now
+        self.connected = connected
+
     def reading(self, temperature, humidity, now):
         if self._valid(temperature, self.valid_range):
             self.last_valid_time = now
@@ -84,8 +93,8 @@ class ThermalMonitor:
                 return (f'{name} over {limits[name]} for {now - since:.0f} s '
                         f'({count} readings)')
 
-        if self.powered and self.stale_timeout > 0:
-            last = max(self.last_valid_time or self.powered_since, self.powered_since)
+        if self.powered and self.connected and self.stale_timeout > 0:
+            last = max(self.last_valid_time or 0, self.powered_since, self.connected_since)
             if now - last >= self.stale_timeout:
                 return f'no valid temperature reading for {now - last:.0f} s'
 

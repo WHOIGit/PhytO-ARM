@@ -79,6 +79,12 @@ def await_thermal_lockout():
     rospy.logerr(f'Thermal lockout active since {record.get("time")}: {record.get("reason")}. '
                  'Sampling will not resume until the lockout file is removed and PhytO-ARM is restarted.')
     stop_pump()
+    # If the shutdown already finished, make sure the IFCB is still off, e.g.
+    # the Digital Logger came back up with its outlets on after a power loss.
+    # An unfinished shutdown is left to the watchdog so the IFCB gets its SSH
+    # shutdown before power is cut.
+    if record.get('completed', False):
+        stop_ifcb()
     # Deliberately never returns to sampling; the restart must be manual
     while not rospy.is_shutdown():
         rospy.sleep(60)
@@ -188,12 +194,13 @@ def main():
 
     arm = ArmOleander(rospy.get_name())
 
-    # Setup publisher for DL outlet control. Names refer to digital_logger/outlets
+    # Setup publisher for DL outlet control. Names refer to digital_logger/outlets.
+    # Latched so a command sent before the DL node connects is not lost.
     outlets = rospy.get_param('outlets', {})
     dl_pump_pub = rospy.Publisher(
-        f'/digital_logger/outlet/{outlets.get("pump", "pump")}/control', Bool, queue_size=10)
+        f'/digital_logger/outlet/{outlets.get("pump", "pump")}/control', Bool, queue_size=10, latch=True)
     dl_ifcb_pub = rospy.Publisher(
-        f'/digital_logger/outlet/{outlets.get("ifcb", "ifcb")}/control', Bool, queue_size=10)
+        f'/digital_logger/outlet/{outlets.get("ifcb", "ifcb")}/control', Bool, queue_size=10, latch=True)
 
     # Subscribe to IFCB connection status
     rospy.Subscriber('/ifcb/connected', Bool, on_ifcb_connection_status)

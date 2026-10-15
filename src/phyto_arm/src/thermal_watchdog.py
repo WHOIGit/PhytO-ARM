@@ -61,17 +61,21 @@ def ssh_shutdown(cfg):
         return False
 
 
-def shut_down_ifcb(cfg, lockout_file, reason, monitor):
+def shut_down_ifcb(cfg, lockout_file, reason, temperature, humidity, resumed_record=None):
     deployment = rospy.get_param('/name', '')
-    rospy.logerr(f'THERMAL SHUTDOWN: {reason}')
 
-    write_lockout(lockout_file, reason,
-                  temperature=monitor.last_temperature,
-                  humidity=monitor.last_humidity)
-
-    send_alerts(f'*IFCB thermal shutdown*\n - Deployment: _{deployment}_\n'
-                f' - Reason: {reason}\n - Last temperature: {monitor.last_temperature} C\n'
-                f' - Last humidity: {monitor.last_humidity} %')
+    if resumed_record is None:
+        rospy.logerr(f'THERMAL SHUTDOWN: {reason}')
+        tripped_at = write_lockout(lockout_file, reason,
+                                   temperature=temperature, humidity=humidity)['time']
+        send_alerts(f'*IFCB thermal shutdown*\n - Deployment: _{deployment}_\n'
+                    f' - Reason: {reason}\n - Last temperature: {temperature} C\n'
+                    f' - Last humidity: {humidity} %')
+    else:
+        tripped_at = resumed_record.get('time')
+        rospy.logwarn(f'Resuming thermal shutdown that tripped at {tripped_at}: {reason}')
+        send_alerts(f'*Resuming interrupted IFCB thermal shutdown* (_{deployment}_)\n'
+                    f' - Tripped at: {tripped_at}\n - Reason: {reason}')
 
     outlets = rospy.get_param('outlets', {})
     pump_pub = rospy.Publisher(
@@ -93,8 +97,7 @@ def shut_down_ifcb(cfg, lockout_file, reason, monitor):
     rospy.sleep(2)
 
     write_lockout(lockout_file, reason, completed=True, ssh_shutdown_ok=ssh_ok,
-                  temperature=monitor.last_temperature,
-                  humidity=monitor.last_humidity)
+                  temperature=temperature, humidity=humidity, time=tripped_at)
     rospy.logerr(f'IFCB powered off. Remove {lockout_file} and restart PhytO-ARM to resume.')
     send_alerts(f'*IFCB powered off* (_{deployment}_). SSH shutdown '
                 f'{"succeeded" if ssh_ok else "did not report success"}. Manual restart required.')
@@ -105,7 +108,10 @@ def main():
 
     cfg = rospy.get_param('thermal_shutdown', {})
     if not cfg.get('enabled', False):
+        # Stay up: phyto-arm runs roslaunch with --required, so exiting would
+        # stop every node
         rospy.logwarn('Thermal shutdown disabled')
+        rospy.spin()
         return
 
     lockout_file = cfg['lockout_file']
@@ -119,8 +125,9 @@ def main():
         rospy.logerr(f'Thermal lockout active since {record.get("time")}: {record.get("reason")}')
         if not record.get('completed', False):
             rospy.logwarn('Previous thermal shutdown did not complete; resuming it')
-            monitor = ThermalMonitor(0, 0, 0, 0)
-            shut_down_ifcb(cfg, lockout_file, record.get('reason', 'unknown'), monitor)
+            shut_down_ifcb(cfg, lockout_file, record.get('reason', 'unknown'),
+                           record.get('temperature'), record.get('humidity'),
+                           resumed_record=record)
         rospy.spin()
         return
 
@@ -164,10 +171,14 @@ def main():
     def on_outlet(msg):
         monitor.set_powered(msg.is_active, rospy.get_time())
 
+    def on_connected(msg):
+        monitor.set_connected(msg.data, rospy.get_time())
+
     ifcb_outlet = rospy.get_param('outlets', {}).get('ifcb', 'ifcb')
     rospy.Subscriber('/ifcb/temperature', Temperature, on_temperature)
     rospy.Subscriber('/ifcb/humidity', RelativeHumidity, on_humidity)
     rospy.Subscriber(f'/digital_logger/outlet/{ifcb_outlet}/status', OutletStatus, on_outlet)
+    rospy.Subscriber('/ifcb/connected', Bool, on_connected)
 
     if monitor.stale_timeout > 0 and rospy.get_param('/ifcb/environment_poll_interval', 0) <= 0:
         rospy.logerr('ifcb/environment_poll_interval is not set; with no readings the '
@@ -181,7 +192,8 @@ def main():
         reason = monitor.check(rospy.get_time())
         if reason is not None:
             lockout_pub.publish(Bool(data=True))
-            shut_down_ifcb(cfg, lockout_file, reason, monitor)
+            shut_down_ifcb(cfg, lockout_file, reason,
+                           monitor.last_temperature, monitor.last_humidity)
             break
         rate.sleep()
 
