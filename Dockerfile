@@ -40,15 +40,15 @@ RUN python3 -m pip install "Cython<3.1"
 COPY deps/python3-requirements.txt ./
 RUN python3 -m pip install --ignore-installed -r python3-requirements.txt
 
-# pyifcbclient requires signalrcore>=1.0.2, which pins msgpack==1.1.2, which
-# requires Python 3.9. signalrcore's synchronous client (all pyifcbclient uses)
-# works on 3.8 with msgpack 1.1.1, so install these without dependency
-# resolution.
+# pyifcbclient does not pin signalrcore, and signalrcore >=1.0.1 hard-pins
+# msgpack==1.1.2, which requires Python 3.9. Install these without dependency
+# resolution so we can pin msgpack ourselves. signalrcore <1.0.2 truncates
+# WebSocket frames larger than one TCP segment, which breaks the IFCB client.
 #
-# TODO: Remove this when upgrading beyond Python 3.8 (Ubuntu 20.04).
-RUN python3 -m pip install 'msgpack==1.1.1' \
- && python3 -m pip install --no-deps \
-        'signalrcore==1.0.2' \
+# TODO: Revisit this when upgrading beyond Python 3.8 (Ubuntu 20.04).
+RUN python3 -m pip install --ignore-installed --no-deps \
+        msgpack==1.1.1 \
+        signalrcore==1.0.2 \
         'git+https://github.com/WHOIGit/pyifcbclient.git#egg=pyifcbclient'
 
 
