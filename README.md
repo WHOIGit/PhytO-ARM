@@ -335,6 +335,26 @@ When running in a container, the gpsd service on the host needs to be modified t
     ListenStream=0.0.0.0:2947
 
 
+### IFCB thermal shutdown
+
+`arm_oleander` can power off the IFCB when the temperature from its housekeeping sensor (the one recorded in `.hdr` files) stays too high. See `arm_oleander.thermal_shutdown` in `configs/example.yaml`.
+
+The `ifcb` node reads the sensor every `ifcb.environment_poll_interval` seconds by sending `daq:getenvironment`. The `thermal_watchdog` node trips when readings stay over `max_temperature` for `trip_duration` seconds (and at least `min_readings` readings). It also trips if the IFCB is powered and connected but no valid reading arrives for `stale_timeout` seconds (off by default until polling during a sample is verified). When it trips, it:
+
+1. Writes the lockout file (`lockout_file`)
+2. Turns off the pump
+3. Runs `ssh.command` on the IFCB to shut it down
+4. Waits `power_off_delay` seconds, then turns off the IFCB outlet
+5. Sends Slack messages to every entry under `alerts`
+
+While the lockout file exists, the arm will not turn the pump or IFCB back on, including across PhytO-ARM restarts. **Restarting is manual:** check the IFCB, delete the lockout file (it records the reason and last readings), power the IFCB on, and restart PhytO-ARM.
+
+Setup on the IFCB side:
+
+- Put a private key where the container can read it (e.g. under `/data`, which `docker_run.sh` mounts), `chmod 600` it (ssh refuses keys others can read), and set `ssh.key_file`. Add the public key to `~/.ssh/authorized_keys` for `ssh.user` on the IFCB.
+- Give `ssh.user` passwordless sudo for shutdown, e.g. `ifcb ALL=(root) NOPASSWD: /sbin/shutdown` in `/etc/sudoers.d/`.
+- Test from the container with `ssh -i <key> <user>@<ifcb address> true`.
+
 ### Other board configuration
 
 Additional Ubuntu configuration that may be necessary to ensure GPS stays powered on and available.
@@ -560,6 +580,15 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
       - `~sample/feedback` sampling action feedback
       - `~sample/result` sampling action result
 
+  - `thermal_watchdog`: Powers off the IFCB if its housekeeping sensor runs hot (see _IFCB thermal shutdown_)
+    - Subscribes:
+      - `/ifcb/temperature` and `/ifcb/humidity` for sensor readings
+      - `/digital_logger/outlet/{ifcb outlet}/status` to know whether the IFCB is powered
+      - `/ifcb/connected` so a lost connection is not mistaken for a sensor failure
+    - Publishes:
+      - `~lockout` (latched) true once a thermal shutdown has happened
+      - `/digital_logger/outlet/{outlet}/control` to turn off the pump and IFCB
+
   - `mock_ifcb_runner`: Mock version of `ifcb_runner`
     - Publishes:
       - `~state` current state for debugging purposes
@@ -642,6 +671,8 @@ These nodes perform lower-level interactions with hardware components. These nod
       - `~roi/image` for detected ROI images only
       - `~roi/image/raw` republished ROI as raw (if classifier enabled)
       - `~roi/markers` with rectangular bounds of ROIs
+      - `~temperature` housekeeping sensor temperature (C), when `environment_poll_interval` > 0
+      - `~humidity` housekeeping sensor relative humidity (0.0-1.0), when `environment_poll_interval` > 0
     - Services:
       - `~command` to send a message to the IFCB
       - `~routine` to send a routine to the IFCB

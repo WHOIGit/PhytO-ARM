@@ -15,7 +15,7 @@ from ifcbclient import IFCBClient
 from ds_core_msgs.msg import RawData
 from foxglove_msgs.msg import ImageMarkerArray
 from geometry_msgs.msg import Point
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, RelativeHumidity, Temperature
 from std_msgs.msg import Bool, ColorRGBA
 from visualization_msgs.msg import ImageMarker
 
@@ -193,6 +193,32 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     mkr_pub.publish(markers)
 
 
+# Publish a reading from the IFCB's housekeeping temperature/humidity sensor.
+# The reply to 'daq:getenvironment' is 'valuechanged:getenvironment:<humidity %>:<temperature C>'.
+def on_getenvironment(temp_pub, humid_pub, *fields):
+    humidity, temperature = fields[-2:]
+    stamp = rospy.Time.now()
+
+    temp_msg = Temperature()
+    temp_msg.header.stamp = stamp
+    temp_msg.temperature = temperature
+    temp_pub.publish(temp_msg)
+
+    # RelativeHumidity is a fraction from 0.0 to 1.0
+    humid_msg = RelativeHumidity()
+    humid_msg.header.stamp = stamp
+    humid_msg.relative_humidity = humidity / 100.0
+    humid_pub.publish(humid_msg)
+
+
+# Periodically ask the IFCB for an environmental sensor reading
+def environment_poller(tx_pub, interval):
+    while not rospy.is_shutdown():
+        rospy.sleep(interval)
+        if ifcb_ready.is_set():
+            send_command(tx_pub, 'daq:getenvironment')
+
+
 # Manages IFCB client connection with automatic retry on failure.
 def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
     global ifcb_client
@@ -228,6 +254,8 @@ def connection_manager(publishers, retry_interval=5, max_retry_interval=60):
                         functools.partial(on_triggerrois, publishers['roi'], publishers['mkr']))
             ifcb_client.on(('valuechanged','interactive','stopped',),
                         functools.partial(on_interactive_stopped, publishers['tx']))
+            ifcb_client.on(('valuechanged','getenvironment',),
+                        functools.partial(on_getenvironment, publishers['temperature'], publishers['humidity']))
 
             try:
                 ifcb_client.connect()
@@ -275,6 +303,10 @@ def main():
     # Publisher for connection status (latched so new subscribers get current state)
     status_pub = rospy.Publisher('~connected', Bool, queue_size=1, latch=True)
 
+    # Publishers for the housekeeping environmental sensor
+    temp_pub = rospy.Publisher('~temperature', Temperature, queue_size=5)
+    humid_pub = rospy.Publisher('~humidity', RelativeHumidity, queue_size=5)
+
     # Bundle publishers for the connection manager
     publishers = {
         'rx': rx_pub,
@@ -282,7 +314,9 @@ def main():
         'img': img_pub,
         'roi': roi_pub,
         'mkr': mkr_pub,
-        'status': status_pub
+        'status': status_pub,
+        'temperature': temp_pub,
+        'humidity': humid_pub,
     }
 
 
@@ -311,6 +345,15 @@ def main():
         daemon=True
     )
     connection_thread.start()
+
+    # Optionally poll the environmental sensor; 0 disables polling
+    env_interval = rospy.get_param('~environment_poll_interval', 0)
+    if env_interval > 0:
+        threading.Thread(
+            target=environment_poller,
+            args=(tx_pub, env_interval),
+            daemon=True
+        ).start()
 
     rospy.loginfo('IFCB node started, attempting connection to IFCB...')
 

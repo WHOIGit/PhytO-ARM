@@ -13,5 +13,7 @@
         <node name="arm" pkg="phyto_arm" type="arm_oleander.py" />
 
         <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
+
+        <node name="thermal_watchdog" pkg="phyto_arm" type="thermal_watchdog.py" />
     </group>
 </launch>

@@ -10,6 +10,7 @@ import rospy
 from std_msgs.msg import Bool
 
 from arm_base import ArmBase, Task
+from thermal import lockout_active, read_lockout
 from phyto_arm.msg import RunIFCBGoal, RunIFCBAction
 
 
@@ -24,6 +25,10 @@ class ArmOleander(ArmBase):
     #  - depth: the depth to move to (optional, won't move if not provided)
     #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
+        # A thermal shutdown overrides everything until a person clears it
+        if thermal_lockout():
+            return Task('thermal_lockout', await_thermal_lockout)
+
         # Always check if we're in the geofence
         if self.geofence_block():
             if last_task is None or last_task.name == 'shutdown_sampling':
@@ -66,10 +71,33 @@ def on_ifcb_connection_status(msg):
     else:
         ifcb_connection_event.clear()
 
+def thermal_lockout():
+    return lockout_active(rospy.get_param('thermal_shutdown/lockout_file', ''))
+
+def await_thermal_lockout():
+    record = read_lockout(rospy.get_param('thermal_shutdown/lockout_file'))
+    rospy.logerr(f'Thermal lockout active since {record.get("time")}: {record.get("reason")}. '
+                 'Sampling will not resume until the lockout file is removed and PhytO-ARM is restarted.')
+    stop_pump()
+    # If the shutdown already finished, make sure the IFCB is still off, e.g.
+    # the Digital Logger came back up with its outlets on after a power loss.
+    # An unfinished shutdown is left to the watchdog so the IFCB gets its SSH
+    # shutdown before power is cut.
+    if record.get('completed', False):
+        stop_ifcb()
+    # Deliberately never returns to sampling; the restart must be manual
+    while not rospy.is_shutdown():
+        rospy.sleep(60)
+
 def send_ifcb_action():
     goal = RunIFCBGoal()
     ifcb_runner.send_goal(goal)
-    ifcb_runner.wait_for_result()
+    # Poll rather than block forever, because the IFCB may be powered off
+    # mid-sample by a thermal shutdown and never report back
+    while not ifcb_runner.wait_for_result(rospy.Duration(5)):
+        if rospy.is_shutdown() or thermal_lockout():
+            ifcb_runner.cancel_all_goals()
+            return
 
 def await_geofence():
     rospy.loginfo('Waiting for geofence to be cleared')
@@ -80,6 +108,9 @@ def await_geofence():
     arm.start_next_task()
 
 def ifcb_sample():
+    if thermal_lockout():
+        arm.start_next_task()
+        return
     if not ifcb_connected:
         stop_pump()
 
@@ -111,10 +142,16 @@ def shutdown_sampling():
 
 
 def start_pump():
+    if thermal_lockout():
+        rospy.logerr('Refusing to start pump during thermal lockout')
+        return
     dl_pump_pub.publish(Bool(data=True))
 
 
 def start_ifcb():
+    if thermal_lockout():
+        rospy.logerr('Refusing to power on IFCB during thermal lockout')
+        return
     dl_ifcb_pub.publish(Bool(data=True))
 
     # Wait for IFCB to connect, with timeout
@@ -157,9 +194,13 @@ def main():
 
     arm = ArmOleander(rospy.get_name())
 
-    # Setup publisher for DL outlet control
-    dl_pump_pub = rospy.Publisher('/digital_logger/outlet/pump/control', Bool, queue_size=10)
-    dl_ifcb_pub = rospy.Publisher('/digital_logger/outlet/ifcb/control', Bool, queue_size=10)
+    # Setup publisher for DL outlet control. Names refer to digital_logger/outlets.
+    # Latched so a command sent before the DL node connects is not lost.
+    outlets = rospy.get_param('outlets', {})
+    dl_pump_pub = rospy.Publisher(
+        f'/digital_logger/outlet/{outlets.get("pump", "pump")}/control', Bool, queue_size=10, latch=True)
+    dl_ifcb_pub = rospy.Publisher(
+        f'/digital_logger/outlet/{outlets.get("ifcb", "ifcb")}/control', Bool, queue_size=10, latch=True)
 
     # Subscribe to IFCB connection status
     rospy.Subscriber('/ifcb/connected', Bool, on_ifcb_connection_status)
@@ -177,7 +218,7 @@ def main():
 
     # Let's give the IFCB a moment to try to connect
     power_cycle = rospy.get_param('tasks/power_cycle_on_geofence')
-    if not power_cycle:
+    if not power_cycle and not thermal_lockout():
         rospy.loginfo('Letting IFCB connection warm up...')
         rospy.sleep(15)
         if not ifcb_connected:
