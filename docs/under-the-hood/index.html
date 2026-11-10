@@ -33,7 +33,9 @@ canvas{display:block;width:100%;max-width:100%;aspect-ratio:16/9;image-rendering
 .bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--lime);opacity:.85;pointer-events:none}
 .bar .head{position:absolute;top:-4px;bottom:-4px;width:4px;background:var(--fg);pointer-events:none}
 .label{font-family:var(--pix);font-size:10px;letter-spacing:.08em;color:var(--dim);margin:0 0 10px}
-.carts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.carts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.carts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.carts{grid-template-columns:1fr}}
 .cart{position:relative;display:flex;flex-direction:column;gap:6px;background:var(--cab);border:2px solid var(--line);padding:14px;cursor:pointer;min-width:0}
 .cart input{position:absolute;opacity:0;pointer-events:none}
 .cart:hover{border-color:var(--slate)}
@@ -85,7 +87,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--slate);padding
   </section>
 
   <footer>
-    <kbd>SPACE</kbd> play/pause &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> one bar &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> configuration.
+    <kbd>SPACE</kbd> play/pause &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> one bar &nbsp; <kbd>1</kbd>&ndash;<kbd>4</kbd> configuration. DUTY is drawn from the unmerged <code>arm_duty_cycle.py</code> in PR #121.
     Behaviour is drawn from <code>arm_base.py</code>, <code>lock_manager.py</code>, <code>arm_ifcb.py</code>, <code>arm_chanos.py</code>, <code>ifcb_runner.py</code>, <code>winch_node.py</code> and <code>seatrac_starlink_manager.py</code> in
     <a href="https://github.com/WHOIGit/PhytO-ARM" target="_blank" rel="noopener">WHOIGit/PhytO-ARM</a>. Times are compressed; a real dwell is 60&nbsp;s, not two beats.
   </footer>
@@ -229,6 +231,9 @@ const CHARTS={
   track(c,x,y,w,h,st){T('/gps/fix',x,y,P.slate);const top=y+10,hh=h-20;for(let gx=x;gx<x+w;gx+=12)R(gx,top,1,hh,P.dusk);for(let gy=top;gy<top+hh;gy+=8)R(x,gy,w,1,P.dusk);
     const pt=k=>[x+6+k*(w-12),top+hh/2+Math.sin(k*7)*hh*0.3+Math.sin(k*17)*3];let prev=null;const n=Math.floor(c.k*60);for(let i=0;i<=n;i++){const p=pt(i/60);if(prev)L(prev[0],prev[1],p[0],p[1],P.sky);prev=p;}
     if(prev&&frac(c.t/BEAT)<.6)R(prev[0]-1,prev[1]-1,3,3,P.lime);T(c.lat.toFixed(4)+' '+c.lon.toFixed(3),x,top+hh+1,P.silver);},
+  duty(c,x,y,w,h){T('ifcb outlet / hr',x,y,P.slate);const n=c.hist.length,bw=Math.floor(w/n);c.hist.forEach((v,i)=>{R(x+i*bw,y+11,bw-1,8,P.dusk);R(x+i*bw,y+11,Math.round((bw-1)*v),8,i===n-1?P.sand:P.orange);});
+    T('samples',x,y+22,P.slate);for(let i=0;i<c.target;i++)box(x+48+i*10,y+23,8,7,i<c.samples?P.lime:P.ink,P.slate);
+    T('next '+c.next,x,y+32,P.silver);T(c.state,x+w-c.state.length*6,y+32,c.state==='ON'?P.lime:c.state==='OFF'?P.slate:P.sand);},
   clock(c,x,y,w,h){T(c.title||'UTC',x,y,P.slate);TC(c.hhmm,x+w/2,y+12,P.white,2);if(c.sub)TC(c.sub,x+w/2,y+33,c.subc||P.silver);},
 };
 function drawConsole(lines,lb){R(0,156,W,24,P.ink);R(0,156,W,1,P.dusk);const shown=lines.filter(l=>l[0]<=lb).slice(-2);
@@ -246,7 +251,7 @@ function renderWorld(st){const c=st.c;
   else{drawSky(st.tod,c.t);drawWater(c.t);drawLayer(st.layer,c.t);drawDock(st);if(st.ranges)drawRanges(st.rangeX??4);}
   for(const f of st.under)f();
   if(st.boat)st.boatY=drawBoat(st,st.boatX);
-  else{drawIFCBbox(st,18,st.sampling);for(const a of st.arms)drawArm(a,st);}
+  else{if(st.duty)drawDutyDeck(st);else drawIFCBbox(st,18,st.sampling);for(const a of st.arms)drawArm(a,st);}
   for(const f of st.over)f();
   drawHUD(st);drawConsole(st.log,c.lb);}
 function base(c,o){return Object.assign({c,tod:17.4,arms:[],layer:1.12,nodes:NODES[c.key],active:[],idle:[],log:[],lock:null,chart:null,under:[],over:[],ranges:true,boat:false,scroll:0},o);}
@@ -254,6 +259,7 @@ const NODES={
   dock:['lock_mgr','gps','web','rosbag','arm','ctd','profiler','motor','winch','ifcb_run'],
   duet:['lock_mgr','gps','web','rosbag','I.arm','I.winch','I.prof','I.ifcb','C.arm','C.winch','C.ctd','C.motor'],
   roam:['lock_mgr','gps','web','rosbag','arm','ifcb_run','ctd','ifcb','seatrac','starlink'],
+  duty:['lock_mgr','gps','dig_log','net_cap','arm','ctd','profiler','winch','ifcb_run','ifcb'],
 };
 const armI=o=>Object.assign({ns:'arm_ifcb',short:'I',x:74,col:P.lime,kind:'ifcb',d:1.3,task:'idle',lock:null,v:0,flow:false,dwell:null,steps:null},o);
 const armC=o=>Object.assign({ns:'arm_chanos',short:'C',x:150,col:P.sand,kind:'chanos',d:1.2,task:'idle',lock:null,v:0,flow:false,dwell:null,steps:null},o);
@@ -274,6 +280,8 @@ const BOOT={
     yaml:['launch_args:',' ifcb_winch: true',' chanos_winch: false','lock_manager:',' max_moving_winches: 1','arm_ifcb:',' winch: 0.7 - 1.5 m',' profiler: PE port4']},
   duet:{lines:[[10,'$ phyto-arm start arm_ifcb',P.sand],[11,'+ arm ctd profiler winch',P.white],[12,'$ phyto-arm start arm_chanos',P.sand],[13,'+ arm  rbr ctd  winch',P.white],[14,'+ udp stream :12345',P.white],[14.75,'2 arms: idle',P.lime]],
     yaml:['launch_args:',' ifcb_winch: true',' chanos_winch: true','lock_manager:',' max_moving_winches: 1','arm_chanos:',' downcast: stepped',' upcast: continuous']},
+  duty:{lines:[[10,'$ phyto-arm start arm_duty_cycle',P.sand],[11,'+ ifcb  ifcb_logfilter',P.white],[12,'+ arm  ctd(udp)  ifcb_runner',P.white],[13,'+ profiler  motor  winch',P.white],[14.5,'PR #121: arm_duty_cycle',P.orange]],
+    yaml:['launch_args:',' duty_cycle_winch:','   true','duty_cycle:',' interval: 60',' number_of_samples: 3',' start_time: 00:00','scheduled_depths:',' [1.0, 1.4]']},
   roam:{lines:[[10,'$ phyto-arm start arm_seatrac',P.sand],[11,'+ ifcb  ifcb_logfilter',P.white],[12,'+ seatrac  starlink_mgr',P.white],[13,'+ arm  ctd  ifcb_runner',P.white],[14.5,'winch_enabled: false',P.lime]],
     yaml:['launch_args:',' ifcb_winch: false',' chanos_winch: false','starlink_manager:',' scheduled_on: 12:30',' soc_threshold:','  high: 95','  medium: 80']},
 };
@@ -283,22 +291,24 @@ function sBoot(c){const lb=c.lb,t=c.t,b=BOOT[c.key];R(0,12,W,168,P.ink);
   let y=16;for(const [bb,s,col] of lines){if(lb<bb)break;const age=(lb-bb)*BEAT;T(s.slice(0,Math.floor(age*70)+1),4,y,col);y+=10;}
   if(frac(t/BEAT)<.5)R(4,y,5,8,P.lime);
   R(184,14,136,9*b.yaml.length+14,P.cab||'#232640');R(184,14,136,9,P.slate);T('config.yaml',187,14,P.ink);
-  b.yaml.forEach((s,i)=>{const hi=s.includes('winch')||s.includes('max_moving')||s.includes('thresh')||s.includes('scheduled');T(s,187,25+i*9,hi&&lb>=10?c.cfg.col:P.silver);});
+  b.yaml.forEach((s,i)=>{const hi=s.includes('interval')||s.includes('samples')||s.includes('winch')||s.includes('max_moving')||s.includes('thresh')||s.includes('scheduled');T(s,187,25+i*9,hi&&lb>=10?c.cfg.col:P.silver);});
   if(lb>=4){const n=Math.min(6,Math.floor(lb-3));for(let i=0;i<n;i++){const x=190+(i%3)*42,y2=118+Math.floor(i/3)*16;box(x,y2,38,12,P.dusk,P.green);T(['LOCK','GPS','WEB','BRDG','CAM','BAG'][i],x+3,y2+2,P.lime);}}
   if(lb>=11){TC(c.cfg.name+' ARMS ONLINE',252,152,c.cfg.col);}}
 const LOOPBOX=[[4,24,'loop()'],[116,24,'lock_manager'],[116,70,'get_next_task'],[116,116,'send_winch_goal'],[4,116,'task.callback'],[4,70,'start_next_task']];
 const LOOPTXT={dock:[['ArmBase.loop()',P.lime],['',0],['every arm',P.silver],['subclasses',P.silver],['ArmBase and',P.silver],['overrides',P.silver],['get_next_task',P.white],['',0],['returns Task(',P.sand],[' name, callback,',P.sand],[' depth, speed)',P.sand]],
   duet:[['2 arms, 1 lock',P.sand],['',0],['acquire() is a',P.silver],['non-blocking',P.silver],['semaphore with',P.silver],['named owners',P.silver],['',0],['the loser sleeps',P.white],['1 s and retries',P.white],['',0],['release() runs',P.lime],['in winch_done',P.lime]],
+  duty:[['PR #121 changes',P.orange],['arm_base.loop()',P.orange],['',0],['task comes first',P.silver],['then the lock,',P.silver],['only if the task',P.silver],['has a depth',P.silver],['',0],['fixes depth=None',P.white],['crash when IFCB',P.white],['disconnects',P.white]],
   roam:[['winch_enabled:',P.sky],[' false',P.sky],['',0],['winch_client is',P.silver],['None, so loop()',P.silver],['skips the lock',P.silver],['and the winch',P.silver],['',0],['the callback',P.white],['runs right away',P.white]]};
 function sLoop(c){const t=c.t,lb=c.lb,key=c.key;R(0,12,W,144,P.ink);
   for(let x=0;x<214;x+=8)for(let y=16;y<154;y+=8)R(x,y,1,1,P.dusk);
   const noW=key==='roam';const bw=96,bh=18;const ctr=i=>[LOOPBOX[i][0]+bw/2,LOOPBOX[i][1]+bh/2];
   const solid=noW?P.dusk:P.slate;
   L(100,33,116,33,solid);L(164,42,164,70,solid);L(164,88,164,116,solid);L(116,125,100,125,P.slate);L(52,116,52,88,P.slate);L(52,70,52,42,P.slate);
-  L(108,42,116,70,noW?P.lime:P.dusk,true);L(116,88,100,116,noW?P.lime:P.dusk,true);
-  if(noW)T('skip',56,98,P.lime);
+  const dc=key==='duty';L(108,42,116,70,noW||dc?P.lime:P.dusk,true);L(116,88,100,116,noW||dc?P.lime:P.dusk,true);
+  if(noW||dc)T(dc?'no depth':'skip',dc?50:56,98,P.lime);
   const paths={dock:[[[0,0],[2,1],[4,2],[6,3],[10,4],[12,5],[14,0],[16,1]]],
     roam:[[[0,0],[2,2],[4,4],[6,5],[8,0],[10,2],[12,4],[14,5],[16,0]]],
+    duty:[[[0,0],[1.5,2],[3,1],[4.5,3],[7,4],[8,5],[9,0],[10.5,2],[12.5,4],[14,5],[15.5,0]]],
     duet:[[[0,0],[1,1],[3,2],[5,3],[9,4],[11,5],[13,0],[14,1]],[[0,0],[1.5,1],[9.5,2],[11.5,3],[16,3]]]};
   const tokCols=[key==='duet'?P.lime:c.cfg.col,P.sand];const where=[];
   paths[key].forEach((pth,k)=>{let i=0;while(i<pth.length-1&&lb>=pth[i+1][0])i++;const bx0=pth[i][1];const nxt=pth[i+1];let pos=ctr(bx0);
@@ -309,7 +319,7 @@ function sLoop(c){const t=c.t,lb=c.lb,key=c.key;R(0,12,W,144,P.ink);
   if(key==='duet'&&between(lb,1.5,9.5)&&frac(t/BEAT)<.6)T('busy 1/1',150,44,P.sand);
   R(214,12,106,144,P.cab||'#232640');R(214,12,1,144,P.dusk);T('arm_base.py',218,16,P.slate);
   LOOPTXT[key].forEach(([s,col],i)=>{if(s&&lb>=i*0.75)T(s,218,30+i*10,col);});
-  drawConsole(key==='roam'?[[0,'arm_ifcb','No winch; running no_winch','W'],[8,'arm_ifcb','No winch; running no_winch','W']]:
+  drawConsole(key==='duty'?[[0,'arm_duty_cycle','Goal depth 0.7 for task upcast','W'],[9,'arm_duty_cycle','No movement requested; running await_duty_cycle','W']]:key==='roam'?[[0,'arm_ifcb','No winch; running no_winch','W'],[8,'arm_ifcb','No winch; running no_winch','W']]:
     key==='duet'?[[0,'arm_ifcb','Arm waiting for clearance','W'],[0.5,'arm_chanos','Arm waiting for clearance','W'],[3,'arm_ifcb','Goal depth 0.7 for task upcast','W'],[9.5,'arm_chanos','Goal depth 0.7 for task upcast_continuous','W']]:
     [[0,'arm_ifcb','Arm waiting for clearance','W'],[3,'arm_ifcb','Goal depth 0.7 for task upcast','W'],[5,'arm_ifcb','All checks passed; Moving winch to 0.7','I'],[12,'arm_ifcb','task_completed','I']],lb);}
 function sOutro(c){const t=c.t,lb=c.lb;drawSky(lb<8?20:21,t,W);drawWater(t,W,true);drawLayer(1.2,t,W,0.6);ground();
@@ -480,6 +490,80 @@ function rLapse(c){const lb=c.lb;const tod=8+lb/32*48;const h=((tod%24)+24)%24;c
     if(on){S('sat',170,18);for(let k=0;k<5;k++){const p=frac(c.t*1.4+k/5);R(lerp(BX-20,172,p),lerp(SURF-20,22,p),2,1,P.white);}}});
   renderWorld(st);}
 
+/* ============================================================ DUTY: PR #121 duty-cycle arm (Pi powers the IFCB on a schedule) */
+const armD=o=>armI(Object.assign({ns:'arm_duty_cycle',short:'D',col:P.orange},o));
+function fileIcon(x,y){R(x,y,4,5,P.white);R(x+3,y,1,1,P.slate);R(x+1,y+2,2,1,P.slate);}
+function drawDutyDeck(st){const t=st.c.t,pw=st.ifcbPower,x=18;const off=pw==='off';
+  box(x,28,30,14,off?P.ink:P.dusk,off?P.slate:P.silver);T('IFCB',x+3,30,off?P.slate:P.white);
+  const led=pw==='on'?(st.sampling&&frac(t/STEP)<.5?P.lime:P.green):pw==='boot'?(frac(t*4)<.5?P.sand:P.dusk):pw==='down'?(frac(t*2)<.5?P.red:P.dusk):P.dusk;R(x+26,31,2,2,led);
+  R(x+2,39,6,1,st.aux?P.cyan:P.dusk);R(x+30,41,28,1,P.teal);
+  if(off){const z=frac(t/BEAT/2);T('z',x+20+z*6,22-z*8,P.slate);}
+  R(115,24,16,10,P.ink);T('Pi',117,24,P.lime);box(116,34,14,8,P.teal,P.lime);R(127,36,2,2,st.check&&frac(t/(BEAT*2))<.18?P.sand:P.green);
+  box(146,30,46,12,P.dusk,P.silver);T('DLI',148,31,P.silver);
+  for(let i=0;i<8;i++)R(168+i*3,33,2,5,i===0?(st.outlet?P.lime:P.red):[1,3,4,5].includes(i)?P.green:P.ink);
+  R(48,43,120,1,st.outlet?P.orange:P.dusk);if(st.outlet&&(pw==='boot'||pw==='on')){const p=frac(t*1.5);R(lerp(168,48,p),43,3,1,P.sand);}}
+function dutyBase(c,o){return base(c,Object.assign({duty:true,tod:1,ifcbPower:'on',outlet:true,aux:true,lock:{max:1,owners:[],waiting:[]}},o));}
+const HIST=cur=>[...Array(11).fill(0.8),cur];
+function duSleep(c){const lb=c.lb;const tod=52/60+lb/16*(8/60);const fire=lb>=14;
+  const st=dutyBase(c,{arms:[armD({d:1.4,task:fire?'startup_sampling':'await_duty_cycle'})],tod,ifcbPower:'off',outlet:false,aux:false,check:true,active:['arm'],
+    chart:{type:'duty',samples:0,target:3,hist:HIST(fire?0.05:0),next:'01:00',state:fire?'WAKE':'OFF'},
+    log:[[0,'arm_duty_cycle','Outside sampling window, waiting for next duty cycle','I'],[4,'arm_duty_cycle','should_transition_duty_state() -> False','I'],[8,'arm_duty_cycle','rospy.sleep(check_interval)  # 60 s','I'],
+      [14,'arm_duty_cycle','Interval elapsed, starting new sampling session','I'],[15,'arm_duty_cycle','No movement requested; running startup_sampling','W']]});
+  st.over.push(()=>{const x=92,y=62;win(x,y,108,52,'duty_cycle',P.orange);T('start  00:00',x+3,y+10,P.silver);T('+ n x 60 min',x+3,y+19,P.silver);
+    T('now    '+hhmm(tod),x+3,y+30,P.white);T('next   01:00',x+3,y+40,fire&&frac(c.t/BEAT)<.7?P.lime:P.sand);});
+  renderWorld(st);}
+function duWake(c){const lb=c.lb;const outlet=lb<6||lb>=7;const pw=lb<6?'boot':lb<7?'off':lb<10?'boot':'on';const aux=lb>=11;const att=lb<7?1:2;
+  const st=dutyBase(c,{arms:[armD({d:1.4,task:'startup_sampling'})],tod:1+lb/16*(5/60),ifcbPower:pw,outlet,aux,active:lb<10?['dig_log','ifcb']:['ifcb','ctd','net_cap'],
+    chart:{type:'duty',samples:0,target:3,hist:HIST(0.1),next:'02:00',state:pw==='on'?'ON':'BOOT'},
+    log:[[0,'arm_duty_cycle','Turning on IFCB power (attempt 1/3)','I'],[1,'arm_duty_cycle','Waiting for IFCB to connect (timeout: 180 seconds)','I'],[6,'arm_duty_cycle','IFCB failed to connect on attempt 1, power cycling','W'],
+      [7,'arm_duty_cycle','Turning on IFCB power (attempt 2/3)','I'],[10,'arm_duty_cycle','IFCB connected successfully','I'],[11,'arm_duty_cycle','Turning ON auxiliary power','I'],[13,'arm_duty_cycle','CTD depth received: 1.40 m','I'],[15,'arm_duty_cycle','Starting new sampling session: target 3 samples','I']]});
+  st.over.push(()=>{const x=92,y=62;win(x,y,108,58,'power_on_ifcb()',P.orange);T('attempt '+att+'/3',x+3,y+10,lb>=6&&lb<7?P.red:P.white);
+    const p=lb<6?lb/6*0.9:lb<7?0:lb<10?(lb-7)/3*0.5:0.5;R(x+3,y+21,100,5,P.dusk);R(x+3,y+21,Math.round(100*p),5,lb>=10?P.lime:P.sand);T(lb>=10?'connected':'restart_wait 180s',x+3,y+27,lb>=10?P.lime:P.slate);
+    if(lb>=11)T('switchauxpower1:1',x+3,y+37,P.cyan);if(lb>=13)T('ctd depth OK',x+3,y+46,P.lime);
+    if(aux&&frac(c.t/STEP)<.5)R(DX+5,DY(1.4)+4,2,1,P.cyan);});
+  renderWorld(st);}
+const DX=74;
+function duProf(c){const lb=c.lb;const m=track(lb,1.4,[[0.5,5,0.7],[6,14,1.5]]);const held=between(lb,0.5,5)||between(lb,6,14);const peak=lb>=15?DOCK_PEAK:null;
+  const a=armD({d:m.d,v:m.v,lock:held?'held':null,task:lb<5.5?'upcast':'downcast'});
+  const st=dutyBase(c,{arms:[a],tod:1.1+lb/16*0.15,active:held?['winch','ctd','lock_mgr']:['profiler'],lock:{max:1,owners:held?['arm_duty_cycle']:[],waiting:[]},
+    chart:{type:'profile',from:0.7,to:lb>=6?m.d:null,layer:DOCK_PEAK,peak,t:c.t,title:'profiler: PE'},
+    log:[[0,'arm_duty_cycle','get_next_task() first, then lock','I'],[0.5,'arm_duty_cycle','Goal depth 0.7 for task upcast','W'],[6,'arm_duty_cycle','Goal depth 1.5 for task downcast','W'],[10,'ctd','/aml_udp_stream -> /arm_duty_cycle/ctd/depth','I'],[15,'arm_duty_cycle','Profile peak is 3.41 at 1.12 m','I']]});
+  st.over.push(()=>{if(lb>=6&&lb<14&&frac(c.t/STEP)<.5)R(DX+5,DY(a.d)+4,2,1,P.lime);if(peak!=null){const y=DY(peak);L(4,y,198,y,frac(c.t/BEAT)<.6?P.sand:P.orange,true);T('PEAK',150,y-9,P.sand);}});
+  renderWorld(st);}
+function duSched(c){const lb=c.lb;const m=track(lb,1.5,[[0,2,DOCK_PEAK],[5,7,1.0],[10,12,1.4]]);const mov=between(lb,0,2)||between(lb,5,7)||between(lb,10,12);
+  const smp=between(lb,2,5)||between(lb,7,10)||between(lb,12,15);const n=(lb>=5)+(lb>=10)+(lb>=15);
+  const task=lb<2?'profiler_peak_depth':lb<5?'ifcb sample 1/3':lb<7?'scheduled_depth':lb<10?'ifcb sample 2/3':lb<12?'scheduled_depth':lb<15?'ifcb sample 3/3':'shutdown_sampling';
+  const a=armD({d:m.d,v:m.v,lock:mov?'held':null,task,flow:smp,steps:[{d:DOCK_PEAK,done:lb>=2},{d:1.0,done:lb>=7},{d:1.4,done:lb>=12}]});
+  const st=dutyBase(c,{arms:[a],tod:1.3+lb/16*0.25,sampling:smp,active:mov?['winch']:smp?['ifcb_run','ifcb']:['arm'],lock:{max:1,owners:mov?['arm_duty_cycle']:[],waiting:[]},
+    chart:{type:'duty',samples:n,target:3,hist:HIST(0.3+lb/40),next:'02:00',state:'ON'},
+    log:[[0,'arm_duty_cycle','Using profiler peak depth: 1.12 m','I'],[2,'ifcb_runner','Starting runsample routine','I'],[5,'arm_duty_cycle','Completed sample 1/3','I'],[5.3,'arm_duty_cycle','Scheduled depth 1/2: 1.00 m','I'],
+      [10,'arm_duty_cycle','Completed sample 2/3','I'],[10.3,'arm_duty_cycle','Scheduled depth 2/2: 1.40 m','I'],[15,'arm_duty_cycle','Completed sample 3/3','I'],[15.4,'arm_duty_cycle','Reached target sample count (3), shutting down','I']]});
+  st.over.push(()=>{const s0=lb<5?2:lb<10?7:12;if(smp)roiWin(96,62,7,2,Math.floor((lb-s0)*3)+1,s0*13,'roi @ '+(lb<5?'peak 1.12':lb<10?'sched 1.00':'sched 1.40'));});
+  renderWorld(st);}
+function duShut(c){const lb=c.lb;const pw=lb<10?'on':lb<13?'down':'off';
+  const steps=[['wait 180 s',0],['rsync -avz',3],['ssh shutdown',9],['wait 60 s',10],['outlet OFF',13]];
+  const st=dutyBase(c,{arms:[armD({d:1.4,task:lb<13?'shutdown_sampling':'await_duty_cycle'})],tod:1.6+lb/16*0.2,ifcbPower:pw,outlet:lb<13,active:lb<3?['ifcb']:lb<9?['arm']:['dig_log'],
+    chart:{type:'duty',samples:3,target:3,hist:HIST(lb<13?0.75:0.8),next:'02:00',state:lb<13?'ON':'OFF'},
+    log:[[0,'arm_duty_cycle','Waiting for IFCB to finish current sample for 180 seconds','W'],[3,'arm_duty_cycle','Starting file sync from IFCB: /data/ifcbdata -> /data/ifcb_sync','I'],[8,'arm_duty_cycle','File sync completed successfully','I'],
+      [9,'arm_duty_cycle','Sending shutdown command to IFCB host via SSH','I'],[9.6,'arm_duty_cycle','IFCB host shutdown command sent successfully','I'],[10.2,'arm_duty_cycle','Waiting 60 seconds for IFCB to shutdown','I'],[13,'arm_duty_cycle','Turning off IFCB power','I'],
+      [14,'arm_duty_cycle','Duty cycle state: sampling_active=False, interval=60 min, target_samples=3, next_transition=02:00','I']]});
+  st.over.push(()=>{const x=92,y=62;win(x,y,108,56,'shutdown_sampling()',P.orange);steps.forEach(([s,b],i)=>{const nx=steps[i+1]?steps[i+1][1]:14;const done=lb>=nx,cur=lb>=b&&!done;
+      T(done?'[x]':cur&&frac(c.t/BEAT)<.6?'[>]':'[ ]',x+3,y+10+i*9,done?P.lime:cur?P.sand:P.slate);T(s,x+24,y+10+i*9,done||cur?P.white:P.slate);});
+    if(between(lb,3,8))for(let k=0;k<4;k++){const p=frac((lb-3)/1.25+k/4);fileIcon(lerp(40,118,p),26-Math.sin(p*Math.PI)*12);}
+    if(between(lb,9,10)){const p=lb-9;T('ssh',lerp(110,40,p),18-Math.sin(p*Math.PI)*4,P.sand);}});
+  renderWorld(st);}
+function duLapse(c){const lb=c.lb;const k=Math.floor(lb/4),q=lb-k*4;const tod=2+lb/4;const pk=1.12+0.25*Math.sin(k*0.9);const prev=1.4;
+  const pw=q<0.4?'boot':q<3.2?'on':q<3.4?'down':'off';
+  const m=track(q,prev,[[0.4,0.8,0.7],[0.8,1.6,1.5],[1.6,1.8,pk],[2.1,2.2,1.0],[2.5,2.6,1.4]]);const smp=between(q,1.8,2.1)||between(q,2.2,2.5)||between(q,2.6,2.9);
+  const n=(q>=2.1)+(q>=2.5)+(q>=2.9);const task=q<0.4?'startup_sampling':q<0.8?'upcast':q<1.6?'downcast':q<2.9?(smp?'ifcb sample '+(n+1)+'/3':'scheduled_depth'):q<3.4?'shutdown_sampling':'await_duty_cycle';
+  const hist=[...Array(11).fill(0.8),Math.min(q,3.2)/4];
+  const a=armD({d:m.d,v:m.v,lock:m.v?'held':null,task,flow:smp});
+  const st=dutyBase(c,{arms:[a],tod,layer:pk,ifcbPower:pw,outlet:q<3.4,aux:q<3.4,sampling:smp,check:pw==='off',active:pw==='off'?['arm']:['ifcb','winch'],lock:{max:1,owners:m.v?['arm_duty_cycle']:[],waiting:[]},
+    chart:{type:'duty',samples:Math.min(n,3),target:3,hist,next:hhmm(Math.floor(tod)+1),state:pw==='off'?'OFF':'ON'},
+    log:[[0,'arm_duty_cycle','Interval elapsed, starting new sampling session','I'],[0.4,'arm_duty_cycle','Goal depth 0.7 for task upcast','W'],[1.6,'arm_duty_cycle','Profile peak at '+f2(pk)+' m','I'],[2.9,'arm_duty_cycle','Reached target sample count (3), shutting down','I'],[3.4,'arm_duty_cycle','Turning off IFCB power','I']].map(l=>[l[0]+k*4,l[1],l[2],l[3]])});
+  st.over.push(()=>{R(96,62,100,11,P.ink);T(hhmm(tod)+' UTC',98,63,P.white);T('#'+(k+2),170,63,P.orange);});
+  renderWorld(st);}
+
 /* ============================================================ configurations */
 const HEAD=[{a:0,b:4,title:'PHYTO-ARM',d:'Title.',fn:sTitle},{a:4,b:8,title:'BOOT',d:'phyto-arm start main, then the arm launch file. Nodes come up on the beat.',fn:sBoot},{a:8,b:12,title:'THE ARM LOOP',d:'ArmBase.loop(): await clearance, get_next_task, send_winch_goal, callback, repeat.',fn:sLoop}];
 const TAIL=[{a:40,b:44,title:'WHERE DATA GOES',d:'rosbag records every topic; IFCB dashboard gets bins with metadata; NetCDF goes to ERDDAP.',fn:sOutro}];
@@ -499,6 +583,14 @@ const CONFIGS={
     scenes:[...HEAD,{a:12,b:16,title:'NO WINCH, NO WAITING',d:'winch_enabled is false, so get_next_task returns no_winch and the IFCB runs back to back.',fn:rNoWinch},{a:16,b:20,title:'GPS -> BIN METADATA',d:'gpsd fixes feed the web node field_map, which stamps lat, lon, depth and commit on each bin.',fn:rGPS},
       {a:20,b:24,title:'SUN -> SOC -> STARLINK',d:'At SOC 95% while charging, starlink_manager switches the Starlink outlet on.',fn:rSun},{a:24,b:28,title:'NAG TIMER',d:'Starlink on without high SOC + charging starts a 1200 s shutdown_reminder, then a Slack alert.',fn:rNag},
       {a:28,b:32,title:'12:30 UTC CHECK',d:'The daily timer only enables Starlink above 80% SOC; otherwise it posts why and reschedules.',fn:rDaily},{a:32,b:40,title:'VOYAGE TIME-LAPSE',d:'Two days underway: bins pile up, the track grows, SOC rides the sun.',fn:rLapse},...TAIL]},
+  duty:{key:'duty',name:'DUTY',tag:'PI + IFCB ON A TIMER',col:P.orange,css:'#ef7d57',transpose:-4,duty:0.25,blurb:'From PR #121 (unmerged). A Raspberry Pi wakes the IFCB on a schedule, profiles, takes N samples, syncs files and powers it off.',
+    code:'launch_args:\n  duty_cycle_winch: true\nduty_cycle:\n  interval: 60\n  number_of_samples: 3',
+    scenes:[...HEAD,{a:12,b:16,title:'ASLEEP UNTIL 01:00',d:'IFCB is unpowered. await_duty_cycle re-checks every check_interval; sessions start at start_time + n x interval.',fn:duSleep},
+      {a:16,b:20,title:'WAKE UP',d:'Digital Logger outlet on, wait for /ifcb/connected, power-cycle on timeout (3 tries), then aux power for the CTD.',fn:duWake},
+      {a:20,b:24,title:'TASK FIRST, THEN LOCK',d:'Upcast and downcast to find the peak. The PR\'s arm_base takes the lock only for tasks with a depth.',fn:duProf},
+      {a:24,b:28,title:'PEAK + SCHEDULED DEPTHS',d:'Sample at the peak, then each scheduled_depths entry, counting toward number_of_samples.',fn:duSched},
+      {a:28,b:32,title:'SYNC + SHUT DOWN',d:'Wait for the last sample, rsync bins to the Pi, ssh sudo shutdown, wait 60 s, outlet off.',fn:duShut},
+      {a:32,b:40,title:'HOURLY SESSIONS',d:'Eight sessions on the hour. The outlet strip in the HUD shows how long the IFCB is powered.',fn:duLapse},...TAIL]},
 };
 
 /* ============================================================ frame */
@@ -603,7 +695,7 @@ if(!window.__RENDER__){
   const bar=$('bar');const seekEv=e=>{const r=bar.getBoundingClientRect();seek(clamp((e.clientX-r.left)/r.width)*DUR);};bar.addEventListener('click',seekEv);
   bar.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){seek(songTime()+BAR);e.preventDefault();}if(e.key==='ArrowLeft'){seek(songTime()-BAR);e.preventDefault();}});
   document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.key!==' ')return;if(e.key===' '){e.preventDefault();toggle();}else if(e.key==='ArrowRight'&&e.target!==bar)seek(songTime()+BAR);else if(e.key==='ArrowLeft'&&e.target!==bar)seek(songTime()-BAR);
-    else if(e.key==='1')setConfig('dock');else if(e.key==='2')setConfig('duet');else if(e.key==='3')setConfig('roam');});
+    else if(e.key==='1')setConfig('dock');else if(e.key==='2')setConfig('duet');else if(e.key==='3')setConfig('roam');else if(e.key==='4')setConfig('duty');});
   try{const k=localStorage.getItem('pa-cfg');if(k&&CONFIGS[k]){curKey=k;events=songEvents(CONFIGS[k]);buildUI();}}catch(e){}
   const _set=setConfig;setConfig=k=>{_set(k);try{localStorage.setItem('pa-cfg',k);}catch(e){}};
   requestAnimationFrame(tick);
