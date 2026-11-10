@@ -1,0 +1,621 @@
+<title>PhytO-ARM Under the Hood</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="An 8-bit, music-synced tour of how PhytO-ARM's ROS nodes, arms, winches and lock manager work together.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one arcade cabinet column. Screen on top, transport bar, then the three arm configurations as cartridges, then the chapter list. */
+:root{
+  --ink:#1a1c2c; --cab:#232640; --line:#333c57; --slate:#566c86; --dim:#94b0c2; --fg:#f4f4f4;
+  --lime:#a7f070; --sand:#ffcd75; --sky:#41a6f6; --orange:#ef7d57;
+  --pix:"Press Start 2P", ui-monospace, monospace;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--ink);color:var(--fg)}
+body{font-family:var(--mono);font-size:14px;line-height:1.55;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+h1{font-family:var(--pix);font-size:clamp(15px,3.2vw,22px);letter-spacing:.04em;margin:0;color:var(--lime);text-wrap:balance}
+h1 span{color:var(--fg)}
+header p{margin:0;color:var(--dim);max-width:60ch}
+.screen{position:relative;background:#000;border:4px solid var(--line);box-shadow:0 0 0 4px var(--cab),0 18px 40px rgba(0,0,0,.45)}
+canvas{display:block;width:100%;max-width:100%;aspect-ratio:16/9;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
+.start{position:absolute;inset:auto 0 9% 0;margin:auto;width:max-content;max-width:90%;font-family:var(--pix);font-size:clamp(9px,1.6vw,13px);background:var(--lime);color:var(--ink);border:0;padding:12px 16px;cursor:pointer;box-shadow:4px 4px 0 var(--ink)}
+.start:hover{background:var(--sand)}
+.start:focus-visible,button:focus-visible,.cart:focus-within{outline:3px solid var(--sky);outline-offset:3px}
+.transport{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.transport button{font-family:var(--pix);font-size:11px;background:var(--cab);color:var(--fg);border:2px solid var(--line);padding:9px 12px;cursor:pointer;min-width:44px}
+.transport button:hover{border-color:var(--lime)}
+.time{font-family:var(--pix);font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums;min-width:11ch}
+.bar{flex:1 1 260px;min-width:0;position:relative;height:22px;background:var(--cab);border:2px solid var(--line);cursor:pointer}
+.bar .seg{position:absolute;top:0;bottom:0;border-right:2px solid var(--ink)}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--lime);opacity:.85;pointer-events:none}
+.bar .head{position:absolute;top:-4px;bottom:-4px;width:4px;background:var(--fg);pointer-events:none}
+.label{font-family:var(--pix);font-size:10px;letter-spacing:.08em;color:var(--dim);margin:0 0 10px}
+.carts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cart{position:relative;display:flex;flex-direction:column;gap:6px;background:var(--cab);border:2px solid var(--line);padding:14px;cursor:pointer;min-width:0}
+.cart input{position:absolute;opacity:0;pointer-events:none}
+.cart:hover{border-color:var(--slate)}
+.cart.on{border-color:var(--c);box-shadow:inset 0 0 0 2px var(--c)}
+.cart b{font-family:var(--pix);font-size:12px;color:var(--c);letter-spacing:.04em}
+.cart .k{font-family:var(--pix);font-size:8px;color:var(--dim)}
+.cart p{margin:0;color:var(--fg)}
+.cart code{display:block;white-space:pre;overflow-x:auto;font-size:12px;color:var(--dim);background:var(--ink);padding:8px 10px;border-left:3px solid var(--c)}
+.chapters{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2px 20px}
+.chapters li{min-width:0}
+.chapters button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:4.5ch 1fr;gap:10px;width:100%;padding:7px 8px;cursor:pointer;border-left:3px solid transparent}
+.chapters button:hover{background:var(--cab)}
+.chapters button:focus-visible{outline:2px solid var(--sky)}
+.chapters .now{border-left-color:var(--lime);background:var(--cab)}
+.chapters .n{font-family:var(--pix);font-size:9px;color:var(--slate);padding-top:4px;font-variant-numeric:tabular-nums}
+.chapters .t{font-family:var(--pix);font-size:9px;color:var(--fg);line-height:1.6}
+.chapters .d{display:block;font-family:var(--mono);color:var(--dim);font-size:13px;line-height:1.5;margin-top:4px}
+footer{color:var(--slate);font-size:12px}
+footer a{color:var(--dim)}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--slate);padding:1px 5px}
+@media (prefers-reduced-motion: reduce){ .start{box-shadow:none} }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>PHYTO-ARM <span>UNDER THE HOOD</span></h1>
+    <p>An 82-second, 128&nbsp;BPM chiptune tour of what the ROS nodes are doing while the winch goes up and down. Pick a deployment below. Each one gets its own scenes and its own key.</p>
+  </header>
+
+  <div class="screen">
+    <canvas id="screen" width="320" height="180" aria-label="PhytO-ARM animation"></canvas>
+    <button class="start" id="start">&#9654; PRESS START</button>
+  </div>
+
+  <div class="transport">
+    <button id="play" aria-label="Play or pause">&#9654;</button>
+    <span class="time" id="time">0:00 / 1:23</span>
+    <div class="bar" id="bar" role="slider" aria-label="Seek" tabindex="0"></div>
+  </div>
+
+  <section>
+    <p class="label">ARM CONFIGURATION</p>
+    <div class="carts" id="carts"></div>
+  </section>
+
+  <section>
+    <p class="label">CHAPTERS</p>
+    <ol class="chapters" id="chapters"></ol>
+  </section>
+
+  <footer>
+    <kbd>SPACE</kbd> play/pause &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> one bar &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> configuration.
+    Behaviour is drawn from <code>arm_base.py</code>, <code>lock_manager.py</code>, <code>arm_ifcb.py</code>, <code>arm_chanos.py</code>, <code>ifcb_runner.py</code>, <code>winch_node.py</code> and <code>seatrac_starlink_manager.py</code> in
+    <a href="https://github.com/WHOIGit/PhytO-ARM" target="_blank" rel="noopener">WHOIGit/PhytO-ARM</a>. Times are compressed; a real dwell is 60&nbsp;s, not two beats.
+  </footer>
+</div>
+
+<script>
+'use strict';
+/* ============================================================ constants */
+const W=320,H=180,BPM=128,STEP=60/BPM/4,BEAT=STEP*4,BAR=BEAT*4,BARS=44,DUR=BARS*BAR;
+const P={ink:'#1a1c2c',plum:'#5d275d',red:'#b13e53',orange:'#ef7d57',sand:'#ffcd75',lime:'#a7f070',green:'#38b764',teal:'#257179',
+  navy:'#29366f',blue:'#3b5dc9',sky:'#41a6f6',cyan:'#73eff7',white:'#f4f4f4',silver:'#94b0c2',slate:'#566c86',dusk:'#333c57'};
+const FONT="0000000000888808000DDD000000DDnDnDD08LZXL:ZL8@ZB48BE200HTTHVTJ008880000004888884008444448000RDnDR000088n880000000<4480000n000000000<<0002248@@000<BBBB<0008H888L000<B248N000N4<22L0004<DTn4000N@L22L000<@LBB<000N22488000<B<BB<000<BB>2<0000<<0<<0000<<0<448006HPH600000n0n00000`<2<`00<B2<808000LTZ\\PL0008DRnRR000lRlRRl000<B@@B<000LBBBBL000N@L@@N000N@L@@@000<B@FB<000BBNBBB000L8888L000>444TH000BDHDBB000@@@@@N000RfZZRR000BJFBBB000LRRRRL000LBBL@@000<BBJF<200LBBLBB000<B84B<000n88888000BBBBB<000BBBN<<000RRZZfR000RD88DR000RRD888000N248@N000L@@@@L000@@8422000L4444L0008DR0000000000000n084000000000>BB>000@@LBBL00000>@@>00022>BB>00000<FH>0004:8L8800000<BB>2<0@@LBBB00080H88L00040<444D80@@DHDB000H8888L00000dZZR00000LBBB00000<BB<00000LBBL@@000>BB>22000DJ@@00000>H6L00088L8:400000BBB>00000BB<<00000RZZD00000B<<B00000BBB>B<000N48N00488@88400088888880@88488@0000:D00000";
+const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v, lerp=(a,b,p)=>a+(b-a)*p, frac=v=>v-Math.floor(v);
+function hash(i){let h=Math.imul((i|0)^0x9e3779b9,0x85ebca6b);h^=h>>>13;h=Math.imul(h,0xc2b2ae35);h^=h>>>16;return (h>>>0)/4294967296;}
+const f2=v=>v.toFixed(2);
+
+/* ============================================================ canvas + primitives */
+const cv=document.getElementById('screen'); const X=cv.getContext('2d'); X.imageSmoothingEnabled=false;
+function R(x,y,w,h,c){X.fillStyle=c;X.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+const pats={};
+function dith(x,y,w,h,c,alt){const k=c+(alt?1:0);if(!pats[k]){const p=document.createElement('canvas');p.width=p.height=2;const g=p.getContext('2d');g.fillStyle=c;g.fillRect(alt?1:0,0,1,1);g.fillRect(alt?0:1,1,1,1);pats[k]=X.createPattern(p,'repeat');}
+  X.fillStyle=pats[k];X.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+function L(x0,y0,x1,y1,c,dash){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);X.fillStyle=c;
+  const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy,n=0;
+  for(;;){if(!dash||((n>>1)%2===0))X.fillRect(x0,y0,1,1);n++;if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx;}if(e2<=dx){e+=dx;y0+=sy;}}}
+function disc(cx,cy,r,c){for(let y=-r;y<=r;y++){const w=Math.floor(Math.sqrt(r*r-y*y+r*0.8));R(cx-w,cy+y,w*2+1,1,c);}}
+function ring(cx,cy,r,c){for(let a=0;a<40;a++){const t=a/40*Math.PI*2;R(cx+Math.round(Math.cos(t)*r),cy+Math.round(Math.sin(t)*r),1,1,c);}}
+function box(x,y,w,h,fill,edge){R(x,y,w,h,edge);R(x+1,y+1,w-2,h-2,fill);}
+/* font atlas: 95 glyphs, 6x9 cells */
+const atlasBase=document.createElement('canvas');atlasBase.width=95*6;atlasBase.height=9;
+{const g=atlasBase.getContext('2d');g.fillStyle='#fff';for(let i=0;i<95;i++)for(let y=0;y<9;y++){const r=FONT.charCodeAt(i*9+y)-48;for(let x=0;x<6;x++)if((r>>(5-x))&1)g.fillRect(i*6+x,y,1,1);}}
+const tint={};
+function atlas(c){if(!tint[c]){const a=document.createElement('canvas');a.width=atlasBase.width;a.height=9;const g=a.getContext('2d');g.drawImage(atlasBase,0,0);g.globalCompositeOperation='source-in';g.fillStyle=c;g.fillRect(0,0,a.width,9);tint[c]=a;}return tint[c];}
+function T(s,x,y,c=P.white,sc=1){s=String(s);const a=atlas(c);x=Math.round(x);y=Math.round(y);
+  for(let i=0;i<s.length;i++){let k=s.charCodeAt(i)-32;if(k<0||k>94)k=31;if(k)X.drawImage(a,k*6,0,6,9,x+i*6*sc,y,6*sc,9*sc);}}
+function TS(s,x,y,c,sc=1,sh=P.ink){T(s,x+sc,y+sc,sh,sc);T(s,x,y,c,sc);}
+function TC(s,cx,y,c,sc=1,shadow){const x=cx-String(s).length*3*sc;shadow?TS(s,x,y,c,sc):T(s,x,y,c,sc);}
+/* sprites */
+const SPR={
+  diatom:['.ggg.','gLgLg','ggLgg','gLgLg','.ggg.'],
+  chain:['gg.gg.gg.','gLggLggLg','gg.gg.gg.'],
+  dino:['..oo..','.oOOo.','oOwOOo','oOOOOo','.oOOo.','..o...','...o..'],
+  cerat:['o.....o','.o...o.','..ooo..','.oOOOo.','..ooo..','...o...','...o...','....o..'],
+  fish:['...bbb..','b.bbbbkb','bbbbbbbb','b.bbbbb.','...bb...'],
+  sat:['bb.w.bb','bbwwwbb','bb.w.bb'],
+  env:['wwwwwww','wkwwwkw','wwkwkww','wwwkwww','wwwwwww'],
+  cloud:['...wwww.....','.wwwwwwwww..','wwwwwwwwwwww','.sssssssss..'],
+};
+const SMAP={g:P.green,L:P.lime,o:P.orange,O:P.sand,w:P.white,b:P.sky,k:P.ink,s:P.silver};
+const scache={};
+function S(name,x,y,mono,flip){const key=name+(mono||'')+(flip?'f':'');if(!scache[key]){const rows=SPR[name];const c=document.createElement('canvas');c.width=rows[0].length;c.height=rows.length;const g=c.getContext('2d');
+  rows.forEach((r,yy)=>{for(let xx=0;xx<r.length;xx++){const ch=r[xx];if(ch==='.')continue;g.fillStyle=mono||SMAP[ch];g.fillRect(flip?r.length-1-xx:xx,yy,1,1);}});scache[key]=c;}
+  X.drawImage(scache[key],Math.round(x),Math.round(y));}
+
+/* ============================================================ winch motion: integrate winch_node.velocity_f (atan profile) */
+const HSD=0.08;
+const WC=(()=>{let x=0;const xs=[0];const dt=0.002;while(1-x>0.004&&xs.length<20000){x+=(2/Math.PI)*Math.atan((1-x)/HSD)*dt;xs.push(x);}return xs;})();
+function wease(p){if(p<=0)return 0;if(p>=1)return 1;const f=p*(WC.length-1),i=Math.floor(f);return lerp(WC[i],WC[i+1],f-i)/WC[WC.length-1];}
+function mv(from,to,b0,b1,lb,linear){const p=(lb-b0)/(b1-b0);if(p<=0)return{d:from,v:0};if(p>=1)return{d:to,v:0};
+  const e=linear?(p<0.9?p/0.9*0.97:0.97+wease((p-0.9)/0.1)*0.03):wease(p);return{d:lerp(from,to,e),v:(linear?0.25:(2/Math.PI)*Math.atan((1-e)/HSD))*Math.sign(to-from)};}
+/* moves: [[b0,b1,to,linear?],...] */
+function track(lb,start,moves){let d=start;for(const m of moves){if(lb<m[0])return{d,v:0};if(lb<m[1])return mv(d,m[2],m[0],m[1],lb,m[3]);d=m[2];}return{d,v:0};}
+
+/* ============================================================ world drawing */
+const SURF=56,PXM=56,WX=204; const DY=d=>SURF+d*PXM;
+function prof(d,peak){return 0.55+2.85*Math.exp(-(((d-peak)/0.11)**2))+0.3*(hash(Math.round(d*50)*7+Math.round(peak*100))-0.5);}
+function skyPal(h){h=((h%24)+24)%24;
+  if(h<4.5||h>=20.5)return{b:[P.ink,P.ink,P.navy],stars:1,sun:P.white};
+  if(h<6.5)return{b:[P.navy,P.plum,P.orange],stars:0.4,sun:P.orange};
+  if(h<17)return{b:[P.blue,P.sky,P.cyan],stars:0,sun:P.sand};
+  if(h<19)return{b:[P.navy,P.plum,P.red,P.orange],stars:0,sun:P.sand};
+  return{b:[P.ink,P.navy,P.plum],stars:0.6,sun:P.orange};}
+function drawSky(tod,t,x1=WX,cloudy){const s=skyPal(tod);const top=12,hgt=SURF-top;const n=s.b.length;
+  for(let i=0;i<n;i++){const y=top+Math.floor(hgt*i/n),y2=top+Math.floor(hgt*(i+1)/n);R(0,y,x1,y2-y,s.b[i]);if(i>0)dith(0,y-2,x1,2,s.b[i]);}
+  if(s.stars){for(let i=0;i<26;i++){if(hash(i+5)>s.stars)continue;const x=hash(i)*x1,y=top+2+hash(i+50)*(hgt-14);const on=frac(t/BEAT+hash(i+9))<0.8;if(on)R(x,y,1,1,P.white);}}
+  const h=((tod%24)+24)%24;
+  if(h>=5.5&&h<=19.5){const p=(h-5.5)/14;const sx=lerp(14,x1-14,p),sy=SURF-6-Math.sin(Math.PI*p)*34;disc(sx,sy,4,s.sun);if(h<7||h>17)R(sx-4,sy,9,1,P.orange);}
+  else{disc(x1-30,22,3,P.white);disc(x1-28,21,2,s.b[0]);}
+  if(cloudy){for(let i=0;i<4;i++){const x=((i*61-t*6)%(x1+30)+x1+30)%(x1+30)-20;S('cloud',x,16+i*7%20);}}}
+function drawWater(t,x1=WX,bed=true,scroll=0){R(0,SURF,x1,100,P.blue);dith(0,SURF+20,x1,4,P.navy);R(0,SURF+24,x1,34,P.navy);dith(0,SURF+58,x1,4,P.dusk);R(0,SURF+62,x1,38,P.dusk);
+  for(let x=0;x<x1;x++){const y=SURF+Math.round(Math.sin((x+scroll)*0.21+t*3.1)*1.1);R(x,y-1,1,2,P.cyan);if(((x+Math.floor(scroll)+Math.floor(t*12))%23)===0)R(x,y-2,2,1,P.white);}
+  for(let i=0;i<10;i++){const bx=hash(i+300)*x1,sp=10+hash(i+301)*14;const by=150-frac(t*sp/90+hash(i+302))*90;R(bx+Math.sin(t*2+i)*2,by,1,1,P.sky);}
+  if(bed){R(0,150,x1,6,P.ink);for(let x=0;x<x1;x+=3){const hgt=Math.round(hash(x*13)*3);R(x,148-hgt+2,3,hgt+1,P.dusk);}
+    for(let i=0;i<5;i++){const fx=(hash(i+40)*x1+t*(6+i*2))%(x1+20)-10;S('fish',fx,112+i*7,null,false);} } }
+function drawLayer(depth,t,x1=WX,str=1){const cy=DY(depth);
+  for(let i=0;i<170*str;i++){let x=(hash(i)*x1+Math.sin(t*0.6+i)*3+t*2)%x1;const y=cy+(hash(i+999)+hash(i+1999)+hash(i+2999)-1.5)*15;if(y<SURF+2)continue;R(x,y,1,1,hash(i+77)<0.55?P.green:P.lime);}
+  for(let i=0;i<7;i++){const x=(hash(i+500)*x1+t*3)%x1,y=cy-6+hash(i+501)*12;S(['diatom','chain','dino','cerat'][i%4],x,y);} }
+function drawDock(st){const t=st.c.t;for(const x of [10,110,192])R(x,46,4,104,P.dusk);
+  R(0,42,WX,4,P.slate);R(0,46,WX,1,P.dusk);for(let x=2;x<WX;x+=16)R(x,37,1,5,P.silver);R(0,37,WX,1,P.silver);}
+function lockIcon(x,y,state,t){if(!state)return;const blink=frac(t/BEAT)<0.6;
+  if(state==='held'){R(x+1,y,4,1,P.lime);R(x,y+1,1,2,P.lime);R(x+5,y+1,1,2,P.lime);R(x-1,y+3,8,5,P.lime);R(x+2,y+5,2,2,P.ink);}
+  else if(blink){R(x+1,y-1,4,1,P.sand);R(x,y,1,2,P.sand);R(x+5,y,1,1,P.sand);R(x-1,y+3,8,5,P.sand);T('?',x+8,y,P.sand);}}
+function drawArm(a,st){const t=st.c.t,x=a.x,py=DY(a.d);
+  R(x-a.ns.length*3-1,13,a.ns.length*6+2,10,P.ink);T(a.ns,x-a.ns.length*3,14,a.col);lockIcon(x-3,24,a.lock,t);
+  R(x,40,1,py-40,P.silver);if(a.kind==='ifcb')R(x+2,41,1,py-41,P.teal);
+  R(x-7,38,14,4,P.dusk);ring(x,34,5,P.silver);const ang=a.d*7;for(let k=0;k<4;k++){const aa=ang+k*Math.PI/2;L(x,34,x+Math.cos(aa)*4,34+Math.sin(aa)*4,P.slate);}
+  R(x+6,31,5,7,P.blue);R(x+7,32,3,1,a.v?(frac(t*8)<.5?P.lime:P.green):P.green);
+  if(a.kind==='ifcb'){R(x-3,py,7,10,P.silver);R(x-3,py,7,2,P.cyan);R(x-2,py+10,5,2,P.slate);R(x-4,py+3,1,4,P.orange);
+    if(a.flow){for(let i=0;i<8;i++){const yy=py-frac(t*1.6+i/8)*(py-42);R(x+2,yy,1,2,P.cyan);}}}
+  else{R(x-4,py,9,14,P.sand);R(x-4,py+4,9,1,P.orange);R(x-4,py+9,9,1,P.orange);R(x-3,py+1,1,12,P.white);R(x-2,py+14,5,4,P.silver);R(x-1,py+18,3,1,P.slate);}
+  if(a.v){for(let i=0;i<3;i++){const yy=frac(t*3+i/3);R(x-7-yy*6,py+5-yy*4,1,1,P.cyan);}}
+  if(a.dwell!=null){R(x+7,py+2,3,12,P.ink);const hh=Math.round(12*clamp(a.dwell));R(x+7,py+14-hh,3,hh,P.sand);T('dwell',x+11,py+3,P.sand);}
+  if(a.steps){a.steps.forEach((s,i)=>{const yy=DY(s.d);R(x-12,yy,5,1,s.done?a.col:P.slate);if(s.clamp)T('clamp',x-44,yy-4,P.orange);});}
+}
+function drawRanges(x,min=0.7,max=1.5){L(x,DY(min),x+30,DY(min),P.slate,true);L(x,DY(max),x+30,DY(max),P.slate,true);T('min '+min,x+1,DY(min)-9,P.slate);T('max '+max,x+1,DY(max)+1,P.slate);}
+function drawIFCBbox(st,x=18,sampling){box(x,28,30,14,P.dusk,P.silver);T('IFCB',x+3,30,P.white);R(x+26,31,2,2,sampling?(frac(st.c.t/STEP)<.5?P.lime:P.green):P.slate);R(x+30,41,46-x-30+26,1,P.teal);}
+function drawBoat(st,bx){const t=st.c.t,by=SURF+Math.round(Math.sin(t*2.2));
+  R(bx-34,by-3,68,4,P.slate);R(bx-30,by+1,60,3,P.dusk);R(bx-38,by-4,6,2,P.slate);
+  R(bx-30,by-7,60,4,P.navy);const sunny=st.sunUp;for(let i=0;i<9;i++)R(bx-29+i*6+(i>4?6:0),by-6,5,2,sunny&&frac(t*0.7+i*0.11)<0.2?P.cyan:P.blue);
+  R(bx-6,by-13,14,6,P.white);R(bx-4,by-11,4,2,P.sky);R(bx+2,by-11,4,2,P.sky);T('IFCB',bx-12,by+6,P.silver);
+  R(bx+16,by-32,1,25,P.silver);R(bx+14,by-34,5,2,frac(t/BEAT)<0.3&&st.gps?P.lime:P.white);
+  R(bx-20,by-17,1,10,P.silver);R(bx-25,by-19,11,2,st.starlink?P.white:P.slate);if(st.starlink)R(bx-21,by-20,3,1,P.lime);
+  R(bx-1,by+4,2,10,P.silver);if(st.flow){for(let i=0;i<4;i++){const yy=by+14-frac(t*1.5+i/4)*12;R(bx,yy,1,1,P.cyan);}}
+  return by;}
+function drawIslands(scroll){for(let i=0;i<5;i++){const w=30+hash(i+70)*40,x=((i*90-scroll*0.3)%(WX+80)+WX+80)%(WX+80)-60;R(x,SURF-5,w,5,P.teal);R(x+6,SURF-8,w-14,3,P.teal);R(x+w*0.4,SURF-11,6,3,P.green);}}
+
+/* ============================================================ HUD (right panel) + console */
+function drawHUD(st){const x0=WX,t=st.c.t;R(x0,12,W-x0,144,P.ink);R(x0,12,1,144,P.dusk);
+  T('ROS NODES',x0+4,13,P.slate);
+  const nodes=st.nodes;nodes.forEach((n,i)=>{const col=i%2,row=Math.floor(i/2),x=x0+4+col*57,y=22+row*8;
+    const idle=st.idle.includes(n),act=st.active.includes(n);
+    R(x,y+3,3,3,idle?P.slate:act?(frac(t/STEP)<.5?P.sand:P.orange):P.green);T(n,x+5,y,idle?P.slate:act?P.white:P.silver);});
+  let y=22+Math.ceil(nodes.length/2)*8+2;R(x0+4,y,108,1,P.dusk);y+=2;
+  if(st.arms.length===1){const a=st.arms[0];T('/'+a.ns+'/task',x0+4,y,P.slate);y+=9;T(a.task.slice(0,18),x0+8,y,a.col);y+=9;
+    if(st.hudLine)T(st.hudLine.slice(0,18),x0+4,y,P.silver);else T('v '+(a.v*0.02).toFixed(3)+' m/s',x0+4,y,P.silver);y+=10;}
+  else{for(const a of st.arms){T(a.short,x0+4,y,a.col);T(a.task.slice(0,17),x0+12,y,P.white);y+=9;}y+=1;}
+  if(st.lock){const lk=st.lock;T('LOCK',x0+4,y,P.slate);if(!lk.note)for(let i=0;i<lk.max;i++){const ow=lk.owners[i];const arm=st.arms.find(a=>a.ns===ow);box(x0+30+i*12,y+1,10,7,ow?arm.col:P.ink,P.slate);}
+    if(lk.waiting.length&&frac(t/BEAT)<.7){const a=st.arms.find(a=>a.ns===lk.waiting[0]);T('wait '+(a?a.short:''),x0+30+lk.max*12+3,y,P.sand);}
+    if(lk.note)T(lk.note,x0+30,y,P.slate);y+=10;}
+  const cy=Math.max(y,104);R(x0+4,cy,108,1,P.dusk);if(st.chart)CHARTS[st.chart.type](st.chart,x0+4,cy+2,108,154-cy-2,st);}
+const CHARTS={
+  profile(c,x,y,w,h){T(c.title||'profiler',x,y,P.slate);const top=y+10,bot=y+h,ch=bot-top;const dmin=0.6,dmax=1.6;const Yd=d=>top+(d-dmin)/(dmax-dmin)*ch;
+    R(x+14,top,1,ch,P.dusk);R(x+14,bot,w-14,1,P.dusk);T('m',x,top,P.slate);
+    if(c.to!=null&&c.to>c.from){let px=null;for(let d=c.from;d<=c.to+1e-6;d+=0.02){const v=prof(d,c.layer);const xx=x+15+v/3.7*(w-18),yy=Yd(d);dith(x+15,yy,xx-x-15,1,P.green);if(px)L(px[0],px[1],xx,yy,P.lime);px=[xx,yy];}}
+    else T('no cast yet',x+20,top+ch/2-4,P.slate);
+    if(c.peak!=null){const yy=Yd(c.peak);L(x+15,yy,x+w,yy,frac(c.t/BEAT)<.6?P.sand:P.orange,true);R(x+w-30,y,30,9,P.ink);T(f2(c.peak),x+w-24,y,P.sand);}},
+  steps(c,x,y,w,h){T('offset_steps',x,y,P.slate);c.rows.forEach((r,i)=>{const yy=y+10+i*8;T((r.off>=0?'+':'')+f2(r.off),x,yy,P.silver);T(f2(r.raw),x+36,yy,r.clamp?P.orange:P.white);if(r.clamp)T(f2(r.d),x+72,yy,P.orange);if(r.done)R(x+104,yy+3,3,3,P.sand);});},
+  soc(c,x,y,w,h,st){T('/seatrac/power',x,y,P.slate);const s=c.soc;box(x,y+12,40,16,P.ink,P.silver);R(x+40,y+17,2,6,P.silver);
+    const col=s>=95?P.lime:s>=80?P.sand:P.red;R(x+2,y+14,Math.round(36*s/100),12,col);T(s.toFixed(0)+'%',x+48,y+12,col,1);T(c.charging?'charging':'draining',x+48,y+21,c.charging?P.lime:P.orange);
+    T('hi 95',x,y+32,s>=95?P.lime:P.slate);T('med 80',x+40,y+32,s>=80?P.sand:P.slate);T(c.starlink?'starlink ON':'starlink off',x,y+41,c.starlink?P.lime:P.slate);},
+  track(c,x,y,w,h,st){T('/gps/fix',x,y,P.slate);const top=y+10,hh=h-20;for(let gx=x;gx<x+w;gx+=12)R(gx,top,1,hh,P.dusk);for(let gy=top;gy<top+hh;gy+=8)R(x,gy,w,1,P.dusk);
+    const pt=k=>[x+6+k*(w-12),top+hh/2+Math.sin(k*7)*hh*0.3+Math.sin(k*17)*3];let prev=null;const n=Math.floor(c.k*60);for(let i=0;i<=n;i++){const p=pt(i/60);if(prev)L(prev[0],prev[1],p[0],p[1],P.sky);prev=p;}
+    if(prev&&frac(c.t/BEAT)<.6)R(prev[0]-1,prev[1]-1,3,3,P.lime);T(c.lat.toFixed(4)+' '+c.lon.toFixed(3),x,top+hh+1,P.silver);},
+  clock(c,x,y,w,h){T(c.title||'UTC',x,y,P.slate);TC(c.hhmm,x+w/2,y+12,P.white,2);if(c.sub)TC(c.sub,x+w/2,y+33,c.subc||P.silver);},
+};
+function drawConsole(lines,lb){R(0,156,W,24,P.ink);R(0,156,W,1,P.dusk);const shown=lines.filter(l=>l[0]<=lb).slice(-2);
+  shown.forEach((l,i)=>{const [b,node,msg,lvl]=l;const row=shown.length===1?1:i;const y=158+row*10;const age=(lb-b)*BEAT;
+    let s='['+node+'] '+msg;const typed=Math.floor(age*110)+1;let off=0;if(i===shown.length-1){off=Math.max(0,Math.min(s.length-48,Math.floor((age-s.length/110-0.35)*16)));s=s.slice(0,typed);}
+    T(lvl==='W'?'WARN':'INFO',2,y,lvl==='W'?P.sand:P.sky);T(s.slice(off,off+48),32,y,P.white);});}
+function win(x,y,w,h,title,col=P.sky){R(x+2,y+2,w,h,'#00000088');R(x,y,w,h,col);R(x+1,y+9,w-2,h-10,P.ink);T(title,x+3,y,P.ink);}
+function roiWin(x,y,cols,rows,n,seed,title='ifcb/roi/image'){win(x,y,cols*13+3,rows*13+12,title,P.silver);
+  for(let i=0;i<Math.min(n,cols*rows);i++){const cx=x+2+(i%cols)*13,cy=y+11+Math.floor(i/cols)*13;R(cx,cy,12,12,P.silver);const k=Math.floor(hash(seed+i)*4);
+    S(['diatom','chain','dino','cerat'][k],cx+6-[5,9,6,7][k]/2,cy+6-[5,3,7,8][k]/2,P.dusk,hash(seed+i+3)<.5);}}
+
+/* ============================================================ scene plumbing */
+function renderWorld(st){const c=st.c;
+  if(st.boat){drawSky(st.tod,c.t,WX,st.cloudy);drawIslands(st.scroll);drawWater(c.t,WX,false,st.scroll);drawLayer(st.layer,c.t,WX,0.5);}
+  else{drawSky(st.tod,c.t);drawWater(c.t);drawLayer(st.layer,c.t);drawDock(st);if(st.ranges)drawRanges(st.rangeX??4);}
+  for(const f of st.under)f();
+  if(st.boat)st.boatY=drawBoat(st,st.boatX);
+  else{drawIFCBbox(st,18,st.sampling);for(const a of st.arms)drawArm(a,st);}
+  for(const f of st.over)f();
+  drawHUD(st);drawConsole(st.log,c.lb);}
+function base(c,o){return Object.assign({c,tod:17.4,arms:[],layer:1.12,nodes:NODES[c.key],active:[],idle:[],log:[],lock:null,chart:null,under:[],over:[],ranges:true,boat:false,scroll:0},o);}
+const NODES={
+  dock:['lock_mgr','gps','web','rosbag','arm','ctd','profiler','motor','winch','ifcb_run'],
+  duet:['lock_mgr','gps','web','rosbag','I.arm','I.winch','I.prof','I.ifcb','C.arm','C.winch','C.ctd','C.motor'],
+  roam:['lock_mgr','gps','web','rosbag','arm','ifcb_run','ctd','ifcb','seatrac','starlink'],
+};
+const armI=o=>Object.assign({ns:'arm_ifcb',short:'I',x:74,col:P.lime,kind:'ifcb',d:1.3,task:'idle',lock:null,v:0,flow:false,dwell:null,steps:null},o);
+const armC=o=>Object.assign({ns:'arm_chanos',short:'C',x:150,col:P.sand,kind:'chanos',d:1.2,task:'idle',lock:null,v:0,flow:false,dwell:null,steps:null},o);
+const at=(lb,list,dflt)=>{let v=dflt;for(const [b,x] of list)if(lb>=b)v=x;return v;};
+const between=(lb,a,b)=>lb>=a&&lb<b;
+function hhmm(h){h=((h%24)+24)%24;const m=Math.floor((h%1)*60);return String(Math.floor(h)).padStart(2,'0')+':'+String(m).padStart(2,'0');}
+
+/* ============================================================ common scenes */
+function ground(){R(0,154,W,26,P.ink);for(let x=0;x<W;x+=4){const h=Math.round(hash(x*7)*4);R(x,152-h,4,h+2,P.dusk);}for(let i=0;i<9;i++)R(hash(i+90)*W,160+hash(i+91)*16,2,1,P.slate);}
+function sTitle(c){const t=c.t,lb=c.lb,cfg=c.cfg;drawSky(19.2,t,W);drawWater(t,W,true);drawLayer(1.2,t,W,0.8);ground();
+  const bounce=Math.max(0,1-frac(t/BEAT)*4);const cols=[P.lime,P.cyan,P.sand,P.orange];const col=lb<8?P.lime:cols[Math.floor(lb)%4];
+  win(40,24,240,62,'',P.dusk);TC('PHYTO-ARM',W/2+1,36-Math.round(bounce*2),col,3,true);TC('UNDER THE HOOD',W/2,66,P.white,1,true);
+  if(lb>=4){TC(cfg.name+'  '+cfg.tag,W/2,100,cfg.col,1,true);}
+  if(lb>=8)TC('ROS toolkit for IFCB + ocean sensors',W/2,114,P.silver,1,true);
+  if(lb>=12&&frac(t/BEAT)<0.6)TC('github.com/WHOIGit/PhytO-ARM',W/2,165,P.cyan,1,true);}
+const BOOT={
+  dock:{lines:[[10,'$ phyto-arm start arm_ifcb',P.sand],[11,'+ arm  ctd_comms  ctd',P.white],[12,'+ profiler  motor  winch',P.white],[13,'+ ifcb_runner',P.white],[14.5,'arm_ifcb: idle',P.lime]],
+    yaml:['launch_args:',' ifcb_winch: true',' chanos_winch: false','lock_manager:',' max_moving_winches: 1','arm_ifcb:',' winch: 0.7 - 1.5 m',' profiler: PE port4']},
+  duet:{lines:[[10,'$ phyto-arm start arm_ifcb',P.sand],[11,'+ arm ctd profiler winch',P.white],[12,'$ phyto-arm start arm_chanos',P.sand],[13,'+ arm  rbr ctd  winch',P.white],[14,'+ udp stream :12345',P.white],[14.75,'2 arms: idle',P.lime]],
+    yaml:['launch_args:',' ifcb_winch: true',' chanos_winch: true','lock_manager:',' max_moving_winches: 1','arm_chanos:',' downcast: stepped',' upcast: continuous']},
+  roam:{lines:[[10,'$ phyto-arm start arm_seatrac',P.sand],[11,'+ ifcb  ifcb_logfilter',P.white],[12,'+ seatrac  starlink_mgr',P.white],[13,'+ arm  ctd  ifcb_runner',P.white],[14.5,'winch_enabled: false',P.lime]],
+    yaml:['launch_args:',' ifcb_winch: false',' chanos_winch: false','starlink_manager:',' scheduled_on: 12:30',' soc_threshold:','  high: 95','  medium: 80']},
+};
+function sBoot(c){const lb=c.lb,t=c.t,b=BOOT[c.key];R(0,12,W,168,P.ink);
+  const lines=[[0,'$ phyto-arm start main',P.sand],[0.5,'  /configs/config.yaml',P.sand],[1.5,'validate vs example.yaml: OK',P.lime],[2.5,'rosparam load: param server',P.silver],
+    [4,'+ lock_manager',P.white],[5,'+ gps          gpsd',P.white],[6,'+ web          :8098',P.white],[7,'+ rosbridge    :9090',P.white],[8,'+ camera       rtsp',P.white],[9,'+ rosbag_record',P.white],...b.lines];
+  let y=16;for(const [bb,s,col] of lines){if(lb<bb)break;const age=(lb-bb)*BEAT;T(s.slice(0,Math.floor(age*70)+1),4,y,col);y+=10;}
+  if(frac(t/BEAT)<.5)R(4,y,5,8,P.lime);
+  R(184,14,136,9*b.yaml.length+14,P.cab||'#232640');R(184,14,136,9,P.slate);T('config.yaml',187,14,P.ink);
+  b.yaml.forEach((s,i)=>{const hi=s.includes('winch')||s.includes('max_moving')||s.includes('thresh')||s.includes('scheduled');T(s,187,25+i*9,hi&&lb>=10?c.cfg.col:P.silver);});
+  if(lb>=4){const n=Math.min(6,Math.floor(lb-3));for(let i=0;i<n;i++){const x=190+(i%3)*42,y2=118+Math.floor(i/3)*16;box(x,y2,38,12,P.dusk,P.green);T(['LOCK','GPS','WEB','BRDG','CAM','BAG'][i],x+3,y2+2,P.lime);}}
+  if(lb>=11){TC(c.cfg.name+' ARMS ONLINE',252,152,c.cfg.col);}}
+const LOOPBOX=[[4,24,'loop()'],[116,24,'lock_manager'],[116,70,'get_next_task'],[116,116,'send_winch_goal'],[4,116,'task.callback'],[4,70,'start_next_task']];
+const LOOPTXT={dock:[['ArmBase.loop()',P.lime],['',0],['every arm',P.silver],['subclasses',P.silver],['ArmBase and',P.silver],['overrides',P.silver],['get_next_task',P.white],['',0],['returns Task(',P.sand],[' name, callback,',P.sand],[' depth, speed)',P.sand]],
+  duet:[['2 arms, 1 lock',P.sand],['',0],['acquire() is a',P.silver],['non-blocking',P.silver],['semaphore with',P.silver],['named owners',P.silver],['',0],['the loser sleeps',P.white],['1 s and retries',P.white],['',0],['release() runs',P.lime],['in winch_done',P.lime]],
+  roam:[['winch_enabled:',P.sky],[' false',P.sky],['',0],['winch_client is',P.silver],['None, so loop()',P.silver],['skips the lock',P.silver],['and the winch',P.silver],['',0],['the callback',P.white],['runs right away',P.white]]};
+function sLoop(c){const t=c.t,lb=c.lb,key=c.key;R(0,12,W,144,P.ink);
+  for(let x=0;x<214;x+=8)for(let y=16;y<154;y+=8)R(x,y,1,1,P.dusk);
+  const noW=key==='roam';const bw=96,bh=18;const ctr=i=>[LOOPBOX[i][0]+bw/2,LOOPBOX[i][1]+bh/2];
+  const solid=noW?P.dusk:P.slate;
+  L(100,33,116,33,solid);L(164,42,164,70,solid);L(164,88,164,116,solid);L(116,125,100,125,P.slate);L(52,116,52,88,P.slate);L(52,70,52,42,P.slate);
+  L(108,42,116,70,noW?P.lime:P.dusk,true);L(116,88,100,116,noW?P.lime:P.dusk,true);
+  if(noW)T('skip',56,98,P.lime);
+  const paths={dock:[[[0,0],[2,1],[4,2],[6,3],[10,4],[12,5],[14,0],[16,1]]],
+    roam:[[[0,0],[2,2],[4,4],[6,5],[8,0],[10,2],[12,4],[14,5],[16,0]]],
+    duet:[[[0,0],[1,1],[3,2],[5,3],[9,4],[11,5],[13,0],[14,1]],[[0,0],[1.5,1],[9.5,2],[11.5,3],[16,3]]]};
+  const tokCols=[key==='duet'?P.lime:c.cfg.col,P.sand];const where=[];
+  paths[key].forEach((pth,k)=>{let i=0;while(i<pth.length-1&&lb>=pth[i+1][0])i++;const bx0=pth[i][1];const nxt=pth[i+1];let pos=ctr(bx0);
+    if(nxt&&lb>=nxt[0]-0.5){const c1=ctr(nxt[1]);const ee=Math.floor(clamp((lb-(nxt[0]-0.5))/0.5)*6)/6;pos=[lerp(pos[0],c1[0],ee),lerp(pos[1],c1[1],ee)];}
+    where.push(bx0);const bob=frac(t/STEP)<.5?0:1;const x=Math.round(pos[0]-5+k*14),y=Math.round(pos[1]-19-bob);
+    R(x,y,11,8,tokCols[k]);R(x+2,y+2,2,2,P.ink);R(x+7,y+2,2,2,P.ink);R(x+1,y+8,2,2,tokCols[k]);R(x+8,y+8,2,2,tokCols[k]);});
+  LOOPBOX.forEach(([x,y,label],i)=>{const g=noW&&(i===1||i===3);const hit=where.indexOf(i);const col=hit>=0?tokCols[hit]:g?P.dusk:P.slate;box(x,y,bw,bh,P.ink,col);T(label,x+3,y+5,g?P.dusk:hit>=0?P.white:P.silver);});
+  if(key==='duet'&&between(lb,1.5,9.5)&&frac(t/BEAT)<.6)T('busy 1/1',150,44,P.sand);
+  R(214,12,106,144,P.cab||'#232640');R(214,12,1,144,P.dusk);T('arm_base.py',218,16,P.slate);
+  LOOPTXT[key].forEach(([s,col],i)=>{if(s&&lb>=i*0.75)T(s,218,30+i*10,col);});
+  drawConsole(key==='roam'?[[0,'arm_ifcb','No winch; running no_winch','W'],[8,'arm_ifcb','No winch; running no_winch','W']]:
+    key==='duet'?[[0,'arm_ifcb','Arm waiting for clearance','W'],[0.5,'arm_chanos','Arm waiting for clearance','W'],[3,'arm_ifcb','Goal depth 0.7 for task upcast','W'],[9.5,'arm_chanos','Goal depth 0.7 for task upcast_continuous','W']]:
+    [[0,'arm_ifcb','Arm waiting for clearance','W'],[3,'arm_ifcb','Goal depth 0.7 for task upcast','W'],[5,'arm_ifcb','All checks passed; Moving winch to 0.7','I'],[12,'arm_ifcb','task_completed','I']],lb);}
+function sOutro(c){const t=c.t,lb=c.lb;drawSky(lb<8?20:21,t,W);drawWater(t,W,true);drawLayer(1.2,t,W,0.6);ground();
+  if(lb<10){win(108,40,104,30,'rosbag_record',P.lime);T('every topic',122,52,P.white);T('-> /data/*.bag',114,61,P.silver);
+    const outs=[[10,104,'FOXGLOVE',P.sky],[116,104,'IFCB DASH',P.sand],[222,104,'ERDDAP',P.orange]];
+    outs.forEach(([x,y,s,col],i)=>{box(x,y,88,16,P.ink,col);TC(s,x+44,y+4,col);if(lb>=1+i){for(let k=0;k<3;k++){const p=frac(t*1.2+k/3);const sx=160,sy=70,ex=x+44,ey=y;R(lerp(sx,ex,p)-1,lerp(sy,ey,p)-1,3,3,col);}}});
+    T('NetCDF (CF)',230,124,P.silver);T('bins+metadata',118,124,P.silver);T('live + bags',16,124,P.silver);}
+  else{const fade=clamp((lb-14)/2);win(52,36,216,72,'',P.dusk);TC('PHYTO-ARM',W/2+1,48,P.lime,3,true);TC('github.com/WHOIGit/PhytO-ARM',W/2,82,P.cyan,1,true);TC('Brosnahan Lab . WHOI',W/2,94,P.silver,1,true);
+    TC('THANKS FOR WATCHING',W/2,164,frac(t/BEAT)<.6?P.white:P.sand,1,true);if(fade>0){X.globalAlpha=fade;R(0,0,W,H,P.ink);X.globalAlpha=1;}}}
+
+/* ============================================================ DOCK: one arm, one winch */
+const DOCK_PEAK=1.12;
+function dUp(c){const lb=c.lb,m=track(lb,1.3,[[2,12,0.7]]);const held=between(lb,2,12);
+  const a=armI({d:m.d,v:m.v,lock:lb<2?'wait':held?'held':null,task:lb<2?'waiting_for_clearance':held?'upcast':'task_completed'});
+  const st=base(c,{arms:[a],active:held?['winch','motor','ctd','lock_mgr']:['lock_mgr'],lock:{max:1,owners:held?['arm_ifcb']:[],waiting:lb<2?['arm_ifcb']:[]},chart:{type:'profile',from:0.7,to:null,layer:DOCK_PEAK,t:c.t},
+    log:[[0,'arm_ifcb','Arm waiting for clearance','W'],[2,'arm_ifcb','Goal depth 0.7 for task upcast','W'],[3,'arm_ifcb','All checks passed; Moving winch to 0.7','I'],[8,'winch','velocity_f: atan slow-down near target','I'],[12,'arm_ifcb','release_clearance() -> True','I']]});
+  st.over.push(()=>{if(between(lb,3,11)){const x=110,y=70;win(x,y,88,34,'winch_node',P.sky);T('v=max*2/pi*',x+3,y+11,P.silver);T(' atan(dx/0.05)',x+3,y+20,P.silver);}});
+  renderWorld(st);}
+function dDown(c){const lb=c.lb,m=track(lb,0.7,[[1,13,1.5]]);const held=between(lb,1,13);const peak=lb>=14?DOCK_PEAK:null;
+  const a=armI({d:m.d,v:m.v,lock:lb<1?'wait':held?'held':null,task:lb<1?'waiting_for_clearance':held?'downcast':'task_completed'});
+  const st=base(c,{arms:[a],active:held?['winch','motor','ctd','profiler']:lb>=13?['profiler','arm']:['lock_mgr'],lock:{max:1,owners:held?['arm_ifcb']:[],waiting:lb<1?['arm_ifcb']:[]},
+    chart:{type:'profile',from:0.7,to:lb>=1?m.d:null,layer:DOCK_PEAK,peak,t:c.t,title:'profiler: PE'},
+    log:[[0,'arm_ifcb','Goal depth 1.5 for task downcast','W'],[1,'profiler','Subscribing to ctd/aml/port4/phycoerythrin','I'],[6,'ctd','/arm_ifcb/ctd/depth -> winch + profiler','I'],[13,'profiler','DepthProfile resampled @ 0.02 m','I'],[14,'arm_ifcb','Profile peak is 3.41 at 1.12 m','I']]});
+  st.over.push(()=>{if(held&&frac(c.t/STEP)<.5){R(a.x+5,DY(a.d)+4,2,1,P.lime);}if(peak!=null){const y=DY(peak);L(4,y,198,y,frac(c.t/BEAT)<.6?P.sand:P.orange,true);T('PEAK',150,y-9,P.sand);}});
+  renderWorld(st);}
+function dPeak(c){const lb=c.lb,m=track(lb,1.5,[[1,8,DOCK_PEAK]]);const held=between(lb,1,8);
+  const a=armI({d:m.d,v:m.v,lock:lb<1?'wait':held?'held':null,task:lb<1?'waiting_for_clearance':lb<8?'profiler_peak_depth':'ifcb sample',flow:lb>=14});
+  const playlist=[['cartridgedebubble','0 = off',P.slate],['debubble+beads','1440 min',P.slate],['biocide+bleach','1440 min',P.slate],['debubble','always',P.white],['runsample','always',P.white]];
+  const cur=lb>=14?4:lb>=11?3:-1;
+  const st=base(c,{arms:[a],sampling:lb>=11,active:held?['winch','motor','ctd']:lb>=8?['ifcb_run','arm']:[],lock:{max:1,owners:held?['arm_ifcb']:[],waiting:lb<1?['arm_ifcb']:[]},
+    chart:{type:'profile',from:0.7,to:1.5,layer:DOCK_PEAK,peak:DOCK_PEAK,t:c.t,title:'profiler: PE'},
+    log:[[0,'arm_ifcb','Goal depth 1.12 for task profiler_peak_depth','W'],[8,'arm_ifcb','winch_done -> release_clearance()','I'],[9,'ifcb_runner','Activating position hold','I'],[11,'ifcb_runner','Starting debubble routine','I'],[14,'ifcb_runner','Starting runsample routine','I']]});
+  st.over.push(()=>{if(lb>=9){const x=94,y=64;win(x,y,106,58,'ifcb_runner playlist',P.lime);playlist.forEach(([n,v,col],i)=>{const on=i===cur;if(on)R(x+1,y+10+i*9,104,9,P.dusk);T(n.slice(0,11),x+3,y+10+i*9,on?P.lime:col);T(v.slice(0,6),x+70,y+10+i*9,on?P.lime:P.slate);});}});
+  renderWorld(st);}
+function dSample(c){const lb=c.lb;const a=armI({d:DOCK_PEAK,task:lb<13?'ifcb sample':'task_completed',flow:lb<7});
+  const st=base(c,{arms:[a],sampling:true,active:lb<7?['ifcb_run']:lb<12?['web','gps']:['arm'],lock:{max:1,owners:[],waiting:[]},
+    chart:{type:'profile',from:0.7,to:1.5,layer:DOCK_PEAK,peak:DOCK_PEAK,t:c.t,title:'profiler: PE'},
+    log:[[0,'ifcb','runsample: imaging at 1.12 m','I'],[6,'ifcb_runner','Should release position hold now','I'],[7,'ifcb_runner','Position hold released','I'],[9,'web','field_map -> IFCB bin metadata','I'],[13,'arm_ifcb','start_next_task()','I']]});
+  st.over.push(()=>{roiWin(92,60,8,3,Math.floor(lb*2.2),11);if(lb>=9){const x=94,y=108;win(x,y,106,46,'web /field_map',P.sand);
+    [['ctdDepth','1.12'],['gpsLatitude','41.524'],['gpsLongitude','-70.671'],['commitHash','bd725dd']].forEach(([k,v],i)=>{if(lb>=9+i*0.5){T(k,x+3,y+10+i*9,P.silver);T(v,x+106-v.length*6-3,y+10+i*9,P.white);}});}});
+  renderWorld(st);}
+function dPlanB(c){const lb=c.lb;const wiz=lb>=8;
+  const m=track(lb,DOCK_PEAK,[[2,6,0.7],[9,14,1.5]]);const held=between(lb,2,6)||between(lb,9,14);
+  const a=armI({d:m.d,v:m.v,lock:held?'held':null,task:wiz?'wiz_probe':'scheduled_depth'});
+  const st=base(c,{arms:[a],tod:wiz?11.75+lb/16*0.25:10.5,active:held?['winch','motor']:['arm'],lock:{max:1,owners:held?['arm_ifcb']:[],waiting:[]},
+    chart:{type:'clock',hhmm:wiz?hhmm(11.75+clamp((lb-8)/6)*0.25):'10:30',title:'UTC',sub:wiz?(lb>=14?'wiz: hold 30 min':'next wiz 12:00'):'every: 60 min',subc:wiz?P.sand:P.silver},
+    log:[[0,'arm_ifcb','its_scheduled_depth_time() -> True','I'],[1,'arm_ifcb','Using scheduled depth of 0.70 m','I'],[8,'arm_ifcb','its_wiz_time(): inside 15 min window','W'],[9,'arm_ifcb','Preferred wiz probe depth exceeds max depth, using max depth','W'],[14,'arm_ifcb','Waiting for wiz probe to finish','I']]});
+  st.over.push(()=>{const x=96,y=62;if(!wiz){win(x,y,104,52,'scheduled_depth',P.sky);T('peak < threshold',x+3,y+10,P.silver);T('or 60 min passed',x+3,y+19,P.silver);T('linspace(.7,1.5,3)',x+3,y+30,P.white);
+      [0.7,1.1,1.5].forEach((d,i)=>{const on=i===0&&lb>=1;box(x+6+i*32,y+40,28,10,on?P.sky:P.ink,P.sky);T(d.toFixed(1),x+11+i*32,y+41,on?P.ink:P.sky);});}
+    else{win(x,y,104,52,'wiz_probe',P.sand);T('peak 1.12',x+3,y+10,P.silver);T('+ offset 0.50',x+3,y+19,P.silver);T('= 1.62 > max',x+3,y+28,P.orange);T('-> clamp 1.50',x+3,y+38,lb>=9&&frac(c.t/BEAT)<.7?P.sand:P.white);}});
+  renderWorld(st);}
+function dLapse(c){const lb=c.lb;const peaks=[1.0,1.22,1.38,0.98];const k=Math.min(3,Math.floor(lb/8)),q=lb-k*8;const pk=peaks[k],prev=k?peaks[k-1]:DOCK_PEAK;
+  const tod=6+lb/32*24;const layer=lerp(prev,pk,clamp(q/4));
+  const m=track(q,prev,[[0,1.5,0.7],[1.5,4.5,1.5],[4.5,5.5,pk]]);const task=q<1.5?'upcast':q<4.5?'downcast':q<5.5?'profiler_peak_depth':'ifcb sample';const held=q<5.5;
+  const a=armI({d:m.d,v:m.v,lock:held?'held':null,task,flow:q>=5.5});const bins=k*1+(q>=5.5?1:0)+412;
+  const st=base(c,{arms:[a],tod,layer,sampling:q>=5.5,active:held?['winch','motor','ctd']:['ifcb_run'],lock:{max:1,owners:held?['arm_ifcb']:[],waiting:[]},
+    chart:{type:'profile',from:0.7,to:q>=1.5?Math.min(m.d,1.5):k?1.5:null,layer:q>=1.5?pk:prev,peak:q>=4.5?pk:null,t:c.t,title:'profiler '+hhmm(tod)},
+    log:[[k*8-8+5.5,'ifcb_runner','Starting runsample routine','I'],[q<0?99:0,'arm_ifcb','Goal depth 0.7 for task upcast','W'],[1.5,'arm_ifcb','Goal depth 1.5 for task downcast','W'],[4.5,'arm_ifcb','Profile peak at '+f2(pk)+' m','I'],[5.5,'ifcb_runner','Starting runsample routine','I']].map(l=>[l[0]+k*8,l[1],l[2],l[3]])});
+  st.over.push(()=>{R(100,62,96,11,P.ink);T(hhmm(tod),102,63,P.white);T('bins '+bins,140,63,P.lime);if(q>=5.5)roiWin(110,76,6,2,Math.floor((q-5.5)*5),k*31);});
+  renderWorld(st);}
+
+/* ============================================================ DUET: IFCB + Chanos, one lock */
+const IX=58,CX=150;
+function uLock(c){const lb=c.lb;const mi=track(lb,1.3,[[1,7,0.7]]),mc=track(lb,1.2,[[8,15,0.7]]);
+  const iH=between(lb,1,7),cH=between(lb,8,15);
+  const I=armI({x:IX,d:mi.d,v:mi.v,lock:iH?'held':(lb<1||lb>=7.5)?'wait':null,task:lb<1?'waiting_for_clearance':iH?'upcast':lb<7.5?'task_completed':'waiting_for_clearance'});
+  const C=armC({x:CX,d:mc.d,v:mc.v,lock:cH?'held':lb<8?'wait':null,task:lb<8?'waiting_for_clearance':cH?'upcast_continuous':'task_completed'});
+  const owners=iH?['arm_ifcb']:cH?['arm_chanos']:[];const waiting=(lb<8&&!cH)?['arm_chanos']:(!iH&&lb>=7.5)?['arm_ifcb']:[];
+  const st=base(c,{arms:[I,C],rangeX:4,active:iH?['I.winch','lock_mgr']:cH?['C.winch','C.motor','lock_mgr']:['lock_mgr'],lock:{max:1,owners,waiting},
+    chart:{type:'profile',from:0.7,to:null,layer:DOCK_PEAK,t:c.t},
+    log:[[0,'arm_ifcb','Arm waiting for clearance','W'],[1,'lock_manager','acquire(arm_ifcb) -> True','I'],[2,'lock_manager','acquire(arm_chanos) -> False  1/1','I'],[4,'arm_chanos','rospy.sleep(1); retry acquire','I'],[7,'lock_manager','release(arm_ifcb) -> True','I'],[8,'lock_manager','acquire(arm_chanos) -> True','I'],[9,'arm_ifcb','Arm waiting for clearance','W'],[15,'lock_manager','release(arm_chanos) -> True','I']]});
+  st.under.push(()=>{});st.over.push(()=>semaphore(104,14,1,owners,st));renderWorld(st);}
+function semaphore(x,y,max,owners,st){x=92;y=24;R(89,13,26,10,P.ink);T('lock',90,14,P.silver);box(x-2,y,max*11+3,10,P.ink,P.slate);for(let i=0;i<max;i++){const ow=owners[i];const a=st.arms.find(a=>a.ns===ow);R(x+1+i*11,y+2,8,6,ow?a.col:P.dusk);}}
+function uShared(c){const lb=c.lb;const mi=track(lb,0.7,[[0,11,1.5]]);const iH=lb<11;const cH=lb>=14;const peak=lb>=12?DOCK_PEAK:null;
+  const I=armI({x:IX,d:mi.d,v:mi.v,lock:iH?'held':null,task:iH?'downcast':'task_completed'});
+  const C=armC({x:CX,d:0.7,lock:cH?'held':'wait',task:cH?'downcast_profile_step':'waiting_for_clearance'});
+  const owners=iH?['arm_ifcb']:cH?['arm_chanos']:[];
+  const st=base(c,{arms:[I,C],rangeX:4,active:iH?['I.winch','I.prof']:lb<14?['I.prof','C.arm']:['C.arm','lock_mgr'],lock:{max:1,owners,waiting:cH?[]:['arm_chanos']},
+    chart:{type:'profile',from:0.7,to:mi.d,layer:DOCK_PEAK,peak,t:c.t,title:'/arm_ifcb/profiler'},
+    log:[[0,'arm_ifcb','Goal depth 1.5 for task downcast','W'],[3,'arm_chanos','Arm waiting for clearance','W'],[11,'lock_manager','release(arm_ifcb) -> True','I'],[12,'arm_ifcb','Profile peak is 3.41 at 1.12 m','I'],[13,'arm_chanos','sub /arm_ifcb/profiler: peak 1.12 m','I'],[14,'lock_manager','acquire(arm_chanos) -> True','I']]});
+  st.over.push(()=>{semaphore(104,14,1,owners,st);if(peak!=null){const y=DY(peak);L(IX+8,y,CX-8,y,P.sand,true);}
+    if(between(lb,12,14)){const p=clamp((lb-12)/2),x=lerp(IX,CX,p),y=DY(1.12)-30-Math.sin(p*Math.PI)*24;S('env',x-3,y);T('peak',x-10,y-9,P.sand);}});
+  renderWorld(st);}
+const OFFS=[-0.5,-0.25,0,0.25,0.5];const STEPS=OFFS.map(o=>{const raw=DOCK_PEAK+o;const d=clamp(raw,0.7,1.5);return{off:o,raw,d,clamp:raw!==d};});
+function uSteps(c){const lb=c.lb;
+  const cm=track(lb,0.7,[[4,5.5,STEPS[1].d],[8.5,10,STEPS[2].d],[13,14.5,STEPS[3].d]]);
+  const cH=between(lb,0,0.5)||between(lb,4,5.5)||between(lb,8.5,10)||between(lb,13,14.5);
+  const dw=lb<0.5?null:lb<4?(lb-0.5)/3.5:lb<5.5?null:lb<8.5?(lb-5.5)/3:lb<10?null:lb<13?(lb-10)/3:lb<14.5?null:(lb-14.5)/3;
+  const visited=lb>=14.5?4:lb>=10?3:lb>=5.5?2:lb>=0.5?1:0;
+  const im=track(lb,1.5,[[1,4,DOCK_PEAK]]);const iH=between(lb,1,4);
+  const I=armI({x:IX,d:im.d,v:im.v,lock:iH?'held':null,task:lb<1?'waiting_for_clearance':iH?'profiler_peak_depth':'ifcb sample',flow:lb>=5});
+  const C=armC({x:CX,d:cm.d,v:cm.v,lock:cH?'held':null,dwell:dw,task:dw!=null?'await_sensor':'downcast_profile_step',steps:STEPS.map((s,i)=>({d:s.d,done:i<visited,clamp:s.clamp&&lb<4}))});
+  const owners=iH?['arm_ifcb']:cH?['arm_chanos']:[];
+  const st=base(c,{arms:[I,C],rangeX:4,sampling:lb>=5,active:cH?['C.winch','C.motor']:iH?['I.winch']:['C.ctd','I.ifcb'],lock:{max:1,owners,waiting:[]},
+    chart:{type:'steps',rows:STEPS.map((s,i)=>({...s,done:i<visited}))},
+    log:[[0,'arm_chanos','Step 0.62 exceeds min depth, clamping to 0.7','W'],[0.5,'arm_chanos','Waiting 60 seconds for DC sensor to complete.','I'],[1,'arm_ifcb','Goal depth 1.12 for task profiler_peak_depth','W'],[4,'arm_chanos','Goal depth 0.87 for task downcast_profile_step','W'],[8.5,'arm_chanos','Goal depth 1.12 for task downcast_profile_step','W'],[13,'arm_chanos','Goal depth 1.37 for task downcast_profile_step','W']]});
+  st.over.push(()=>semaphore(104,14,1,owners,st));renderWorld(st);}
+function uDwell(c){const lb=c.lb;const cm=track(lb,1.37,[[0,1.5,1.5],[6,16,0.7,true]]);const cH=lb<1.5||lb>=6;
+  const C=armC({x:CX,d:lb>=6?mv(1.5,0.7,6,46,lb,true).d:cm.d,v:lb>=6?-0.25:cm.v,lock:cH?'held':null,dwell:between(lb,1.5,5)?(lb-1.5)/3.5:null,
+    task:lb<1.5?'downcast_profile_step':lb<5?'await_sensor':lb<6?'downcast_continuous':'upcast_continuous',steps:STEPS.map(s=>({d:s.d,done:true}))});
+  const I=armI({x:IX,d:DOCK_PEAK,task:lb<8?'ifcb sample':'waiting_for_clearance',lock:lb>=8?'wait':null,flow:lb<7});
+  const owners=cH?['arm_chanos']:[];
+  const st=base(c,{arms:[I,C],rangeX:4,sampling:lb<8,active:cH?['C.winch','C.motor']:['C.ctd'],lock:{max:1,owners,waiting:lb>=8?['arm_ifcb']:[]},
+    chart:{type:'steps',rows:STEPS.map(s=>({...s,done:true}))},hudLine:null,
+    log:[[0,'arm_chanos','Goal depth 1.5 for task downcast_profile_step','W'],[1.5,'arm_chanos','Waiting 60 seconds for DC sensor to complete.','I'],[5,'arm_chanos','Done waiting for DC sensor to complete.','I'],[6,'arm_chanos','Goal depth 0.7 for task upcast_continuous','W'],[7,'arm_chanos','speed = tasks/continuous_speed 0.005','I'],[9,'arm_ifcb','Arm waiting for clearance','W'],[13,'arm_ifcb','Arm waiting for clearance','W']]});
+  st.over.push(()=>{semaphore(104,14,1,owners,st);if(lb<8)roiWin(76,96,4,2,Math.floor(lb*1.6),77,'ifcb roi');if(lb>=7){R(CX-63,DY(C.d)+3,56,10,P.ink);T('0.005 m/s',CX-62,DY(C.d)+4,P.sand);}});
+  renderWorld(st);}
+function uTwo(c){const lb=c.lb;const cd=mv(1.5,0.7,-10,30,lb,true).d;const im=track(lb,DOCK_PEAK,[[1,6,0.7],[7,15,1.5]]);const iH=between(lb,1,6)||between(lb,7,15);
+  const C=armC({x:CX,d:cd,v:-0.25,lock:'held',task:'upcast_continuous'});
+  const I=armI({x:IX,d:im.d,v:im.v,lock:iH?'held':lb<1?'wait':null,task:lb<1?'waiting_for_clearance':lb<6?'upcast':lb<7?'task_completed':'downcast'});
+  const owners=['arm_chanos',...(iH?['arm_ifcb']:[])];
+  const st=base(c,{arms:[I,C],rangeX:4,active:['I.winch','C.winch','lock_mgr'],lock:{max:2,owners,waiting:lb<1?['arm_ifcb']:[]},
+    chart:{type:'profile',from:0.7,to:lb>=7?im.d:null,layer:1.18,t:c.t,title:'/arm_ifcb/profiler'},
+    log:[[0,'config','lock_manager/max_moving_winches: 2','I'],[0.5,'config','(read once at startup: restart main)','W'],[1,'lock_manager','acquire(arm_ifcb) -> True  2/2','I'],[7,'arm_ifcb','Goal depth 1.5 for task downcast','W'],[11,'config','keep 1 on battery: limits power draw','W']]});
+  st.over.push(()=>{semaphore(104,14,2,owners,st);if(between(lb,0,4)&&frac(c.t/BEAT)<.7)TC('max_moving_winches: 2',110,72,P.lime,1,true);});
+  renderWorld(st);}
+function uLapse(c){const lb=c.lb;const k=Math.min(3,Math.floor(lb/8)),q=lb-k*8;const peaks=[1.0,1.22,1.38,0.98];const pk=peaks[k],prev=k?peaks[k-1]:1.18;const tod=6+lb/32*24;
+  const im=track(q,prev,[[0,1.5,0.7],[2.5,4.5,1.5],[5.5,6.5,pk]]);const cs=[clamp(pk-0.25,0.7,1.5),pk,clamp(pk+0.25,0.7,1.5)];
+  const cm=track(q,clamp(prev+0.25,0.7,1.5),[[1.5,2.5,cs[0]],[4.5,5.5,cs[1]],[6.5,8,cs[2]]]);
+  const iH=between(q,0,1.5)||between(q,2.5,4.5)||between(q,5.5,6.5);const cH=between(q,1.5,2.5)||between(q,4.5,5.5)||between(q,6.5,8);
+  const I=armI({x:IX,d:im.d,v:im.v,lock:iH?'held':'wait',task:q<1.5?'upcast':q<2.5?'waiting_for_clearance':q<4.5?'downcast':q<5.5?'waiting_for_clearance':q<6.5?'profiler_peak_depth':'ifcb sample',flow:q>=6.5});
+  const C=armC({x:CX,d:cm.d,v:cm.v,lock:cH?'held':'wait',task:cH?'profile_step':'await_sensor',dwell:cH?null:frac(q/2)});
+  const owners=iH?['arm_ifcb']:cH?['arm_chanos']:[];
+  const st=base(c,{arms:[I,C],rangeX:4,tod,layer:lerp(prev,pk,clamp(q/4)),sampling:q>=6.5,active:iH?['I.winch']:['C.winch'],lock:{max:1,owners,waiting:[iH?'arm_chanos':'arm_ifcb']},
+    chart:{type:'profile',from:0.7,to:q>=2.5?Math.min(im.d,1.5):k?1.5:null,layer:q>=2.5?pk:prev,peak:q>=4.5?pk:null,t:c.t,title:'profiler '+hhmm(tod)},
+    log:[[0,'lock_manager','acquire(arm_ifcb) -> True','I'],[1.5,'lock_manager','acquire(arm_chanos) -> True','I'],[2.5,'lock_manager','acquire(arm_ifcb) -> True','I'],[4.5,'lock_manager','acquire(arm_chanos) -> True','I'],[5.5,'arm_ifcb','Goal depth '+f2(pk)+' for task profiler_peak_depth','W'],[6.5,'arm_chanos','Goal depth '+f2(cs[2])+' for task profile_step','W']].map(l=>[l[0]+k*8,l[1],l[2],l[3]])});
+  st.over.push(()=>{semaphore(104,14,1,owners,st);R(80,62,58,11,P.ink);T(hhmm(tod),82,63,P.white);});renderWorld(st);}
+
+/* ============================================================ ROAMER: SeaTrac ASV, no winch */
+const BX=56;
+function roamBase(c,o){const st=base(c,Object.assign({boat:true,boatX:BX,ranges:false,scroll:c.t*14,layer:0.9,idle:['lock_mgr'],lock:{max:1,owners:[],waiting:[],note:'no winch'},tod:10,gps:true,flow:true,sunUp:true},o));
+  const h=((st.tod%24)+24)%24;st.sunUp=h>6&&h<18.5;return st;}
+function ifcbCycle(q){return q<1?'no_winch':q<3?'debubble':'runsample';}
+function rNoWinch(c){const lb=c.lb;const q=lb%8;const a=armI({task:ifcbCycle(q)});
+  const st=roamBase(c,{arms:[a],active:q<1?['arm']:['ifcb_run','ifcb'],chart:{type:'track',k:0.1+lb/160,t:c.t,lat:41.5240+lb*0.0004,lon:-70.671+lb*0.0006},
+    log:[[0,'arm_ifcb','No winch; running no_winch','W'],[1,'ifcb_runner','Starting debubble routine','I'],[3,'ifcb_runner','Starting runsample routine','I'],[7,'ifcb_runner','Position hold released','I'],[8,'arm_ifcb','No winch; running no_winch','W'],[9,'ifcb_runner','Starting debubble routine','I'],[11,'ifcb_runner','Starting runsample routine','I']]});
+  st.over.push(()=>{if(q>=3)roiWin(104,62,7,3,Math.floor((q-3)*4),Math.floor(lb/8)*40+5);});renderWorld(st);}
+function rGPS(c){const lb=c.lb;const q=lb%8;const a=armI({task:ifcbCycle(q)});
+  const st=roamBase(c,{arms:[a],tod:11,active:['gps','web'],chart:{type:'track',k:0.2+lb/120,t:c.t,lat:41.5304+lb*0.0004,lon:-70.662+lb*0.0006},
+    log:[[0,'gps','/gps/fix 41.5304 -70.662','I'],[2,'web','gpsLatitude  <- /gps/fix latitude','I'],[3,'web','commitHash   <- $COMMIT_HASH','I'],[4,'web','ctdDepth     <- /ctd/depth depth','I'],[6,'ifcb','bin D20261110T112000 + metadata','I'],[12,'ifcb','bin D20261110T114000 + metadata','I']]});
+  st.over.push(()=>{for(let i=0;i<3;i++){const sx=30+i*55,sy=16+(i%2)*6;S('sat',sx,sy);if(frac(c.t/BEAT+i/3)<.5)L(sx+3,sy+3,BX+16,SURF-30,P.lime,true);}
+    const x=104,y=64;win(x,y,96,56,'bin metadata',P.sand);[['gpsLat','41.5304'],['gpsLon','-70.662'],['ctdDepth','0.50'],['commit','bd725dd']].forEach(([k,v],i)=>{if(lb>=1+i){T(k,x+3,y+10+i*9,P.silver);T(v,x+93-v.length*6,y+10+i*9,P.white);}});
+    for(const b0 of [6,12]){if(between(lb,b0,b0+2)){const p=(lb-b0)/2;S('env',lerp(BX,190,p),lerp(SURF-10,20,p)-Math.sin(p*Math.PI)*8);}}
+    T('DASHBOARD',150,14,P.sand);});
+  renderWorld(st);}
+function rSun(c){const lb=c.lb;const soc=Math.min(95,86+lb*0.75);const on=lb>=12;const q=lb%8;
+  const st=roamBase(c,{arms:[armI({task:ifcbCycle(q)})],tod:9+lb*0.25,starlink:on,active:on?['starlink','seatrac']:['seatrac'],chart:{type:'soc',soc,charging:true,starlink:on},
+    log:[[0,'seatrac','/seatrac/power soc 86%  pack_current -4.1 A','I'],[6,'seatrac','/seatrac/power soc 91%  charging','I'],[12,'starlink_mgr','Enabling Starlink: SOC 95.0% >= 95% and charging','I'],[13,'seatrac','/seatrac/outlet/starlink/control True','I'],[14,'seatrac','outlet starlink is_active: True','I']]});
+  st.over.push(()=>{const x=94,y=66;win(x,y,106,50,'power_level_cb',P.lime);[['soc >= 95',soc>=95],['charging',true],['outlet off',!on||lb<12.5],['!already_sent',lb<12.5]].forEach(([s,ok],i)=>{T(ok?'[x]':'[ ]',x+3,y+10+i*9,ok?P.lime:P.slate);T(s,x+24,y+10+i*9,P.white);});
+    if(on){S('sat',170,18);for(let k=0;k<6;k++){const p=frac(c.t*1.4+k/6);R(lerp(BX-20,172,p),lerp(SURF-20,22,p),2,1,P.white);}}});
+  renderWorld(st);}
+function rNag(c){const lb=c.lb;const soc=95-lb*0.45;const on=lb<14;const left=Math.max(0,1200-Math.max(0,lb-1)*120);const q=lb%8;
+  const st=roamBase(c,{arms:[armI({task:ifcbCycle(q)})],tod:16+lb*0.2,starlink:on,active:['starlink'],chart:{type:'clock',title:'nag timer',hhmm:on?String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0'):'--:--',sub:on?'shutdown_reminder':'timer cancelled',subc:on?P.sand:P.slate},
+    log:[[0,'seatrac','soc 95% and not charging','I'],[1,'starlink_mgr','rospy.Timer(1200 s, nag_operator)','I'],[11,'starlink_mgr','send_alerts -> slack','W'],[14,'seatrac','outlet starlink is_active: False','I'],[14.5,'starlink_mgr','nag_timer.shutdown()','I']]});
+  st.over.push(()=>{if(on){S('sat',170,18);for(let k=0;k<6;k++){const p=frac(c.t*1.4+k/6);R(lerp(BX-20,172,p),lerp(SURF-20,22,p),2,1,P.white);}}
+    if(between(lb,11,15)){const x=100,y=70;win(x,y,100,40,'#phyto-arm',P.plum);T('Starlink has',x+4,y+12,P.white);T('been active for',x+4,y+21,P.white);T('a while',x+4,y+30,P.white);}});
+  renderWorld(st);}
+function rDaily(c){const lb=c.lb;const fire=lb>=4;const q=lb%8;
+  const st=roamBase(c,{arms:[armI({task:ifcbCycle(q)})],tod:12.3+lb*0.02,cloudy:true,sunUp:false,active:fire?['starlink']:[],chart:{type:'clock',title:'UTC daily timer',hhmm:fire?'12:30':'12:29',sub:'soc 72%',subc:P.red},
+    log:[[0,'seatrac','/seatrac/power soc 72%  overcast','I'],[4,'starlink_mgr','daily_timer_cb(): last_state False','I'],[5,'starlink_mgr','soc 72.0 < medium 80: send_alerts','W'],[12,'starlink_mgr','schedule_daily_timer() -> tomorrow 12:30','I']]});
+  st.over.push(()=>{if(lb>=5){const x=100,y=64;win(x,y,100,58,'#phyto-arm',P.plum);['Not enabling','Starlink at','scheduled time:','SOC 72.0% below','threshold 80%'].forEach((s,i)=>T(s,x+4,y+11+i*9,i>=3?P.sand:P.white));}});
+  renderWorld(st);}
+function rLapse(c){const lb=c.lb;const tod=8+lb/32*48;const h=((tod%24)+24)%24;const sun=h>6&&h<18.5;const soc=clamp(82+13*Math.sin((tod-9)/24*Math.PI*2),0,100);
+  const charging=sun&&h<15;const on=soc>=94.5&&charging||(h>=12.5&&h<13.5&&soc>=80);const q=lb%4;const bins=Math.floor(lb*0.75)+128;
+  const st=roamBase(c,{arms:[armI({task:q<0.5?'no_winch':'runsample'})],tod,starlink:on,cloudy:false,active:['ifcb_run',on?'starlink':'gps'],chart:{type:'track',k:0.3+lb/50,t:c.t,lat:41.53+lb*0.002,lon:-70.66+lb*0.004},
+    log:[[Math.floor(lb),'ifcb','bin #'+bins+' at '+hhmm(tod)+' soc '+soc.toFixed(0)+'%','I']]});
+  st.over.push(()=>{R(104,62,96,20,P.ink);T(hhmm(tod)+' UTC',106,63,P.white);T('bins '+bins,106,72,P.lime);const col=soc>=95?P.lime:soc>=80?P.sand:P.red;R(160,73,Math.round(soc/100*36),5,col);R(158,71,40,1,P.silver);R(158,79,40,1,P.silver);R(158,71,1,9,P.silver);R(197,71,1,9,P.silver);
+    if(on){S('sat',170,18);for(let k=0;k<5;k++){const p=frac(c.t*1.4+k/5);R(lerp(BX-20,172,p),lerp(SURF-20,22,p),2,1,P.white);}}});
+  renderWorld(st);}
+
+/* ============================================================ configurations */
+const HEAD=[{a:0,b:4,title:'PHYTO-ARM',d:'Title.',fn:sTitle},{a:4,b:8,title:'BOOT',d:'phyto-arm start main, then the arm launch file. Nodes come up on the beat.',fn:sBoot},{a:8,b:12,title:'THE ARM LOOP',d:'ArmBase.loop(): await clearance, get_next_task, send_winch_goal, callback, repeat.',fn:sLoop}];
+const TAIL=[{a:40,b:44,title:'WHERE DATA GOES',d:'rosbag records every topic; IFCB dashboard gets bins with metadata; NetCDF goes to ERDDAP.',fn:sOutro}];
+const CONFIGS={
+  dock:{key:'dock',name:'DOCK',tag:'1 ARM / 1 WINCH',col:P.lime,css:'#a7f070',transpose:0,duty:0.25,blurb:'Stationary platform. One IFCB arm on a JVL winch hunts the chlorophyll peak.',
+    code:'launch_args:\n  ifcb_winch: true\n  chanos_winch: false',
+    scenes:[...HEAD,{a:12,b:16,title:'UPCAST',d:'Wait for the lock, then reel the intake and AML CTD up to winch.range.min.',fn:dUp},{a:16,b:20,title:'DOWNCAST + PROFILE',d:'Drop to range.max while the profiler bins phycoerythrin vs depth; argmax is the peak.',fn:dDown},
+      {a:20,b:24,title:'SEEK THE PEAK',d:'profiler_peak_depth: park at the peak, release the lock, ifcb_runner builds its playlist.',fn:dPeak},{a:24,b:28,title:'IFCB SAMPLE',d:'runsample images particles; position hold releases at ChangeSpeed; web stamps the bin.',fn:dSample},
+      {a:28,b:32,title:'PLAN B: SCHEDULE + WIZ',d:'scheduled_depth cycles linspace(first,last,count); wiz_probe takes over in its prep window, clamped to range.',fn:dPlanB},{a:32,b:40,title:'24 H TIME-LAPSE',d:'Four casts across a day as the layer migrates. Every sample follows the peak.',fn:dLapse},...TAIL]},
+  duet:{key:'duet',name:'DUET',tag:'2 ARMS / 2 WINCHES',col:P.sand,css:'#ffcd75',transpose:3,duty:0.5,blurb:'IFCB arm plus a Chanos arm on separate winches, sharing one lock_manager slot.',
+    code:'launch_args:\n  ifcb_winch: true\n  chanos_winch: true\nlock_manager:\n  max_moving_winches: 1',
+    scenes:[...HEAD,{a:12,b:16,title:'ONE LOCK, TWO ARMS',d:'NamedLockManager is a semaphore of 1. Chanos polls acquire() every second until IFCB releases.',fn:uLock},{a:16,b:20,title:'SHARED PEAK',d:'IFCB downcasts; arm_chanos subscribes to /arm_ifcb/profiler and receives the peak.',fn:uShared},
+      {a:20,b:24,title:'STEPPED DOWNCAST',d:'Chanos visits peak + offset_steps, clamped to range, dwelling at each. Each step takes and frees the lock.',fn:uSteps},{a:24,b:28,title:'DWELL + CONTINUOUS',d:'Last dwell, then upcast_continuous at 0.005 m/s holds the lock. IFCB waits its turn.',fn:uDwell},
+      {a:28,b:32,title:'WHAT IF: 2 SLOTS',d:'max_moving_winches: 2 lets both winches move at once. Read at startup; keep 1 on battery power.',fn:uTwo},{a:32,b:40,title:'TAKING TURNS',d:'A day of interleaved casts: the lock bounces between arms beat by beat.',fn:uLapse},...TAIL]},
+  roam:{key:'roam',name:'ROAMER',tag:'ASV / NO WINCH',col:P.sky,css:'#41a6f6',transpose:-2,duty:0.125,blurb:'SeaTrac surface vehicle. No winch, so no lock: sample, stamp GPS, manage Starlink power.',
+    code:'phyto-arm start arm_seatrac\nlaunch_args:\n  ifcb_winch: false',
+    scenes:[...HEAD,{a:12,b:16,title:'NO WINCH, NO WAITING',d:'winch_enabled is false, so get_next_task returns no_winch and the IFCB runs back to back.',fn:rNoWinch},{a:16,b:20,title:'GPS -> BIN METADATA',d:'gpsd fixes feed the web node field_map, which stamps lat, lon, depth and commit on each bin.',fn:rGPS},
+      {a:20,b:24,title:'SUN -> SOC -> STARLINK',d:'At SOC 95% while charging, starlink_manager switches the Starlink outlet on.',fn:rSun},{a:24,b:28,title:'NAG TIMER',d:'Starlink on without high SOC + charging starts a 1200 s shutdown_reminder, then a Slack alert.',fn:rNag},
+      {a:28,b:32,title:'12:30 UTC CHECK',d:'The daily timer only enables Starlink above 80% SOC; otherwise it posts why and reschedules.',fn:rDaily},{a:32,b:40,title:'VOYAGE TIME-LAPSE',d:'Two days underway: bins pile up, the track grows, SOC rides the sun.',fn:rLapse},...TAIL]},
+};
+
+/* ============================================================ frame */
+let curKey='dock';
+function topBar(sc,idx,n,t,cfg){R(0,0,W,12,P.ink);R(0,11,W,1,P.dusk);T(String(idx+1).padStart(2,'0')+'/'+n,3,2,P.slate);T(sc.title,36,2,cfg.col);
+  const beat=Math.floor(t/BEAT)%4;for(let i=0;i<4;i++)R(W-62+i*6,4,4,4,i===beat?(i===0?P.red:P.lime):P.dusk);T(cfg.name,W-36,2,P.silver);}
+function draw(t){t=clamp(t,0,DUR-1e-3);const cfg=CONFIGS[curKey];const bar=t/BAR;const idx=Math.max(0,cfg.scenes.findIndex(s=>bar>=s.a&&bar<s.b));const sc=cfg.scenes[idx];
+  const lt=t-sc.a*BAR;const c={t,lt,lb:lt/BEAT,bar,cfg,key:curKey};
+  X.globalAlpha=1;R(0,0,W,H,P.ink);sc.fn(c);topBar(sc,idx,cfg.scenes.length,t,cfg);
+  if(lt<STEP*3&&idx>0){const p=lt/(STEP*3);for(let x=0;x<W;x+=16){const w=Math.round(16*(1-p));R(x+(16-w)/2,12,w,H-12,P.ink);}}}
+
+/* ============================================================ music */
+const NOTE=m=>440*Math.pow(2,(m-69)/12);
+const CHORD={Am:[57,60,64],F:[53,57,60],C:[48,52,55],G:[55,59,62],Em:[52,55,59]};
+const ROOT={Am:45,F:41,C:48,G:43,Em:40};
+const MELA=[[[0,69,2],[2,72,2],[4,76,3],[7,74,1],[8,76,2],[10,79,2],[12,76,4]],[[0,77,3],[3,76,1],[4,72,4],[8,69,2],[10,72,2],[12,74,2],[14,72,2]],
+  [[0,76,2],[2,79,2],[4,84,3],[7,83,1],[8,79,2],[10,76,2],[12,79,4]],[[0,83,3],[3,81,1],[4,79,4],[8,74,2],[10,76,2],[12,79,2],[14,71,2]]];
+const MELA_END=[[0,83,3],[3,81,1],[4,79,2],[6,76,2],[8,74,2],[10,76,2],[12,81,4]];
+const MELB=[[[0,81,4],[4,84,4],[8,81,2],[10,79,2],[12,77,4]],[[0,79,4],[4,83,4],[8,86,4],[12,83,2],[14,79,2]],
+  [[0,84,6],[6,83,2],[8,84,2],[10,86,2],[12,88,4]],[[0,84,4],[4,81,8],[12,76,2],[14,79,2]]];
+const MELB_END=[[0,84,2],[2,83,2],[4,81,12]];
+function section(b){if(b<4)return['intro',b];if(b<12)return['verse',b-4];if(b<20)return['chorus',b-12];if(b<28)return['verse',b-20];if(b<32)return['break',b-28];if(b<40)return['chorus',b-32];return['outro',b-40];}
+function chordAt(b){const [s,i]=section(b);if(s==='chorus')return['F','G','C','Am'][i%4];if(s==='break')return['Am','F','Am','G'][i%4];return['Am','F','C','G'][b%4];}
+function songEvents(cfg){const E=[],tr=cfg.transpose,duet=cfg.key==='duet';
+  const add=(b,s,len,type,o)=>E.push(Object.assign({t:(b*16+s)*STEP,d:len*STEP,type},o));
+  const lead=(b,notes,vol,second)=>{for(const [s,m,l] of notes){add(b,s,l,'pulse',{f:NOTE(m+tr),v:vol,duty:cfg.duty,ch:'lead'});
+      if(duet)add(b,s+2,l,'pulse',{f:NOTE(m+tr-12),v:vol*0.55,duty:0.25,ch:'lead2'});else if(second)add(b,s,l,'pulse',{f:NOTE(m+tr-12),v:vol*0.5,duty:0.5,ch:'lead2'});}};
+  for(let b=0;b<BARS;b++){const [s,i]=section(b);const ch=chordAt(b);const tones=[...CHORD[ch].map(n=>n+12),CHORD[ch][0]+24];const root=ROOT[ch]+tr;
+    const arpOn=!(s==='break'&&i<2)&&!(s==='outro'&&i===3);
+    if(arpOn)for(let k=0;k<16;k++){const idx=[0,1,2,3,2,1,0,1,2,3,2,1,0,1,2,3][k];const fade=s==='outro'&&i===2?0.6:1;add(b,k,1,'pulse',{f:NOTE(tones[idx]+tr),v:(s==='chorus'?0.045:0.035)*fade,duty:0.125,ch:'arp'});}
+    if(s==='intro'&&i>=2||s==='verse'||s==='chorus'||s==='outro'&&i<2){for(let k=0;k<8;k++){const n=s==='chorus'&&k===7?root+7:root+(k%2?12:0);add(b,k*2,1.7,'tri',{f:NOTE(n),v:0.24});}}
+    if(s==='break'||s==='outro'&&i===2)add(b,0,15,'tri',{f:NOTE(root),v:0.24});
+    if(s==='verse'){lead(b,i%8===7?MELA_END:MELA[i%4],0.11,b>=20);}
+    if(s==='chorus'){lead(b,i===7?MELB_END:MELB[i%4],0.12,b>=32);}
+    if(s==='break'){if(i===0||i===2)lead(b,MELA[0],0.07,false);if(i===3){[69,71,72,74,76,77,79,81].forEach((m,k)=>add(b,8+k,1,'pulse',{f:NOTE(m+tr),v:0.09,duty:cfg.duty,ch:'lead'}));}}
+    if(s==='outro'&&i<2)lead(b,MELA[i],0.1,false);
+    if(s==='outro'&&i===2){add(b,0,16,'pulse',{f:NOTE(81+tr),v:0.1,duty:cfg.duty,ch:'lead'});}
+    if(s==='outro'&&i===3){for(const n of CHORD.Am)add(b,0,10,'pulse',{f:NOTE(n+12+tr),v:0.06,duty:0.5,ch:'lead2'});add(b,0,4,'kick',{});add(b,0,8,'noise',{v:0.12,hp:3000,ch:'crash'});add(b,0,12,'tri',{f:NOTE(ROOT.Am+tr),v:0.24});}
+    /* drums */
+    const drums=s==='verse'||s==='chorus'||(s==='outro'&&i<3);
+    if(s==='intro'&&i>=2)for(let k=0;k<16;k+=2)add(b,k,0.5,'noise',{v:0.05,hp:7000,ch:'hat'});
+    if(s==='intro'&&i===3){add(b,0,1,'kick',{});add(b,8,1,'kick',{});[12,13,14,15].forEach(k=>add(b,k,1,'snare',{v:0.12+k*0.004}));}
+    if(drums){const four=s==='chorus';
+      for(const k of four?[0,4,8,12]:[0,8,(b%2?10:7)])add(b,k,1,'kick',{});
+      for(const k of [4,12])add(b,k,1,'snare',{v:0.17});
+      for(let k=0;k<16;k++){if(four){if(k%4===2)add(b,k,1.2,'noise',{v:0.06,hp:6000,ch:'hat'});else if(k%2===1)add(b,k,0.4,'noise',{v:0.03,hp:8000,ch:'hat'});}else if(k%2===0)add(b,k,0.5,'noise',{v:0.05,hp:7000,ch:'hat'});}
+      if(i===0&&(s!=='outro'))add(b,0,8,'noise',{v:0.1,hp:3000,ch:'crash'});
+      const end=(s==='verse'&&i===7)||(s==='chorus'&&i===7);if(end)[13,14,15].forEach(k=>add(b,k,1,'snare',{v:0.15}));}
+    if(s==='outro'&&i===0)add(b,0,8,'noise',{v:0.1,hp:3000,ch:'crash'});
+    if(s==='break'){add(b,0,1,'kick',{});if(i>=2)for(let k=0;k<16;k+=(i===3?1:2))add(b,k,0.4,'noise',{v:0.02+k*0.002,hp:8000,ch:'hat'});
+      if(i===3){for(let k=0;k<8;k+=2)add(b,k,1,'snare',{v:0.08});for(let k=8;k<16;k++)add(b,k,1,'snare',{v:0.08+(k-8)*0.012});}}}
+  E.sort((a,b)=>a.t-b.t);return E;}
+/* per-context synth resources */
+const RES=new WeakMap();
+function res(ctx){let r=RES.get(ctx);if(r)return r;r={waves:{}};const n=ctx.sampleRate;const buf=ctx.createBuffer(1,n,n);const d=buf.getChannelData(0);let s=12345;for(let i=0;i<n;i++){s=(Math.imul(s,1103515245)+12345)|0;d[i]=((s>>>16)&0x7fff)/16384-1;}r.noise=buf;RES.set(ctx,r);return r;}
+function pulseWave(ctx,duty){const r=res(ctx);if(!r.waves[duty]){const N=48,re=new Float32Array(N),im=new Float32Array(N);for(let n=1;n<N;n++){re[n]=Math.sin(2*Math.PI*n*duty)/(Math.PI*n);im[n]=(1-Math.cos(2*Math.PI*n*duty))/(Math.PI*n);}r.waves[duty]=ctx.createPeriodicWave(re,im);}return r.waves[duty];}
+function buildBus(ctx,dest){const master=ctx.createGain();master.gain.value=0.9;const comp=ctx.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=3;comp.attack.value=0.003;comp.release.value=0.12;
+  master.connect(comp);comp.connect(dest);const echo=ctx.createDelay(1);echo.delayTime.value=STEP*3;const fb=ctx.createGain();fb.gain.value=0.28;const wet=ctx.createGain();wet.gain.value=0.22;
+  echo.connect(fb);fb.connect(echo);echo.connect(wet);wet.connect(master);return{master,echo};}
+function play1(ctx,bus,e,t0){const t=t0+e.t;if(t<ctx.currentTime-0.01)return;const g=ctx.createGain();g.connect(bus.master);
+  if(e.type==='pulse'||e.type==='tri'){const o=ctx.createOscillator();if(e.type==='pulse')o.setPeriodicWave(pulseWave(ctx,e.duty));else o.type='triangle';o.frequency.value=e.f;
+    const end=t+e.d;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(e.v,t+0.004);g.gain.linearRampToValueAtTime(e.v*0.72,t+Math.min(0.09,e.d*0.5));g.gain.setValueAtTime(e.v*0.72,end-0.02);g.gain.linearRampToValueAtTime(0,end+0.03);
+    if(e.d>0.3&&e.type==='pulse'){const lfo=ctx.createOscillator(),lg=ctx.createGain();lfo.frequency.value=5.5;lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(e.f*0.012,t+0.25);lfo.connect(lg);lg.connect(o.frequency);lfo.start(t);lfo.stop(end+0.05);}
+    if(e.ch==='lead')g.connect(bus.echo);o.connect(g);o.start(t);o.stop(end+0.05);}
+  else if(e.type==='kick'){const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(170,t);o.frequency.exponentialRampToValueAtTime(42,t+0.12);g.gain.setValueAtTime(0.75,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.22);o.connect(g);o.start(t);o.stop(t+0.25);}
+  else{const src=ctx.createBufferSource();src.buffer=res(ctx).noise;const f=ctx.createBiquadFilter();f.type='highpass';const isSn=e.type==='snare';f.frequency.value=isSn?1400:e.hp;
+    const v=e.v,len=isSn?0.13:e.ch==='crash'?0.9:Math.min(e.d,0.09);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.0008,t+len);src.connect(f);f.connect(g);src.start(t,hash(Math.floor(e.t*100))*0.5);src.stop(t+len+0.02);
+    if(isSn){const o=ctx.createOscillator(),og=ctx.createGain();o.type='triangle';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(120,t+0.08);og.gain.setValueAtTime(v*0.9,t);og.gain.exponentialRampToValueAtTime(0.001,t+0.1);o.connect(og);og.connect(bus.master);o.start(t);o.stop(t+0.12);}}}
+
+/* ============================================================ live playback */
+let AC=null,bus=null,events=songEvents(CONFIGS[curKey]),playing=false,startAt=0,pausedAt=0,evIdx=0,timer=null;
+function songTime(){if(!playing)return pausedAt;return AC.currentTime-startAt-(AC.outputLatency||0);}
+function schedule(){const ahead=AC.currentTime+0.18;while(evIdx<events.length&&events[evIdx].t+startAt<ahead){play1(AC,bus,events[evIdx],startAt);evIdx++;}
+  if(songTime()>=DUR){stop(true);}}
+function start(from){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();}
+  AC.resume();if(bus){const old=bus.master;old.gain.setTargetAtTime(0,AC.currentTime,0.01);setTimeout(()=>old.disconnect(),300);}
+  bus=buildBus(AC,AC.destination);startAt=AC.currentTime+0.06-from;evIdx=events.findIndex(e=>e.t>=from-0.001);if(evIdx<0)evIdx=events.length;playing=true;clearInterval(timer);timer=setInterval(schedule,25);schedule();ui();}
+function stop(toEnd){if(!playing)return;pausedAt=toEnd?0:songTime();playing=false;clearInterval(timer);if(bus){const m=bus.master;m.gain.setTargetAtTime(0,AC.currentTime,0.01);setTimeout(()=>m.disconnect(),300);bus=null;}ui();}
+function toggle(){playing?stop():start(pausedAt);}
+function seek(t){t=clamp(t,0,DUR-0.05);if(playing)start(t);else{pausedAt=t;}}
+function setConfig(k){if(!CONFIGS[k])return;const t=songTime();curKey=k;events=songEvents(CONFIGS[k]);if(playing)start(t);buildUI();}
+
+/* ============================================================ UI */
+const $=id=>document.getElementById(id);
+function fmt(s){s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function buildUI(){const carts=$('carts');carts.innerHTML='';Object.values(CONFIGS).forEach((c,i)=>{const l=document.createElement('label');l.className='cart'+(c.key===curKey?' on':'');l.style.setProperty('--c',c.css);
+    l.innerHTML=`<input type="radio" name="cfg" id="cfg-${c.key}" value="${c.key}" ${c.key===curKey?'checked':''}><b>${c.name}</b><span class="k">${c.tag} &middot; KEY ${i+1}</span><p>${c.blurb}</p><code>${c.code}</code>`;
+    l.querySelector('input').addEventListener('change',()=>setConfig(c.key));carts.appendChild(l);});
+  const cfg=CONFIGS[curKey];const bar=$('bar');bar.innerHTML='';cfg.scenes.forEach((s,i)=>{const d=document.createElement('div');d.className='seg';d.style.left=(s.a/BARS*100)+'%';d.style.width=((s.b-s.a)/BARS*100)+'%';d.title=s.title;bar.appendChild(d);});
+  const f=document.createElement('div');f.className='fill';f.id='fill';bar.appendChild(f);const h=document.createElement('div');h.className='head';h.id='head';bar.appendChild(h);
+  const ol=$('chapters');ol.innerHTML='';cfg.scenes.forEach((s,i)=>{const li=document.createElement('li');li.innerHTML=`<button data-a="${s.a}"><span class="n">${String(i+1).padStart(2,'0')}</span><span class="t">${s.title}<span class="d">${s.d}</span></span></button>`;
+    li.firstChild.addEventListener('click',()=>{seek(s.a*BAR);if(!playing)start(s.a*BAR);});ol.appendChild(li);});ui();}
+function ui(){$('play').innerHTML=playing?'&#10074;&#10074;':'&#9654;';$('start').hidden=playing||pausedAt>0;}
+let lastIdx=-1;
+function tick(){const t=songTime();draw(t);const p=clamp(t/DUR)*100;const f=$('fill'),h=$('head');if(f){f.style.width=p+'%';h.style.left='calc('+p+'% - 2px)';}
+  $('time').textContent=fmt(t)+' / '+fmt(DUR);const cfg=CONFIGS[curKey];const idx=cfg.scenes.findIndex(s=>t/BAR>=s.a&&t/BAR<s.b);
+  if(idx!==lastIdx){lastIdx=idx;[...$('chapters').querySelectorAll('button')].forEach((b,i)=>b.classList.toggle('now',i===idx));}
+  requestAnimationFrame(tick);}
+if(!window.__RENDER__){
+  buildUI();
+  $('start').addEventListener('click',()=>start(pausedAt));$('play').addEventListener('click',toggle);cv.addEventListener('click',toggle);
+  const bar=$('bar');const seekEv=e=>{const r=bar.getBoundingClientRect();seek(clamp((e.clientX-r.left)/r.width)*DUR);};bar.addEventListener('click',seekEv);
+  bar.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){seek(songTime()+BAR);e.preventDefault();}if(e.key==='ArrowLeft'){seek(songTime()-BAR);e.preventDefault();}});
+  document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.key!==' ')return;if(e.key===' '){e.preventDefault();toggle();}else if(e.key==='ArrowRight'&&e.target!==bar)seek(songTime()+BAR);else if(e.key==='ArrowLeft'&&e.target!==bar)seek(songTime()-BAR);
+    else if(e.key==='1')setConfig('dock');else if(e.key==='2')setConfig('duet');else if(e.key==='3')setConfig('roam');});
+  try{const k=localStorage.getItem('pa-cfg');if(k&&CONFIGS[k]){curKey=k;events=songEvents(CONFIGS[k]);buildUI();}}catch(e){}
+  const _set=setConfig;setConfig=k=>{_set(k);try{localStorage.setItem('pa-cfg',k);}catch(e){}};
+  requestAnimationFrame(tick);
+}
+
+/* ============================================================ offline render hooks (used by render.mjs) */
+window.PA={W,H,DUR,BAR,keys:Object.keys(CONFIGS),
+  use(k){curKey=k;},
+  frames(t0,n,fps){const out=new Uint8Array(W*H*4*n);for(let i=0;i<n;i++){draw(t0+i/fps);out.set(X.getImageData(0,0,W,H).data,i*W*H*4);}let s='';for(let i=0;i<out.length;i+=0x8000)s+=String.fromCharCode.apply(null,out.subarray(i,i+0x8000));return btoa(s);},
+  async audio(k){const sr=44100,len=Math.ceil((DUR+1)*sr);const ctx=new OfflineAudioContext(2,len,sr);const b=buildBus(ctx,ctx.destination);for(const e of songEvents(CONFIGS[k]))play1(ctx,b,e,0.0);
+    const buf=await ctx.startRendering();const L=buf.getChannelData(0),Rr=buf.getChannelData(1);const n=Math.floor(DUR*sr);const dv=new DataView(new ArrayBuffer(44+n*4));
+    const ws=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};ws(0,'RIFF');dv.setUint32(4,36+n*4,true);ws(8,'WAVE');ws(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,2,true);dv.setUint32(24,sr,true);dv.setUint32(28,sr*4,true);dv.setUint16(32,4,true);dv.setUint16(34,16,true);ws(36,'data');dv.setUint32(40,n*4,true);
+    for(let i=0;i<n;i++){const fade=i>n-sr*0.5?(n-i)/(sr*0.5):1;dv.setInt16(44+i*4,clamp(L[i]*fade,-1,1)*32767,true);dv.setInt16(46+i*4,clamp(Rr[i]*fade,-1,1)*32767,true);}
+    const u=new Uint8Array(dv.buffer);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s);}};
+</script>
