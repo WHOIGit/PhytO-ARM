@@ -135,7 +135,7 @@ def on_triggercontent(roi_pub, mkr_pub, _, daq, rois):
 def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
     timestamp = timestamp or rospy.Time.now()
     markers = ImageMarkerArray()
-    for i, (top, left, image) in enumerate(rois):
+    for i, (left, top, image) in enumerate(rois):
         # IFCB does not give us the width and height so we must extract from
         # the IHDR chunks.
         magic, chlen, chtype, w, h = struct.unpack_from('>8sL4sLL', image)
