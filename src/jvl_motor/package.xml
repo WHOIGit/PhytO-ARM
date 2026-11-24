@@ -15,8 +15,10 @@
     <author email="vlucke@whoi.edu">Verena Lucke</author>
 
     <buildtool_depend>catkin</buildtool_depend>
+    <test_depend>rostest</test_depend>
     <test_depend>rosunit</test_depend>
 
+    <exec_depend>rosgraph_msgs</exec_depend>
     <exec_depend>rospy</exec_depend>
 
     <!-- We use the DsHeader message type -->

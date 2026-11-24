@@ -32,6 +32,20 @@ generate_messages(
 
 catkin_package()
 
+# The driver and simulator import the motor modules from their own directory
+install(PROGRAMS src/jvl_motor_node.py src/mac400_sim_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(FILES src/mac400.py src/mac400_model.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(PROGRAMS scripts/wait_for_socket
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
+
 if (CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
   catkin_add_nosetests(tests DEPENDENCIES ${PROJECT_NAME}_generate_messages_py)
+  add_rostest(test/mac400_sim.test DEPENDENCIES
+    ${PROJECT_NAME}_generate_messages_py
+  )
 endif()
