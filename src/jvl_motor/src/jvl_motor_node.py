@@ -95,8 +95,8 @@ def cmd_set_velocity(client, request):
             mac400.A_SOLL:    request.acceleration,
             mac400.T_SOLL:    request.torque,
         })
-    except RuntimeError:
-        rospy.logerr('Failed to command motor movement')
+    except RuntimeError as err:
+        raise rospy.ServiceException('Failed to set motor velocity') from err
     return srv.SetVelocityCmdResponse()
 
 
@@ -108,8 +108,8 @@ def cmd_set_position_envelope(client, request):
         write_registers(client, {
             mac400.MAX_P_IST:  request.max
         })
-    except RuntimeError:
-        rospy.logerr('Failed to set position envelope')
+    except RuntimeError as err:
+        raise rospy.ServiceException('Failed to set position envelope') from err
     return srv.SetPositionEnvelopeCmdResponse()
 
 
