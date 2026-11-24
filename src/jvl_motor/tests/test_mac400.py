@@ -104,8 +104,10 @@ class TestRegisters(unittest.TestCase):
                          f'Duplicate register numbers: {duped_nums}')
 
     def test_8192_count_encoder_register_words(self):
-        # Golden values from the 8192-count column of the JVL register list.
-        # The driver truncates fractional raw units when it encodes commands.
+        # For the 8192-count encoder, JVL lists 284 for 100 RPM (reg. 5)
+        # and 369 for 100000 RPM/s (reg. 6). The expected decoded values
+        # are calculated from the published scales, without hardware data.
+        # We chose -1000 RPM to exercise signed encoding and truncation.
         for register in (mac400.V_SOLL, mac400.V_IST_16):
             with self.subTest(register=register):
                 self.assertEqual(register.encode(-1000), (0xF4E9, 0xFFFF))
@@ -113,6 +115,7 @@ class TestRegisters(unittest.TestCase):
                 self.assertAlmostEqual(rpm, 100.003873, places=5)
 
         self.assertEqual(mac400.V_IST.encode(-1000), (0xFF4F, 0xFFFF))
+        # Use the same test input, 177, to check the 16-sample ratio.
         rpm = mac400.V_IST.decode(177, 0)
         self.assertAlmostEqual(rpm, 997.22, places=2)
         self.assertEqual(rpm, 16 * mac400.V_IST_16.decode(177, 0))
