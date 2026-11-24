@@ -186,6 +186,18 @@ def main():
         ),
     ]
 
+    try:
+        poll_motor(client, electrical_pub, error_pub, motion_pub)
+    except rospy.ROSInterruptException:
+        if not rospy.is_shutdown():
+            raise
+    finally:
+        for service in services:
+            service.shutdown('node shutting down')
+
+
+# Poll the motor and publish its status until shutdown
+def poll_motor(client, electrical_pub, error_pub, motion_pub):
     # We only send our error status if one of the bits has changed
     last_error = None
 
@@ -240,9 +252,6 @@ def main():
         last_error = err_stat
 
         rate.sleep()
-
-    for service in services:
-        service.shutdown('node shutting down')
 
 
 if __name__ == '__main__':
