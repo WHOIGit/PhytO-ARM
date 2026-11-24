@@ -109,12 +109,16 @@ class TestRegisters(unittest.TestCase):
         for register in (mac400.V_SOLL, mac400.V_IST_16):
             with self.subTest(register=register):
                 self.assertEqual(register.encode(-1000), (0xF4E9, 0xFFFF))
-                self.assertAlmostEqual(register.decode(284, 0), 100.003873, places=5)
+                rpm = register.decode(284, 0)
+                self.assertAlmostEqual(rpm, 100.003873, places=5)
 
         self.assertEqual(mac400.V_IST.encode(-1000), (0xFF4F, 0xFFFF))
-        self.assertAlmostEqual(mac400.V_IST.decode(177, 0), 997.220740, places=5)
+        rpm = mac400.V_IST.decode(177, 0)
+        self.assertAlmostEqual(rpm, 997.22, places=2)
+        self.assertEqual(rpm, 16 * mac400.V_IST_16.decode(177, 0))
         self.assertEqual(mac400.A_SOLL.encode(100000), (369, 0))
-        self.assertAlmostEqual(mac400.A_SOLL.decode(369, 0), 99949.583696, places=5)
+        acceleration = mac400.A_SOLL.decode(369, 0)
+        self.assertAlmostEqual(acceleration, 99949.583696, places=5)
 
     def test_register_codecs(self):
         for reg in mac400.all_registers:
