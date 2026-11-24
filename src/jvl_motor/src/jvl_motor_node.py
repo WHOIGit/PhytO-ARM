@@ -202,7 +202,7 @@ def poll_motor(client, electrical_pub, error_pub, motion_pub):
     last_error = None
 
 
-    rate = rospy.Rate(rospy.get_param('~refresh_rate', 1))  # hz
+    rate = rospy.Rate(rospy.get_param('~refresh_rate', 1), reset=True)  # hz
     while not rospy.is_shutdown():
         # The range of register addresses is too wide, so we need to do this in
         # two calls.
