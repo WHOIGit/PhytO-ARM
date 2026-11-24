@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>phyto_gazebo</name>
+    <version>0.1.0</version>
+    <description>Gazebo simulation of the winch and IFCB/CTD</description>
+    <maintainer email="rgovostes@whoi.edu">Ryan Govostes</maintainer>
+    <license>GPL-3.0</license>
+
+    <buildtool_depend>catkin</buildtool_depend>
+    <build_depend>gazebo_dev</build_depend>
+    <depend>geometry_msgs</depend>
+    <depend>roscpp</depend>
+    <depend>std_msgs</depend>
+
+    <exec_depend>gazebo_ros</exec_depend>
+
+    <export>
+        <gazebo_ros plugin_path="${prefix}/../../lib" />
+    </export>
+</package>
