@@ -58,8 +58,14 @@ class MODE(enum.IntEnum):
     STOP = 11
 
 
-# Register numbers are taken from the user manual, listing 5.12.3. All registers
-# are 32-bits, stored as two 16-bit half-words in big endian order.
+# JVL MACmotor Register List, registers 5, 6, 11 and 12, for the 8192-count encoder.
+# https://ppnb.jvl.dk/MACRegisterList.pdf
+VELOCITY_UNITS_PER_RPM = 2.83989  # 16-sample commanded and measured velocity
+SINGLE_SAMPLE_UNITS_PER_RPM = 0.1774933
+ACCELERATION_UNITS_PER_RPM_PER_SEC = 3.6918613e-3
+
+
+# Each 32-bit register occupies two Modbus words, least significant word first.
 all_registers = [
     # register 0 is reserved
     Register(name='PROG_VERSION',    num=1),
@@ -76,12 +82,12 @@ all_registers = [
         encode=lambda x: pack('l', x),
     ),
     Register(name='V_SOLL',          num=5,
-        decode=lambda lo, hi: unpack('l', lo, hi) / 2.83989,  # RPM
-        encode=lambda x: pack('l', int(x * 2.83989)),
+        decode=lambda lo, hi: unpack('l', lo, hi) / VELOCITY_UNITS_PER_RPM,  # RPM
+        encode=lambda x: pack('l', int(x * VELOCITY_UNITS_PER_RPM)),
     ),
     Register(name='A_SOLL',          num=6,
-        decode=lambda lo, hi: unpack('l', lo, hi) / 3.598133e-3,  # RPM/s
-        encode=lambda x: pack('l', int(x * 3.598133e-3)),
+        decode=lambda lo, hi: unpack('l', lo, hi) / ACCELERATION_UNITS_PER_RPM_PER_SEC,  # RPM/s
+        encode=lambda x: pack('l', int(x * ACCELERATION_UNITS_PER_RPM_PER_SEC)),
     ),
     Register(name='T_SOLL',          num=7,
         decode=lambda lo, hi: unpack('L', lo, hi) / 341,  # % of nominal load
@@ -94,12 +100,12 @@ all_registers = [
         encode=lambda x: pack('l', x),
     ),
     Register(name='V_IST_16',        num=11,
-        decode=lambda lo, hi: unpack('l', lo, hi) / (0.17316 * 16),  # RPM
-        encode=lambda x: pack('l', int(x * (0.17316 * 16))),
+        decode=lambda lo, hi: unpack('l', lo, hi) / VELOCITY_UNITS_PER_RPM,  # RPM
+        encode=lambda x: pack('l', int(x * VELOCITY_UNITS_PER_RPM)),
     ),
     Register(name='V_IST',           num=12,
-        decode=lambda lo, hi: unpack('l', lo, hi) / 0.17316,  # RPM
-        encode=lambda x: pack('l', int(x * 0.17316)),
+        decode=lambda lo, hi: unpack('l', lo, hi) / SINGLE_SAMPLE_UNITS_PER_RPM,  # RPM
+        encode=lambda x: pack('l', int(x * SINGLE_SAMPLE_UNITS_PER_RPM)),
     ),
     Register(name='KVOUT',           num=13),
     Register(name='GEARF1',          num=14),
