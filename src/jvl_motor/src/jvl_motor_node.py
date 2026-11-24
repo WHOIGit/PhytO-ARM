@@ -128,6 +128,55 @@ def cmd_stop(client, request):
     return srv.StopCmdResponse()
 
 
+# Publish the latest motor readings and return the last known error status
+def publish_status(client, electrical_pub, error_pub, motion_pub, last_error):
+    # The range of register addresses is too wide, so we need to do this in
+    # two calls.
+    try:
+        reg_values, timestamp1 = read_registers(client, [
+            mac400.MODE_REG,
+            mac400.P_IST,
+            mac400.V_IST_16,
+            mac400.FLWERR,
+            mac400.U_24V,
+            mac400.ERR_STAT,
+        ])
+        reg_values2, timestamp2 = read_registers(client, [
+            mac400.U_BUS,
+        ])
+        reg_values.update(reg_values2)
+    except RuntimeError:
+        rospy.logerr('Failed to read registers, retrying on loop')
+        return last_error
+
+    # Publish information about the electrical state
+    m = msg.Electrical()
+    m.header.stamp = m.ds_header.io_time = timestamp1
+    m.u_24v = reg_values[mac400.U_24V]
+    m.u_bus = reg_values[mac400.U_BUS]
+    electrical_pub.publish(m)
+
+    # Publish information about motion
+    m = msg.Motion()
+    m.header.stamp = m.ds_header.io_time = timestamp1
+    m.mode = reg_values[mac400.MODE_REG].value
+    m.position = reg_values[mac400.P_IST]
+    m.velocity = reg_values[mac400.V_IST_16]
+    # TODO: FLWERR
+    motion_pub.publish(m)
+
+    # If the error state has changed, publish what changed. For now,
+    # re-pack bits into a 32-bit integer.
+    err_stat = mac400.implode_bits(reg_values[mac400.ERR_STAT])
+    if last_error is not None and last_error != err_stat:
+        m = msg.Error()
+        m.header.stamp = m.ds_header.io_time = timestamp1
+        m.err_stat = err_stat
+        m.change_mask = err_stat ^ last_error
+        error_pub.publish(m)
+    return err_stat
+
+
 def main():
     # Initialize this node
     rospy.init_node('jvl_motor', anonymous=True, log_level=rospy.DEBUG)
@@ -189,60 +238,19 @@ def main():
     # We only send our error status if one of the bits has changed
     last_error = None
 
-
-    rate = rospy.Rate(rospy.get_param('~refresh_rate', 1))  # hz
-    while not rospy.is_shutdown():
-        # The range of register addresses is too wide, so we need to do this in
-        # two calls.
-        try:
-            reg_values, timestamp1 = read_registers(client, [
-                mac400.MODE_REG,
-                mac400.P_IST,
-                mac400.V_IST_16,
-                mac400.FLWERR,
-                mac400.U_24V,
-                mac400.ERR_STAT,
-            ])
-            reg_values2, timestamp2 = read_registers(client, [
-                mac400.U_BUS,
-            ])
-            reg_values.update(reg_values2)
-        except RuntimeError:
-            rospy.logerr('Failed to read registers, retrying on loop')
+    try:
+        rate = rospy.Rate(rospy.get_param('~refresh_rate', 1))  # hz
+        while not rospy.is_shutdown():
+            last_error = publish_status(
+                client, electrical_pub, error_pub, motion_pub, last_error
+            )
             rate.sleep()
-            continue
-
-        # Publish information about the electrical state
-        m = msg.Electrical()
-        m.header.stamp = m.ds_header.io_time = timestamp1
-        m.u_24v = reg_values[mac400.U_24V]
-        m.u_bus = reg_values[mac400.U_BUS]
-        electrical_pub.publish(m)
-
-        # Publish information about motion
-        m = msg.Motion()
-        m.header.stamp = m.ds_header.io_time = timestamp1
-        m.mode = reg_values[mac400.MODE_REG].value
-        m.position = reg_values[mac400.P_IST]
-        m.velocity = reg_values[mac400.V_IST_16]
-        # TODO: FLWERR
-        motion_pub.publish(m)
-
-        # If the error state has changed, publish what changed. For now,
-        # re-pack bits into a 32-bit integer.
-        err_stat = mac400.implode_bits(reg_values[mac400.ERR_STAT])
-        if last_error is not None and last_error != err_stat:
-            m = msg.Error()
-            m.header.stamp = m.ds_header.io_time = timestamp1
-            m.err_stat = err_stat
-            m.change_mask = err_stat ^ last_error
-            error_pub.publish(m)
-        last_error = err_stat
-
-        rate.sleep()
-
-    for service in services:
-        service.shutdown('node shutting down')
+    except rospy.ROSInterruptException:
+        if not rospy.is_shutdown():
+            raise
+    finally:
+        for service in services:
+            service.shutdown('node shutting down')
 
 
 if __name__ == '__main__':
