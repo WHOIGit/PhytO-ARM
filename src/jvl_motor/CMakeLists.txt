@@ -33,5 +33,5 @@ generate_messages(
 catkin_package()
 
 if (CATKIN_ENABLE_TESTING)
-  catkin_add_nosetests(tests)
+  catkin_add_nosetests(tests DEPENDENCIES ${PROJECT_NAME}_generate_messages_py)
 endif()
