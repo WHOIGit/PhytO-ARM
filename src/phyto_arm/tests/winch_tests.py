@@ -1,0 +1,253 @@
+import asyncio
+import os
+import sys
+import unittest
+from unittest.mock import Mock, call, patch
+
+import rospy
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+import winch_node as winch
+
+
+class TestWinchClock(unittest.IsolatedAsyncioTestCase):
+    def patch(self, patcher):
+        self.addCleanup(patcher.stop)
+        return patcher.start()
+
+    def setup_move(self, simulated=True, start=10):
+        loop = asyncio.get_running_loop()
+        self.stamp = rospy.Time(start)
+        params = {
+            '/use_sim_time': simulated,
+            '~epsilon': 0.01,
+            '~gear_ratio': 60,
+            '~half_speed_dist': 0.05,
+            '~max_speed': 0.02,
+            '~safety_envelopes': {'position': 0.1},
+            '~spool_circumference': 0.6604,
+        }
+        self.patch(patch.object(rospy, 'get_param', side_effect=params.get))
+        now = self.patch(patch.object(rospy.Time, 'now'))
+        now.side_effect = lambda: self.stamp
+        self.patch(patch.object(rospy, 'Subscriber'))
+        self.clock = winch.AwaitableRosClock(loop)
+        self.depth = winch.AwaitableValue(loop, now=self.clock.now)
+        self.motor = winch.AwaitableValue(loop, now=self.clock.now)
+        self.commanded = asyncio.Event()
+        self.velocity = Mock(side_effect=lambda **kw: self.commanded.set())
+        self.patch(patch.multiple(
+            winch, clock=self.clock, depth=self.depth, motor=self.motor,
+            set_position_envelope=Mock(), set_velocity=self.velocity,
+            stop=Mock()
+        ))
+        self.server = Mock()
+        self.server.is_preempt_requested.return_value = False
+        self.server.is_active.return_value = False
+
+    async def start_goal(self):
+        goal = Mock(depth=1.0, velocity=0.01)
+        task = asyncio.create_task(winch.move_to_depth_chk(self.server, goal))
+        await asyncio.sleep(0)
+        return task
+
+    def cancel_goal(self):
+        self.server.is_preempt_requested.return_value = True
+        self.server.register_preempt_callback.call_args.args[0]()
+
+    def send_readings(self):
+        self.depth.update_soon(Mock(depth=0.7))
+        self.motor.update_soon(Mock(mode=winch.Motion.MODE_PASSIVE,
+                                    position=0))
+
+    async def test_clock_paused_during_subscription(self):
+        loop = asyncio.get_running_loop()
+        stamp = rospy.Time(10)
+
+        # Gazebo advances and pauses just before our callback is registered
+        def subscribe(topic, message_type, callback):
+            nonlocal stamp
+            stamp = rospy.Time(100)
+            return Mock()
+
+        with patch.object(rospy, 'get_param', return_value=True), \
+             patch.object(rospy, 'Subscriber', side_effect=subscribe), \
+             patch.object(rospy.Time, 'now', side_effect=lambda: stamp):
+            clock = winch.AwaitableRosClock(loop)
+            self.assertEqual(clock.now(), rospy.Time(100))
+
+    async def test_wait_returns_latest_value(self):
+        self.setup_move()
+        depth = self.depth
+        cancelled = asyncio.create_task(depth.wait())
+        other = asyncio.create_task(depth.wait())
+        await asyncio.sleep(0)
+        cancelled.cancel()
+
+        # Two updates can arrive before either waiter resumes
+        depth.update_soon(2)
+        depth.update_soon(3)
+        self.assertEqual(await depth, 3)
+        self.assertEqual(await other, 3)
+        self.assertEqual(depth.value, 3)
+
+    async def test_timeout_requires_duration(self):
+        self.setup_move()
+        with self.assertRaises(TypeError):
+            await winch.wait_for_updates(self.clock, [self.depth],
+                                         rospy.Time(12))
+
+    async def test_overlapping_waits(self):
+        self.setup_move()
+        third = winch.AwaitableValue(asyncio.get_running_loop(),
+                                    now=self.clock.now)
+        first = asyncio.create_task(winch.wait_for_updates(
+            self.clock, [self.depth, self.motor, third], rospy.Duration(2)))
+        second = asyncio.create_task(winch.wait_for_updates(
+            self.clock, [self.depth], rospy.Duration(1)))
+        await asyncio.sleep(0)
+
+        # Both waiters see the same depth update at the earlier deadline
+        self.clock.tick(rospy.Time(11))
+        self.depth.update(1.0)
+        await asyncio.wait_for(second, timeout=1)
+        self.motor.update(1.0)
+        self.clock.tick(rospy.Time(13))
+        await asyncio.wait([first], timeout=1)
+        with self.assertRaises(asyncio.TimeoutError):
+            first.result()
+
+    async def test_cancel_during_startup(self):
+        self.setup_move()
+        task = await self.start_goal()
+        self.cancel_goal()
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_preempted.assert_called_once()
+        self.velocity.assert_not_called()
+
+    async def test_first_goal_with_queued_ticks(self):
+        self.setup_move()
+        self.stamp = rospy.Time(12)
+        task = await self.start_goal()
+
+        # The rospy cache is ahead of the callbacks queued for the winch
+        self.clock.tick(rospy.Time(11))
+        self.send_readings()
+        asyncio.get_running_loop().call_soon(self.clock.tick, rospy.Time(12))
+        await asyncio.wait_for(self.commanded.wait(), timeout=1)
+        self.cancel_goal()
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_not_called()
+
+    async def test_control_interval_and_paused_cancel(self):
+        self.setup_move()
+        task = await self.start_goal()
+        self.send_readings()
+        await asyncio.wait_for(self.commanded.wait(), timeout=1)
+        self.commanded.clear()
+
+        # The next command is due exactly one simulated second later
+        self.clock.tick(rospy.Time(10, 999999999))
+        await asyncio.sleep(0)
+        self.assertEqual(self.velocity.call_count, 1)
+        self.clock.tick(rospy.Time(11))
+        await asyncio.wait_for(self.commanded.wait(), timeout=1)
+        self.assertEqual(self.velocity.call_count, 2)
+
+        # Cancellation must issue a fresh stop while the clock is paused
+        winch.stop.reset_mock()
+        self.cancel_goal()
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_preempted.assert_called_once()
+        winch.stop.assert_called_with()
+        winch.set_position_envelope.assert_called_with(min=0, max=0)
+
+    async def test_slow_motor_service(self):
+        self.setup_move(simulated=False)
+
+        # A depth callback arrives while the velocity service takes 1.1 seconds
+        def slow_velocity(**kwargs):
+            self.depth.update_soon(Mock(depth=1.0))
+            self.stamp += rospy.Duration.from_sec(1.1)
+
+        self.velocity.side_effect = slow_velocity
+        task = await self.start_goal()
+        self.send_readings()
+        await asyncio.wait_for(task, timeout=1)
+        self.velocity.assert_called_once()
+        self.server.set_succeeded.assert_called_once()
+
+    async def test_command_error_stops_before_clearing_envelope(self):
+        self.setup_move()
+        self.velocity.side_effect = rospy.ServiceException('command failed')
+        calls = Mock()
+        calls.attach_mock(winch.stop, 'stop')
+        calls.attach_mock(winch.set_position_envelope, 'envelope')
+        task = await self.start_goal()
+        self.send_readings()
+        with self.assertRaises(rospy.ServiceException):
+            await asyncio.wait_for(task, timeout=1)
+        calls.assert_has_calls([call.stop(), call.envelope(min=0, max=0)])
+        self.server.set_aborted.assert_called_once()
+
+    async def test_wall_clock_rewinds_during_command(self):
+        self.setup_move(simulated=False)
+
+        def rewind(**kwargs):
+            self.stamp -= rospy.Duration(2)
+
+        self.velocity.side_effect = rewind
+        task = await self.start_goal()
+        self.send_readings()
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_called_once_with(
+            text='ROS time moved backwards')
+        winch.set_position_envelope.assert_called_with(min=0, max=0)
+
+    async def test_on_time_readings_before_clock_jump(self):
+        self.setup_move()
+        task = await self.start_goal()
+
+        # Both readings arrive before the deadline but the goal resumes after it
+        self.clock.tick(rospy.Time(11))
+        self.send_readings()
+        asyncio.get_running_loop().call_soon(self.clock.tick, rospy.Time(13))
+        self.send_readings()
+        await asyncio.wait_for(self.commanded.wait(), timeout=1)
+        self.cancel_goal()
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_not_called()
+
+    async def test_late_motor_status(self):
+        self.setup_move()
+        task = await self.start_goal()
+        self.depth.update_soon(Mock(depth=0.7))
+        asyncio.get_running_loop().call_soon(self.clock.tick, rospy.Time(13))
+        self.send_readings()
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_called_once_with(
+            text='Timed out waiting for initial winch status')
+        self.velocity.assert_not_called()
+
+    async def test_startup_deadline(self):
+        self.setup_move(start=0)
+        task = await self.start_goal()
+        self.clock.tick(rospy.Time(100))
+        await asyncio.sleep(0)
+        self.assertFalse(task.done())
+        self.clock.tick(rospy.Time(102))
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_called_once_with(
+            text='Timed out waiting for initial winch status')
+
+    async def test_rewind(self):
+        self.setup_move()
+        task = await self.start_goal()
+
+        # The clock rewinds and catches up before the goal resumes
+        self.clock.tick(rospy.Time(5))
+        self.clock.tick(rospy.Time(11))
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_called_once_with(
+            text='ROS time moved backwards')
