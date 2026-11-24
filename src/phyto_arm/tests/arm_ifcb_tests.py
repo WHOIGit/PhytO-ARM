@@ -64,6 +64,11 @@ class TestWizToRosTime(unittest.TestCase):
 
 
 class TestItsWizTime(unittest.TestCase):
+    @patch('arm_ifcb.rospy.get_param')
+    def test_empty_wiz_schedule(self, get_param):
+        get_param.side_effect = [0, []]
+        self.assertFalse(arm_ifcb.its_wiz_time())
+
     @patch('arm_ifcb.rospy')
     def test_its_wiz_time_true(self, mock_rospy):
         mock_rospy.get_param.return_value = 10  # Preparation window in minutes

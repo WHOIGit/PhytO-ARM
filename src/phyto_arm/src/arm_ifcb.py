@@ -147,7 +147,8 @@ def its_wiz_time():
     prep_window = rospy.Duration(60*rospy.get_param('tasks/wiz_probe/preparation_window'))
 
     # If we're within the preparation window, it's wizin' time
-    return (find_next_wiz_time() - rospy.Time.now()) <= prep_window
+    next_time = find_next_wiz_time()
+    return next_time is not None and next_time - rospy.Time.now() <= prep_window
 
 
 def compute_wiz_depth(peak_depth):
