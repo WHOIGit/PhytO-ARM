@@ -330,10 +330,6 @@ async def main():
     # Register signal handlers the same way rospy would
     for sig in [signal.SIGTERM, signal.SIGINT]:
         loop.add_signal_handler(sig, rospy.signal_shutdown, f'signal-{sig.value}')
-    shutdown = asyncio.Event()
-    rospy.core.add_preshutdown_hook(
-        lambda reason: loop.call_soon_threadsafe(shutdown.set)
-    )
 
     # Wait for services to become available
     for svc in [ zero_position, set_velocity, set_position_envelope, stop ]:
@@ -355,8 +351,13 @@ async def main():
     )
     server.start()
 
-    # Spin so that other tasks can run
-    await shutdown.wait()
+    # Wake main() from the rospy shutdown thread so asyncio can exit cleanly.
+    shutdown = asyncio.Event()
+    rospy.core.add_preshutdown_hook(
+        lambda reason: loop.call_soon_threadsafe(shutdown.set)
+    )
+    if not rospy.core.is_shutdown_requested():
+        await shutdown.wait()
 
 
 if __name__ == '__main__':
