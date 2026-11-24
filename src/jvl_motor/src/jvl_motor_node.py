@@ -239,7 +239,8 @@ def main():
     last_error = None
 
     try:
-        rate = rospy.Rate(rospy.get_param('~refresh_rate', 1))  # hz
+        # Keep polling if ROS time moves backward during sleep
+        rate = rospy.Rate(rospy.get_param('~refresh_rate', 1), reset=True)  # hz
         while not rospy.is_shutdown():
             last_error = publish_status(
                 client, electrical_pub, error_pub, motion_pub, last_error
