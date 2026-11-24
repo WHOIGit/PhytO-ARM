@@ -58,6 +58,12 @@ class MODE(enum.IntEnum):
     STOP = 11
 
 
+# MAC400 with an 8192-count encoder (JVL MACmotor Register List, regs. 5–12).
+# https://ppnb.jvl.dk/MACRegisterList.pdf
+RPM_SCALE = 2.83989  # 16-sample velocity units per RPM
+ACCEL_SCALE = 3.6918613e-3  # acceleration units per RPM/s
+
+
 # Register numbers are taken from the user manual, listing 5.12.3. All registers
 # are 32-bits, stored as two 16-bit half-words in big endian order.
 all_registers = [
@@ -76,12 +82,12 @@ all_registers = [
         encode=lambda x: pack('l', x),
     ),
     Register(name='V_SOLL',          num=5,
-        decode=lambda lo, hi: unpack('l', lo, hi) / 2.83989,  # RPM
-        encode=lambda x: pack('l', int(x * 2.83989)),
+        decode=lambda lo, hi: unpack('l', lo, hi) / RPM_SCALE,  # RPM
+        encode=lambda x: pack('l', int(x * RPM_SCALE)),
     ),
     Register(name='A_SOLL',          num=6,
-        decode=lambda lo, hi: unpack('l', lo, hi) / 3.598133e-3,  # RPM/s
-        encode=lambda x: pack('l', int(x * 3.598133e-3)),
+        decode=lambda lo, hi: unpack('l', lo, hi) / ACCEL_SCALE,  # RPM/s
+        encode=lambda x: pack('l', int(x * ACCEL_SCALE)),
     ),
     Register(name='T_SOLL',          num=7,
         decode=lambda lo, hi: unpack('L', lo, hi) / 341,  # % of nominal load
@@ -94,12 +100,12 @@ all_registers = [
         encode=lambda x: pack('l', x),
     ),
     Register(name='V_IST_16',        num=11,
-        decode=lambda lo, hi: unpack('l', lo, hi) / (0.17316 * 16),  # RPM
-        encode=lambda x: pack('l', int(x * (0.17316 * 16))),
+        decode=lambda lo, hi: unpack('l', lo, hi) / RPM_SCALE,  # RPM
+        encode=lambda x: pack('l', int(x * RPM_SCALE)),
     ),
     Register(name='V_IST',           num=12,
-        decode=lambda lo, hi: unpack('l', lo, hi) / 0.17316,  # RPM
-        encode=lambda x: pack('l', int(x * 0.17316)),
+        decode=lambda lo, hi: unpack('l', lo, hi) / (RPM_SCALE / 16),  # RPM
+        encode=lambda x: pack('l', int(x * (RPM_SCALE / 16))),
     ),
     Register(name='KVOUT',           num=13),
     Register(name='GEARF1',          num=14),
