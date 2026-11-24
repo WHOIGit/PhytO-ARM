@@ -33,10 +33,12 @@ class AwaitableValue:
         self.loop, self.value = loop, initial
         self.now = now
         self.next_receipt = loop.create_future()
+        self.received = None
 
     def update(self, value):
         self.value = value
-        self.next_receipt.set_result(self.now())
+        self.received = self.now()
+        self.next_receipt.set_result(self.received)
         self.next_receipt = self.loop.create_future()
 
     def update_soon(self, value):
@@ -48,6 +50,29 @@ class AwaitableValue:
 
     def __await__(self):
         return self.wait().__await__()
+
+
+# Remember a gap even if several readings arrive before the winch resumes
+class WinchStatus(AwaitableValue):
+    timeout = rospy.Duration(2)
+
+    def __init__(self, clock):
+        super().__init__(clock.loop, now=clock.now)
+        self.clock = clock
+        self.gaps = 0
+
+    # Readings received at time zero age from the first clock tick
+    @property
+    def deadline(self):
+        received = self.received or self.clock.first_tick
+        if received is not None:
+            return received + self.timeout
+
+    def update(self, value):
+        deadline = self.deadline
+        super().update(value)
+        if deadline is not None and self.received > deadline:
+            self.gaps += 1
 
 
 # Wake the control loop on clock ticks and remember rewinds between updates
@@ -98,19 +123,6 @@ class AwaitableRosClock:
         if now < previous:
             raise rospy.exceptions.ROSTimeMovedBackwardsException(
                 (previous - now).to_sec())
-
-    # Always yield once so an overdue control cycle can receive sensor updates
-    async def sleep(self, duration, start):
-        now = self.now()
-        if now < start:
-            raise rospy.exceptions.ROSTimeMovedBackwardsException(
-                (start - now).to_sec())
-
-        deadline = start + duration
-        while True:
-            await self.wait_for_change(deadline)
-            if self.now() >= deadline:
-                return
 
 
 # Convenience methods for making it easier to print a log message at the same
@@ -210,6 +222,40 @@ async def wait_for_updates(clock, values, timeout):
         await clock.wait_for_change(deadline, pending)
 
 
+# Yield elapsed ROS time at the start of a move and on each status update
+async def motion_updates(start, time_limit):
+    now = start
+    streams = (('depth', depth, depth.gaps), ('motor', motor, motor.gaps))
+    while True:
+        elapsed = now - start
+        if elapsed >= time_limit:
+            raise asyncio.TimeoutError(
+                f'Time limit exceeded: {elapsed}/{time_limit}')
+
+        # Each stream must stay fresh throughout the move
+        deadline = start + time_limit
+        for name, status, gaps in streams:
+            expires = status.deadline
+            if now >= expires or status.gaps != gaps:
+                raise asyncio.TimeoutError(
+                    f'Timed out waiting for {name} status')
+            deadline = min(deadline, expires)
+
+        updates = (depth.next_receipt, motor.next_receipt)
+        yield elapsed
+
+        # Blocking motor calls can span a wall clock adjustment
+        previous, now = now, clock.now()
+        if now < previous:
+            raise rospy.exceptions.ROSTimeMovedBackwardsException(
+                (previous - now).to_sec())
+
+        # Wait for either status stream or the earliest deadline
+        while now < deadline and not any(update.done() for update in updates):
+            await clock.wait_for_change(deadline, updates)
+            now = clock.now()
+
+
 # This is our entrypoint to the MoveToDepth action, which has some additional
 # guardrails to prevent a runaway motor.
 async def move_to_depth_chk(server, goal):
@@ -241,7 +287,7 @@ async def move_to_depth_chk(server, goal):
 async def move_to_depth(server, goal):
     # Get an initial depth fix and motor status message
     try:
-        await wait_for_updates(clock, [depth, motor], rospy.Duration(2))
+        await wait_for_updates(clock, [depth, motor], WinchStatus.timeout)
     except asyncio.TimeoutError:
         server.set_aborted(text='Timed out waiting for initial winch status')
         return
@@ -322,12 +368,12 @@ async def move_to_depth(server, goal):
     # Record the time that we start moving
     start_time = clock.now()
 
+    envelope_depth = None
+    envelope_position = None
     started = False
+    velocity = None
     try:
-        while True:
-            now = clock.now()
-            elapsed = now - start_time
-
+        async for elapsed in motion_updates(start_time, time_limit):
             # If we reached our target, stop
             if abs(depth.value.depth - goal.depth) < epsilon:
                 rospy.loginfo('Reached target!')
@@ -349,12 +395,6 @@ async def move_to_depth(server, goal):
                 # We started moving, so turn on the check above
                 started = True
 
-            # If too much time has elapsed, stop
-            if elapsed > time_limit:
-                server.set_aborted(
-                    text=f'Time limit exceeded: {elapsed}/{time_limit}')
-                return
-
             # If depth is outside of bounds, stop
             if not (depth_min <= depth.value.depth <= depth_max):
                 server.set_aborted(
@@ -362,21 +402,25 @@ async def move_to_depth(server, goal):
                          f'not in ({depth_min}, {depth_max})')
                 return
 
-            # Update bounds so we do not travel far from this position
-            pos_margin = dist2encoder(depth_margin)
-            pos_min = max(lower_bound, motor.value.position - pos_margin)
-            pos_max = min(upper_bound, motor.value.position + pos_margin)
-            set_position_envelope(min=pos_min, max=pos_max)
+            # Advance the envelope only with fresh depth and a new position
+            if (depth.value is not envelope_depth and
+                    motor.value.position != envelope_position):
+                envelope_depth = depth.value
+                envelope_position = motor.value.position
+                pos_margin = dist2encoder(depth_margin)
+                pos_min = max(lower_bound, envelope_position - pos_margin)
+                pos_max = min(upper_bound, envelope_position + pos_margin)
+                set_position_envelope(min=pos_min, max=pos_max)
 
             # Compute and command a new velocity according to our current depth
-            velocity = v(depth.value.depth)
-            rpm = rpm_ratio * velocity
-
-            set_velocity(
-                velocity=rpm,       # RPM
-                acceleration=1200,  # RPM/s
-                torque=3.0          # rated torque
-            )
+            new_velocity = v(depth.value.depth)
+            if new_velocity != velocity:
+                velocity = new_velocity
+                set_velocity(
+                    velocity=rpm_ratio * velocity,  # RPM
+                    acceleration=1200,  # RPM/s
+                    torque=3.0          # rated torque
+                )
 
             # Publish feedback about our current progress
             feedback = MoveToDepthFeedback()
@@ -385,10 +429,11 @@ async def move_to_depth(server, goal):
             feedback.velocity = velocity
             server.publish_feedback(feedback)
 
-            await clock.sleep(rospy.Duration(1), start=now)
-
         # Record duration of movement
         elapsed_time = clock.now() - start_time
+    except asyncio.TimeoutError as err:
+        server.set_aborted(text=str(err))
+        return
     finally:
         # However we broke out of the loop, stop the motor immediately
         rospy.logdebug('Loop finished, stopping motor')
@@ -404,7 +449,7 @@ async def move_to_depth(server, goal):
     server.set_succeeded(result)
 
     # Suggest a new conversion factor
-    if abs(start_depth - goal.depth) >= 1.0:
+    if abs(start_depth - goal.depth) >= 1.0 and elapsed_time.to_sec() > 0:
         time_ratio = expected_time / elapsed_time
         rospy.set_param('~spool_circumference',
                         spool_circumference * time_ratio)
@@ -433,8 +478,8 @@ async def main():
     # Subscribe to incoming messages
     global clock, depth, motor
     clock = AwaitableRosClock(loop)
-    depth = AwaitableValue(loop, now=clock.now)
-    motor = AwaitableValue(loop, now=clock.now)
+    depth = WinchStatus(clock)
+    motor = WinchStatus(clock)
     rospy.Subscriber(rospy.get_param('ctd_topic'), DepthPressure, depth.update_soon)
     rospy.Subscriber('motor/motion', Motion, motor.update_soon)
 

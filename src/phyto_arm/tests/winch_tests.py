@@ -33,8 +33,8 @@ class TestWinchClock(unittest.IsolatedAsyncioTestCase):
         now.side_effect = lambda: self.stamp
         self.patch(patch.object(rospy, 'Subscriber'))
         self.clock = winch.AwaitableRosClock(loop)
-        self.depth = winch.AwaitableValue(loop, now=self.clock.now)
-        self.motor = winch.AwaitableValue(loop, now=self.clock.now)
+        self.depth = winch.WinchStatus(self.clock)
+        self.motor = winch.WinchStatus(self.clock)
         self.commanded = asyncio.Event()
         self.velocity = Mock(side_effect=lambda **kw: self.commanded.set())
         self.patch(patch.multiple(
@@ -46,8 +46,8 @@ class TestWinchClock(unittest.IsolatedAsyncioTestCase):
         self.server.is_preempt_requested.return_value = False
         self.server.is_active.return_value = False
 
-    async def start_goal(self):
-        goal = Mock(depth=1.0, velocity=0.01)
+    async def start_goal(self, depth=1.0):
+        goal = Mock(depth=depth, velocity=0.01)
         task = asyncio.create_task(winch.move_to_depth_chk(self.server, goal))
         await asyncio.sleep(0)
         return task
@@ -60,6 +60,12 @@ class TestWinchClock(unittest.IsolatedAsyncioTestCase):
         self.depth.update_soon(Mock(depth=0.7))
         self.motor.update_soon(Mock(mode=winch.Motion.MODE_PASSIVE,
                                     position=0))
+
+    async def start_moving(self):
+        task = await self.start_goal()
+        self.send_readings()
+        await asyncio.wait_for(self.commanded.wait(), timeout=1)
+        return task
 
     async def test_clock_paused_during_subscription(self):
         loop = asyncio.get_running_loop()
@@ -140,22 +146,105 @@ class TestWinchClock(unittest.IsolatedAsyncioTestCase):
         await asyncio.wait_for(task, timeout=1)
         self.server.set_aborted.assert_not_called()
 
-    async def test_control_interval_and_paused_cancel(self):
+    async def test_depth_and_motor_updates(self):
         self.setup_move()
-        task = await self.start_goal()
-        self.send_readings()
-        await asyncio.wait_for(self.commanded.wait(), timeout=1)
-        self.commanded.clear()
+        task = await self.start_moving()
+        envelope = winch.set_position_envelope
+        feedback = asyncio.Event()
+        self.server.publish_feedback.side_effect = lambda msg: feedback.set()
 
-        # The next command is due exactly one simulated second later
-        self.clock.tick(rospy.Time(10, 999999999))
-        await asyncio.sleep(0)
-        self.assertEqual(self.velocity.call_count, 1)
-        self.clock.tick(rospy.Time(11))
-        await asyncio.wait_for(self.commanded.wait(), timeout=1)
-        self.assertEqual(self.velocity.call_count, 2)
+        # Encoder reports alone cannot advance the envelope or change speed
+        self.clock.tick(rospy.Time(10, 100000000))
+        self.motor.update(Mock(mode=winch.Motion.MODE_VELOCITY, position=10))
+        await asyncio.wait_for(feedback.wait(), timeout=1)
+        self.velocity.assert_called_once()
+        envelope.assert_called_once()
 
-        # Cancellation must issue a fresh stop while the clock is paused
+        # An unchanged depth confirms the encoder position without a speed write
+        feedback.clear()
+        self.depth.update(Mock(depth=0.7))
+        await asyncio.wait_for(feedback.wait(), timeout=1)
+        self.velocity.assert_called_once()
+        self.assertEqual(envelope.call_count, 2)
+
+        # Depth alone changes speed and can finish the move before the next tick
+        feedback.clear()
+        self.depth.update(Mock(depth=0.9))
+        await asyncio.wait_for(feedback.wait(), timeout=1)
+        first, second = self.velocity.call_args_list
+        self.assertLess(second.kwargs['velocity'], first.kwargs['velocity'])
+        self.assertEqual(envelope.call_count, 2)
+        self.depth.update(Mock(depth=1.0))
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_succeeded.assert_called_once()
+        winch.stop.assert_called_with()
+
+    async def test_unexpected_motor_stop(self):
+        self.setup_move()
+        task = await self.start_moving()
+        feedback = asyncio.Event()
+        self.server.publish_feedback.side_effect = lambda msg: feedback.set()
+        self.motor.update(Mock(mode=winch.Motion.MODE_VELOCITY, position=1))
+        await asyncio.wait_for(feedback.wait(), timeout=1)
+        self.motor.update(Mock(mode=winch.Motion.MODE_PASSIVE, position=1))
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_called_once_with(
+            text='Motor unexpectedly stopped, mode: 0')
+        self.velocity.assert_called_once()
+
+    async def test_stale_status(self):
+        for missing in ('depth', 'motor'):
+            with self.subTest(missing=missing):
+                self.setup_move()
+                task = await self.start_moving()
+                self.clock.tick(rospy.Time(11))
+                if missing == 'depth':
+                    self.motor.update(Mock(mode=winch.Motion.MODE_VELOCITY,
+                                           position=1))
+                else:
+                    self.depth.update(Mock(depth=0.7))
+                self.clock.tick(rospy.Time(12))
+                await asyncio.wait_for(task, timeout=1)
+                self.server.set_aborted.assert_called_once_with(
+                    text=f'Timed out waiting for {missing} status')
+                self.velocity.assert_called_once()
+                winch.set_position_envelope.assert_called_with(min=0, max=0)
+
+    async def test_late_status_cannot_restart_motion(self):
+        self.setup_move()
+        task = await self.start_moving()
+        # Both streams recover before the waiting coroutine resumes
+        for second in (11, 14):
+            self.clock.tick(rospy.Time(second))
+            self.depth.update(Mock(depth=0.9))
+            self.motor.update(Mock(mode=winch.Motion.MODE_VELOCITY,
+                                   position=1))
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_called_once_with(
+            text='Timed out waiting for depth status')
+        self.velocity.assert_called_once()
+
+    async def test_move_deadline_with_fresh_status(self):
+        self.setup_move()
+        self.patch(patch.object(winch, 'estimate_time',
+                                return_value=rospy.Duration(0)))
+        task = await self.start_moving()
+        feedback = asyncio.Event()
+        self.server.publish_feedback.side_effect = lambda msg: feedback.set()
+        for second in range(11, 20):
+            feedback.clear()
+            self.clock.tick(rospy.Time(second))
+            self.send_readings()
+            await asyncio.wait_for(feedback.wait(), timeout=1)
+        self.clock.tick(rospy.Time(20))
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_called_once()
+        self.assertIn('Time limit exceeded',
+                      self.server.set_aborted.call_args.kwargs['text'])
+
+    async def test_paused_cancel(self):
+        self.setup_move()
+        task = await self.start_moving()
         winch.stop.reset_mock()
         self.cancel_goal()
         await asyncio.wait_for(task, timeout=1)
@@ -240,6 +329,30 @@ class TestWinchClock(unittest.IsolatedAsyncioTestCase):
         await asyncio.wait_for(task, timeout=1)
         self.server.set_aborted.assert_called_once_with(
             text='Timed out waiting for initial winch status')
+
+    async def test_readings_before_first_tick(self):
+        self.setup_move(start=0)
+        task = await self.start_goal()
+        self.send_readings()
+        await asyncio.sleep(0)
+        self.clock.tick(rospy.Time(100))
+        await asyncio.wait_for(self.commanded.wait(), timeout=1)
+        self.clock.tick(rospy.Time(103))
+        self.depth.update(Mock(depth=1.0))
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_aborted.assert_called_once_with(
+            text='Timed out waiting for depth status')
+
+    async def test_target_reached_without_clock_advancing(self):
+        self.setup_move()
+        set_param = self.patch(patch.object(rospy, 'set_param'))
+        task = await self.start_goal(depth=2.0)
+        self.send_readings()
+        await asyncio.wait_for(self.commanded.wait(), timeout=1)
+        self.depth.update(Mock(depth=2.0))
+        await asyncio.wait_for(task, timeout=1)
+        self.server.set_succeeded.assert_called_once()
+        set_param.assert_not_called()
 
     async def test_rewind(self):
         self.setup_move()
