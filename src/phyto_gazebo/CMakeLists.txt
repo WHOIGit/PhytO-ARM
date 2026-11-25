@@ -25,9 +25,12 @@ install(DIRECTORY launch worlds DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
   find_package(ds_sensor_msgs REQUIRED)
+  find_package(ifcb REQUIRED)
   find_package(jvl_motor REQUIRED)
   find_package(phyto_arm REQUIRED)
   find_package(rostest REQUIRED)
+  add_rostest(test/ifcb_mock.test DEPENDENCIES
+    ${ifcb_EXPORTED_TARGETS} ${phyto_arm_EXPORTED_TARGETS})
   catkin_add_nosetests(test/ctd_bridge_tests.py DEPENDENCIES
     ${ds_sensor_msgs_EXPORTED_TARGETS})
   catkin_add_nosetests(test/winch_drum_tests.py)

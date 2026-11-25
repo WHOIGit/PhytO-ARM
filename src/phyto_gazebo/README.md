@@ -85,6 +85,17 @@ production `gpsd_client` publishes `/gps/fix` and `/gps/extended_fix` using
 ROS time.
 Receiver UTC starts at the time of the first fix and advances with Gazebo.
 
+## Sample with a lightweight IFCB
+
+Pass `mock_ifcb:=true` to `winch.launch`, or run
+`roslaunch ifcb ifcb_mock.launch` for the IFCB alone. The mock exposes the
+production command and routine services, connection status, raw messages,
+images and ROI topics. The skeletal sample routine releases the winch at the
+sampling-speed marker and emits a one-pixel test image. Waits use ROS time.
+
+For camera, serial and acquisition-file tests, run IFCBacquire with
+ifcb-simulator.
+
 ## Physical assumptions
 
 The line is a massless spring and damper that can pull on the lifting eye.

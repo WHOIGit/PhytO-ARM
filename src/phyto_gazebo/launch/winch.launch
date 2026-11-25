@@ -1,4 +1,5 @@
 <launch>
+    <arg name="mock_ifcb" default="false" />
     <arg name="gpsd_port" default="29470" />
     <arg name="gui" default="true" />
     <arg name="paused" default="false" />
@@ -21,6 +22,9 @@
 
     <node if="$(arg gui)" pkg="phyto_gazebo" type="view_winch"
           name="gazebo_gui" required="true" />
+
+    <include if="$(arg mock_ifcb)"
+             file="$(find ifcb)/launch/ifcb_mock.launch" />
 
     <node pkg="phyto_gazebo" type="gps_sim.py" name="gps_sim" required="true">
         <param name="port" value="$(arg gpsd_port)" />

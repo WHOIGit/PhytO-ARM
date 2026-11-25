@@ -3,6 +3,7 @@ import functools
 import json
 import os
 import struct
+from threading import Lock
 
 import rospy
 
@@ -29,8 +30,14 @@ def do_command(pub, req):
     return srv.CommandResponse(success=sent)
 
 
+def load_routine(name):
+    path = os.path.join(rospy.get_param('~routines_dir'), f'{name}.json')
+    with open(os.path.expanduser(path), 'rb') as f:
+        return json.load(f)
+
+
 # The ROS service handler that runs a routine, optionally with instrumentation
-def do_runroutine(pub, req):
+def do_runroutine(pub, req, load_routine):
     # XXX
     # We always use the 'interactive:start' command instead of 'routine' because
     # the latter does not (as of Apr 21, 2022) provide any feedback when the
@@ -38,9 +45,6 @@ def do_runroutine(pub, req):
     #
     # This way, the IFCB will send 'valuechanged:interactive:stopped' when the
     # routine completes.
-    #
-    # This means that the routines *must* be written to disk at the expected
-    # location.
 
     # Deny path traversal
     if '/' in req.routine:
@@ -54,13 +58,11 @@ def do_runroutine(pub, req):
     if not sent:
         return srv.RunRoutineResponse(success=False)
 
-    # Attempt to load the file
-    path = os.path.join(rospy.get_param('~routines_dir'), f'{req.routine}.json')
+    # Look up the routine before adding instrumentation
     try:
-        with open(os.path.expanduser(path), 'rb') as f:
-            routine = json.load(f)
-    except:
-        rospy.logerr(f'Could not load {req.routine}.json')
+        routine = load_routine(req.routine)
+    except (KeyError, OSError, ValueError):
+        rospy.logerr(f'Could not load routine {req.routine}')
         return srv.RunRoutineResponse(success=False)
 
     # Optionally instrument the routine
@@ -204,12 +206,12 @@ def create_client(publishers):
     return client
 
 
-def main():
+def main(client_factory=create_client, routine_loader=load_routine):
     global connection
     rospy.init_node('ifcb', anonymous=True)
 
     # Publishers for raw messages coming in and out of the IFCB
-    rx_pub = rospy.Publisher('~in',  RawData, queue_size=5)
+    rx_pub = rospy.Publisher('~in', RawData, queue_size=32)
     tx_pub = rospy.Publisher('~out', RawData, queue_size=5)
 
     # Publishers for images, ROI images, and ROI markers
@@ -236,21 +238,28 @@ def main():
 
 
     # Let the client manage connection attempts and readiness
-    connection = create_client(publishers)
+    connection = client_factory(publishers)
     rospy.on_shutdown(connection.stop)
+
+    # Keep a second request from replacing a routine between load and start
+    request_lock = Lock()
+
+    def handle(handler, req, **kwargs):
+        with request_lock:
+            return handler(tx_pub, req, **kwargs)
 
     # Create a ROS service for sending commands
     rospy.Service(
         '~command',
         srv.Command,
-        functools.partial(do_command, tx_pub),
+        functools.partial(handle, do_command),
     )
 
     # Create a ROS service for running routines
     rospy.Service(
         '~routine',
         srv.RunRoutine,
-        functools.partial(do_runroutine, tx_pub),
+        functools.partial(handle, do_runroutine, load_routine=routine_loader),
     )
 
     connection.connect(wait_until_ready=False)
