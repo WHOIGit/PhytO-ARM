@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+export IFCB_HOST_IMAGE="${IFCB_HOST_IMAGE:-ifcb/ifcbacquire:3.0.0}"
+
+# The replay launcher accepts launch arguments but not ROS node remappings
+exec "$1/ros/run.sh" simulate

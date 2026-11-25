@@ -1,13 +1,15 @@
 <launch>
     <arg name="config_file" />
     <arg name="ifcb_winch" />
+    <arg name="mock_ifcb" default="true" />
     <arg name="motor_modbus_port" default="1503" />
     <arg name="config_reader"
          value="$(find phyto_sim_utils)/scripts/arm_config" />
     <param name="arm_ifcb" type="yaml"
            command="'$(arg config_reader)' '$(arg config_file)' arm_ifcb" />
 
-    <include file="$(find ifcb)/launch/ifcb_mock.launch" />
+    <include if="$(arg mock_ifcb)"
+             file="$(find ifcb)/launch/ifcb_mock.launch" />
 
     <group ns="arm_ifcb">
         <include file="$(find phyto_arm)/launch/sim_cast.launch">
@@ -16,7 +18,8 @@
         </include>
 
         <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
-        <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
+        <node if="$(arg mock_ifcb)" name="ifcb_runner" pkg="phyto_arm"
+              type="ifcb_runner.py" />
         <node if="$(arg ifcb_winch)" name="profiler"
               pkg="phyto_arm" type="profiler_node.py">
             <param name="data_topic" value="ctd/ctd" />

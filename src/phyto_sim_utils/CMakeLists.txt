@@ -9,6 +9,9 @@ install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(PROGRAMS scripts/arm_config scripts/wait_for_socket
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
 
+install(PROGRAMS scripts/run_ifcb_emulator
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
 catkin_install_python(PROGRAMS
   scripts/ctd_sim.py
   scripts/gps_sim.py

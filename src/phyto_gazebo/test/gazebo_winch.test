@@ -3,12 +3,12 @@
     <arg name="gazebo_port" default="16543" />
     <env name="GAZEBO_MASTER_URI" value="http://127.0.0.1:$(arg gazebo_port)" />
     <arg name="motor_modbus_port" default="16542" />
-    <include file="$(find phyto_gazebo)/launch/winch.launch">
+    <include file="$(find phyto_arm)/launch/simulator.launch">
         <arg name="dli_port" value="16545" />
+        <arg name="gazebo" value="true" />
         <arg name="gpsd" value="$(arg gpsd)" />
         <arg name="gpsd_port" value="16544" />
         <arg name="gui" value="false" />
-        <arg name="paused" value="false" />
         <arg name="motor_modbus_port" value="$(arg motor_modbus_port)" />
     </include>
     <test pkg="phyto_gazebo" type="gazebo_winch_test.py"

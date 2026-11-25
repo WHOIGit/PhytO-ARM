@@ -102,6 +102,7 @@ ENV NO_VIRTUALENV=1
 
 # Copy the launch tools and server files
 COPY ./phyto-arm ./phyto-arm
+COPY configs/example.yaml ./configs/example.yaml
 
 # Expose web interface port
 EXPOSE 8080
