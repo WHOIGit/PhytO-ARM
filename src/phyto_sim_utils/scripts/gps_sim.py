@@ -7,7 +7,8 @@ import subprocess
 
 import rospy
 
-from sensor_msgs.msg import NavSatFix, NavSatStatus
+from phyto_sim_utils.gps import receive_fixes
+from sensor_msgs.msg import NavSatStatus
 
 
 # NMEA coordinates use whole degrees followed by decimal minutes
@@ -45,7 +46,7 @@ def main():
     address = ('127.0.0.1', port)
     epoch = None
 
-    # Anchor receiver UTC at the first fix, then advance on Gazebo time
+    # Anchor receiver UTC at the first fix, then advance on ROS time
     def on_fix(fix):
         nonlocal epoch
         elapsed = timedelta(seconds=fix.header.stamp.to_sec())
@@ -59,8 +60,9 @@ def main():
         with subprocess.Popen(['gpsd', '-N', '-n', '-b', '-S', str(port),
                                device]) as daemon:
             rospy.on_shutdown(daemon.terminate)
-            rospy.Subscriber('sim/gps', NavSatFix, on_fix, queue_size=1)
-            if daemon.wait() and not rospy.is_shutdown():
+            receive_fixes(on_fix)
+            daemon.wait()
+            if not rospy.is_shutdown():
                 raise RuntimeError('gpsd exited while the simulator was active')
 
 

@@ -12,9 +12,6 @@ target_include_directories(phyto_tether SYSTEM PRIVATE
   ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
 target_link_libraries(phyto_tether ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 
-catkin_install_python(PROGRAMS
-  scripts/gps_sim.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(PROGRAMS scripts/view_winch
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(TARGETS phyto_tether
