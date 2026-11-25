@@ -39,8 +39,6 @@ install(FILES src/mac400.py src/mac400_model.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-install(PROGRAMS scripts/wait_for_socket
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
 
 if (CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
