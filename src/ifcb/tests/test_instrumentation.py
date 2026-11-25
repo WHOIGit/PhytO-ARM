@@ -112,5 +112,52 @@ class TestInstrumentRoutine(unittest.TestCase):
         self.assertEqual(exit_['path'], [])
 
 
+class TestSelectedMarkers(unittest.TestCase):
+    def setUp(self):
+        self.step = {'StepType': 'ChangeSpeed',
+                     'Arguments': ['{#SamplingSpeed}']}
+        self.selector = json.dumps(self.step)
+        self.group = {'Type': 'Condition', 'Parameters': [False],
+                      'Steps': [{'StepType': 'Initialize'}, self.step]}
+        self.routine = [self.group]
+
+    def test_before_and_after_inside_group(self):
+        for kind in ('Condition', 'Iteration'):
+            with self.subTest(kind=kind):
+                group = dict(self.group, Type=kind)
+                result, = instrument_routine(
+                    [group], 'sample', before=[self.selector],
+                    after=[self.selector], trace=False)
+                first, before, step, after = result['Steps']
+                self.assertEqual(dict(result, Steps=[first, step]), group)
+                for phase, report in [('before', before), ('after', after)]:
+                    self.assertEqual(get_payload(report), {
+                        'kind': phase, 'routine': 'sample', 'path': [0, 1],
+                        'value': self.step,
+                    })
+
+    def test_no_markers(self):
+        self.assertEqual(instrument_routine(self.routine, 's', trace=False),
+                         self.routine)
+
+    def test_invalid_selector(self):
+        for invalid in ('not json', '[]', '{}', '{"StepType": "A", "x": 1}'):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(ValueError, 'Invalid step'):
+                    instrument_routine(self.routine, 's', before=[invalid])
+
+    def test_missing_or_ambiguous_step(self):
+        for count in (0, 2):
+            with self.subTest(count=count):
+                with self.assertRaisesRegex(ValueError, f'found {count}'):
+                    instrument_routine(self.routine * count, 's',
+                                       after=[self.selector], trace=False)
+
+    def test_full_trace_includes_selected_marker_once(self):
+        self.assertEqual(
+            instrument_routine(self.routine, 's', before=[self.selector]),
+            instrument_routine(self.routine, 's'))
+
+
 if __name__ == '__main__':
     unittest.main()

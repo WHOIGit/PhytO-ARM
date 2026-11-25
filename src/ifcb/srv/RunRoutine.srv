@@ -2,7 +2,14 @@
 # Instructs the IFCB to run a routine.
 
 string routine
+
+# Include all routine, group, and step markers for a diagnostic trace
 bool instrument
+
+# Insert markers around the requested steps, each of which must match once
+# Entries are JSON steps, e.g. {"StepType":"Wait","Arguments":[1000]}
+string[] instrument_before
+string[] instrument_after
 
 ---
 
