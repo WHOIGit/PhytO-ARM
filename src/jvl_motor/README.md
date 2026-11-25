@@ -1,5 +1,7 @@
 # MAC400 simulator
 
+For a deployment with a winch and instruments, see the [PhytO-ARM simulation guide](../../SIMULATION.md).
+
 ## Run the driver
 
 In a sourced ROS Noetic workspace, launch the production JVL driver and the
