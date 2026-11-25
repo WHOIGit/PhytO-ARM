@@ -32,9 +32,12 @@ generate_messages(
 catkin_package()
 
 catkin_install_python(
-  PROGRAMS nodes/ifcb nodes/ifcb_logfilter
+  PROGRAMS nodes/ifcb nodes/ifcb_logfilter nodes/ifcb_mock
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if (CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(tests)

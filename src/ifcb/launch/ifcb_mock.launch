@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="ifcb" type="ifcb_mock" name="ifcb" required="true">
+        <param name="data_dir" value="/sim/ifcb" />
+    </node>
+</launch>
