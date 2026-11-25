@@ -72,7 +72,7 @@ def main():
     # Nag the operators if Starlink has been active for too long
     nag_timer = None
 
-    def nag_operator() -> None:
+    def nag_operator(event) -> None:
         nonlocal nag_timer
         nag_timer = None
         send_alerts(alerts, 'Starlink has been active for a while')
