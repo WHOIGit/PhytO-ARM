@@ -34,4 +34,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        if not rospy.is_shutdown():
+            raise
