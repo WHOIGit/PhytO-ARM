@@ -4,11 +4,12 @@ project(phyto_sim_utils)
 find_package(catkin REQUIRED)
 catkin_package()
 
-install(PROGRAMS scripts/wait_for_socket
+install(PROGRAMS scripts/arm_config scripts/wait_for_socket
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
 
 catkin_install_python(PROGRAMS
   scripts/ctd_sim.py
+  scripts/vertical_line.py
   scripts/winch_drum.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

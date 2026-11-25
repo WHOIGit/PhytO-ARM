@@ -20,7 +20,7 @@ rosservice call /motor/stop
 
 `position` is in encoder counts (8192 per revolution) and `velocity` is in RPM.
 The driver polls at 1 Hz over Modbus/TCP at `127.0.0.1:1502`. Set
-`refresh_rate:=<hz>` or `port:=<number>` on the launch command to change them.
+`refresh_rate:=<hz>` or `motor_modbus_port:=<number>` on the launch command to change them.
 
 ## Motor behavior
 

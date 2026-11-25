@@ -1,9 +1,9 @@
 <launch>
-    <arg name="mock_ifcb" default="false" />
     <arg name="gpsd_port" default="29470" />
     <arg name="gui" default="true" />
+    <arg name="mock_ifcb" default="false" />
+    <arg name="motor_modbus_port" default="1502" />
     <arg name="paused" default="false" />
-    <arg name="port" default="1502" />
 
     <arg name="gear_ratio" value="60" />
     <arg name="spool_circumference" value="0.6604" />
@@ -40,7 +40,7 @@
     </node>
 
     <include file="$(find jvl_motor)/launch/sim_motor.launch">
-        <arg name="port" value="$(arg port)" />
+        <arg name="motor_modbus_port" value="$(arg motor_modbus_port)" />
         <arg name="refresh_rate" value="20" />
     </include>
 
