@@ -1,4 +1,5 @@
 <launch>
+    <arg name="dli_port" default="18080" />
     <arg name="gpsd_port" default="29470" />
     <arg name="gui" default="true" />
     <arg name="mock_ifcb" default="false" />
@@ -25,6 +26,21 @@
 
     <include if="$(arg mock_ifcb)"
              file="$(find ifcb)/launch/ifcb_mock.launch" />
+
+    <node pkg="dli_power_switch" type="dli_sim.py" name="dli_sim"
+          required="true">
+        <param name="port" value="$(arg dli_port)" />
+    </node>
+    <node pkg="dli_power_switch" type="dli_power_switch_node.py"
+          name="digital_logger"
+          launch-prefix="$(arg wait_for_socket) $(arg dli_port)">
+        <param name="address" value="127.0.0.1:$(arg dli_port)" />
+        <param name="password" type="str" value="" />
+        <param name="username" type="str" value="" />
+        <rosparam param="outlets">
+            - {name: starlink, outlet: 8}
+        </rosparam>
+    </node>
 
     <node pkg="phyto_gazebo" type="gps_sim.py" name="gps_sim" required="true">
         <param name="port" value="$(arg gpsd_port)" />

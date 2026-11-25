@@ -9,6 +9,7 @@ import rospy
 import rostest
 
 from actionlib_msgs.msg import GoalStatus
+from dli_power_switch.msg import OutletStatus
 from ds_sensor_msgs.msg import Ctd, DepthPressure
 from gazebo_msgs.srv import GetLinkState
 from gps_common.msg import GPSFix
@@ -17,7 +18,7 @@ from jvl_motor.srv import ZeroCmd
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 from pyModbusTCP.client import ModbusClient
 from sensor_msgs.msg import NavSatFix, NavSatStatus
-from std_msgs.msg import Float64
+from std_msgs.msg import Bool, Float64
 from tf.transformations import quaternion_matrix
 
 
@@ -110,6 +111,28 @@ class TestGazeboWinch(unittest.TestCase):
         extended = rospy.wait_for_message('gps/extended_fix', GPSFix, timeout=5)
         self.assertAlmostEqual(extended.latitude, model.latitude, places=5)
         self.assertAlmostEqual(extended.longitude, model.longitude, places=5)
+
+    def test_outlet_control(self):
+        base = 'digital_logger/outlet/starlink/'
+        control = rospy.Publisher(base + 'control', Bool, queue_size=1,
+                                  latch=True)
+        self.addCleanup(control.unregister)
+
+        # Switch one outlet off and back on through the production driver
+        for active in (False, True):
+            seen = threading.Event()
+
+            def on_status(msg):
+                if msg.is_active == active:
+                    seen.set()
+
+            sub = rospy.Subscriber(base + 'status', OutletStatus,
+                                   on_status)
+            try:
+                control.publish(active)
+                self.assertTrue(seen.wait(10), 'Outlet did not switch')
+            finally:
+                sub.unregister()
 
     def test_round_trip(self):
         initial = rospy.wait_for_message('ctd/depth', DepthPressure, timeout=15)

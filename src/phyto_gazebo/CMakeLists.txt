@@ -22,6 +22,7 @@ install(TARGETS phyto_tether
 install(DIRECTORY launch worlds DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  find_package(dli_power_switch REQUIRED)
   find_package(ds_sensor_msgs REQUIRED)
   find_package(ifcb REQUIRED)
   find_package(jvl_motor REQUIRED)
@@ -30,6 +31,7 @@ if(CATKIN_ENABLE_TESTING)
   add_rostest(test/ifcb_mock.test DEPENDENCIES
     ${ifcb_EXPORTED_TARGETS} ${phyto_arm_EXPORTED_TARGETS})
   add_rostest(test/gazebo_winch.test DEPENDENCIES phyto_tether
+    ${dli_power_switch_EXPORTED_TARGETS}
     ${ds_sensor_msgs_EXPORTED_TARGETS} ${jvl_motor_EXPORTED_TARGETS}
     ${phyto_arm_EXPORTED_TARGETS})
 endif()
