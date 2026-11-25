@@ -9,6 +9,7 @@ import mac400
 from mac400_model import MotorModel
 from pyModbusTCP import constants as modbus
 from rosgraph_msgs.msg import Clock
+from std_msgs.msg import Float64
 
 
 FEEDBACK = (mac400.ERR_STAT, mac400.MODE_REG, mac400.P_IST, mac400.V_IST_16)
@@ -72,6 +73,11 @@ class MotorRegisters:
     def advance_for_request(self):
         if not self.use_sim_time:
             self.model.advance(rospy.Time.now().to_nsec())
+
+    def shaft_position(self):
+        with self.lock:
+            self.advance_for_request()
+            return self.model.shaft_position
 
     def feedback_words(self, reg):
         value = self.model.read(reg)
@@ -188,6 +194,12 @@ def main():
     # Use the same clock source as the production driver
     use_sim_time = rospy.get_param('/use_sim_time', False)
     registers = MotorRegisters(MotorModel(counts_per_turn), use_sim_time)
+
+    # Publish mechanical travel even when the encoder has been re-zeroed
+    shaft = rospy.Publisher('~shaft_position', Float64, queue_size=1)
+    rospy.Timer(rospy.Duration(0.05),
+                lambda event: shaft.publish(registers.shaft_position()),
+                reset=True)
 
     # A wall-time socket timeout allows shutdown while ROS time is paused
     with MotorServer((address, port), ModbusConnection) as server:
