@@ -110,7 +110,7 @@ def start(args):
         env['ROS_LOG_DIR'] = log_dir
 
     # The following should only launch once, with the main PhytO-ARM processes
-    roscore = None
+    children = {}
     if args.launch_name == "main":
         # Before we continue compress any older log files
         #print('Compressing older logs')
@@ -118,6 +118,7 @@ def start(args):
 
         # Start the ROS core processes (ROS master, etc.)
         roscore = subprocess.Popen('roscore', env=env)
+        children[roscore.pid] = roscore
         atexit.register(lambda: cleanup('roscore', roscore))
 
         # Start the rosbag logging process. We run this separately from the main
@@ -125,25 +126,22 @@ def start(args):
         # prematurely.
         command, env = prep_roslaunch(config, env, 'phyto_arm', 'rosbag.launch')
         rosbag = subprocess.Popen(command, shell=True, env=env)
+        children[rosbag.pid] = rosbag
         atexit.register(lambda: cleanup('rosbag record', rosbag, dont_kill=True))
 
     # Prepare our roslaunch command
     command, env = prep_roslaunch(config, env, 'phyto_arm', f'{args.launch_name}.launch')
     nodes = subprocess.Popen(command, shell=True, env=env)
+    children[nodes.pid] = nodes
     atexit.register(lambda: cleanup('nodes', nodes))
 
-    # Wait for any child to terminate
-    pid, status = os.wait()
-
-    # Since we called wait() behind subprocess's back, we need to inform it that
-    # the process terminated. A little hacky.
-    for proc in [roscore, rosbag, nodes]:
-        if proc is not None and proc.pid == pid:
-            proc.returncode = os.WEXITSTATUS(status) \
-                              if os.WIFEXITED(status) else -1
-
-    # The atexit handlers will terminate the other subprocesses
-    pass
+    # As container PID 1 we may also reap adopted children.
+    while True:
+        pid, status = os.wait()
+        if pid in children:
+            # os.wait() reaped this child before Popen could record its status.
+            children[pid].returncode = os.WEXITSTATUS(status) if os.WIFEXITED(status) else -1
+            return
 
 
 if __name__ == '__main__':
