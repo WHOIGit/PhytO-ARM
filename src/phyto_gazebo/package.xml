@@ -14,9 +14,15 @@
 
     <exec_depend>ds_sensor_msgs</exec_depend>
     <exec_depend>gazebo_ros</exec_depend>
+    <exec_depend>gps_common</exec_depend>
+    <exec_depend>gpsd</exec_depend>
+    <exec_depend>gpsd_client</exec_depend>
+    <exec_depend>hector_gazebo_plugins</exec_depend>
     <exec_depend>jvl_motor</exec_depend>
     <exec_depend>phyto_arm</exec_depend>
+    <exec_depend>phyto_sim_utils</exec_depend>
     <exec_depend>rospy</exec_depend>
+    <exec_depend>sensor_msgs</exec_depend>
 
     <test_depend>actionlib</test_depend>
     <test_depend>actionlib_msgs</test_depend>
