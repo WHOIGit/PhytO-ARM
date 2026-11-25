@@ -154,24 +154,9 @@ docker exec -it phyto-arm ./phyto-arm start arm_chanos /configs/config.yaml
 To launch all three simultaneously as separate panes in a tmux session, run the `scripts/tmux_run.sh` script. Running this a second time will attach you to the existing session. To kill the session and all processes running within, use the `scripts/tmux_kill.sh` script.
 
 
-### Lightweight arm simulation
+### Simulation
 
-The lightweight arm launches share Gazebo's CTD and winch drum models. They
-assume the line hangs vertically. With the winch enabled, the production
-controller and motor driver operate the MAC400 simulator. With it disabled,
-the CTD samples at a fixed depth of 0.5 m. The `motor_modbus_port` launch
-argument defaults to 1503 for the IFCB arm and 1504 for the Chanos arm.
-
-The IFCB arm profiles CTD temperature during casts and runs its sampling
-action against the skeletal IFCB routines.
-
-```bash
-docker exec -it phyto-arm ./phyto-arm start sim_arm_ifcb /configs/config.yaml
-```
-and
-```
-docker exec -it phyto-arm ./phyto-arm start sim_arm_chanos /configs/config.yaml
-```
+PhytO-ARM can run with simulated hardware. To run automatic IFCB casts or operate the winch in Gazebo, follow the [simulation guide](SIMULATION.md). In an existing deployment container, use `sim_arm_ifcb` or `sim_arm_chanos` as the launch name in the `phyto-arm start` commands above.
 
 ### Unit tests
 
@@ -343,7 +328,7 @@ To develop in PhytO-ARM, it is recommended to use a development container with t
 5. The extension should automatically detect the existing `devcontainer.json` configuration and prompt you to reopen the project as a development container.
 6. Wait for the container to open. The first time may be slow as it builds the development image, expect to wait 10 minutes or longer depending on your hardware and Internet connection.
 
-The development container allows you to develop and test from an environment identical to that used in production. If developing locally, launch arms with mocked hardware (see _Running_ section above).
+To test a deployment locally with simulated hardware, see the [simulation guide](SIMULATION.md).
 
 The `.git` repository folder is also mounted in the development container, making it possible to pull/commit/push as needed from within the container.
 
