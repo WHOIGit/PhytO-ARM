@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
 import datetime
-import functools
 import math
 import re
 
@@ -33,44 +32,13 @@ def ros_safe(s, keep_slashes=False):
 
 
 
-# All messages received from ROS are placed into this queue. Note that
-# asyncio.Queue is _not_ thread safe.
-ros_msg_q = asyncio.Queue()
-
-
-
-# Before ROS tears down our subscriptions, take time to clean up.
-def on_shutdown(loop, *args):
-    def impl():
-        # Executed on the main thread
-        pass
-
-    # Helper coroutine
-    async def impl_async():
-        impl()
-
-    # If this isn't invoked on the main thread, then we would want to schedule
-    # a coroutine to run on the main event loop and block on its completion.
-    #
-    # But if this *is* invoked on the main thread, then doing so would deadlock.
-    # So we just invoke the function directly.
-    if loop == asyncio.get_event_loop():
-        impl()
-    else:
-        future = asyncio.run_coroutine_threadsafe(impl_async(), loop)
-        future.result()  # block until complete
-
-    # Stop the main event loop
-    loop.stop()
-
-
 async def main():
-    # XXX Prefer asyncio.get_running_loop() on Python >= 3.7
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
+    incoming = asyncio.Queue()
 
     # Initialize the ROS node
-    rospy.init_node('rbr_maestro3_ctd', anonymous=True, disable_signals=True)
-    rospy.core.add_preshutdown_hook(functools.partial(on_shutdown, loop))
+    rospy.init_node('rbr_maestro3_ctd', anonymous=True)
+    rospy.on_shutdown(lambda: loop.call_soon_threadsafe(incoming.put_nowait, None))
 
     # Load the list of channels to publish from the ROS parameter server. The
     # channels list should correspond with the `outputformat channelslist`
@@ -109,13 +77,16 @@ async def main():
     ]
 
     # Subscribe to incoming comms messages
-    handler = lambda msg: asyncio.run_coroutine_threadsafe(ros_msg_q.put(msg),
-                                                           loop)
+    def handler(msg):
+        loop.call_soon_threadsafe(incoming.put_nowait, msg)
+
     rospy.Subscriber('~in', RawData, handler)
 
     # Process incoming messages in a loop
     while not rospy.is_shutdown():
-        msg = await ros_msg_q.get()
+        msg = await incoming.get()
+        if msg is None:
+            return
 
         # Crummy parser
         fields = [ x.strip() for x in msg.data.split(b',') ]
@@ -191,4 +162,4 @@ async def main():
 
 
 if __name__ == '__main__':
-    asyncio.get_event_loop().run_until_complete(main())  # Python <3.7
+    asyncio.run(main())
