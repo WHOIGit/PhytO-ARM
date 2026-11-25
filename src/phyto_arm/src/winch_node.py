@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+import ctypes
 import math
 import signal
 import uuid
@@ -174,7 +175,11 @@ async def move_to_depth(server, goal):
 
     # Assert both are not None
     assert max_speed is not None and half_speed_dist is not None, 'Winch speed config invalid'
-    assert goal.velocity < max_speed, 'Goal velocity exceeds max speed'
+
+    # ROS rounds goal.velocity to float32 on the wire. Round the configured
+    # limit too, so requesting exactly the maximum speed passes the check.
+    max_speed = ctypes.c_float(max_speed).value
+    assert goal.velocity <= max_speed, 'Goal velocity exceeds max speed'
     v = velocity_f(goal.depth, goal.velocity, half_speed_dist)
 
     # Estimate the time it should take to reach the destination
