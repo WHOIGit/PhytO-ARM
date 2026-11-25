@@ -19,3 +19,4 @@
 - git:
     local-name: seatrac-api
     uri: https://github.com/WHOIGit/seatrac-api.git
+    version: noetic
