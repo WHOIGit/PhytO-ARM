@@ -1,14 +1,14 @@
 <launch>
-    <arg name="port" default="15502" />
+    <arg name="motor_modbus_port" default="15502" />
     <param name="/use_sim_time" value="true" />
 
     <include file="$(find jvl_motor)/launch/sim_motor.launch">
-        <arg name="port" value="$(arg port)" />
+        <arg name="motor_modbus_port" value="$(arg motor_modbus_port)" />
         <arg name="refresh_rate" value="20" />
     </include>
 
     <test pkg="jvl_motor" type="mac400_driver_test.py" test-name="mac400_driver"
           time-limit="60">
-        <param name="port" value="$(arg port)" />
+        <param name="port" value="$(arg motor_modbus_port)" />
     </test>
 </launch>

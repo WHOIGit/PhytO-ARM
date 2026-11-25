@@ -1,0 +1,26 @@
+<launch>
+    <arg name="initial_depth" default="0.5" />
+    <arg name="motor_modbus_port" />
+    <arg name="winch_enabled" />
+
+    <param name="ctd_topic" value="ctd/depth" />
+    <param name="winch_enabled" value="$(arg winch_enabled)" type="bool" />
+
+    <node pkg="phyto_sim_utils" type="vertical_line.py" name="vertical_line">
+        <param name="initial_depth" value="$(arg initial_depth)" />
+    </node>
+    <node pkg="phyto_sim_utils" type="ctd_sim.py" name="ctd" />
+
+    <group if="$(arg winch_enabled)">
+        <include file="$(find jvl_motor)/launch/sim_motor.launch">
+            <arg name="motor_modbus_port" value="$(arg motor_modbus_port)" />
+            <arg name="refresh_rate" value="20" />
+        </include>
+        <node pkg="phyto_sim_utils" type="winch_drum.py" name="winch_drum">
+            <param name="initial_line_length" value="$(arg initial_depth)" />
+            <remap from="~gear_ratio" to="winch/gear_ratio" />
+            <remap from="~spool_circumference" to="winch/spool_circumference" />
+        </node>
+        <node pkg="phyto_arm" type="winch_node.py" name="winch" />
+    </group>
+</launch>

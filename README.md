@@ -154,15 +154,23 @@ docker exec -it phyto-arm ./phyto-arm start arm_chanos /configs/config.yaml
 To launch all three simultaneously as separate panes in a tmux session, run the `scripts/tmux_run.sh` script. Running this a second time will attach you to the existing session. To kill the session and all processes running within, use the `scripts/tmux_kill.sh` script.
 
 
-### Hardware mocking
+### Lightweight arm simulation
 
-Note that there are also launch files which substitute the IFCB, CTDs and motors for mock versions, suitable for local development and testing. These can be launched as:
+The lightweight arm launches share Gazebo's CTD and winch drum models. They
+assume the line hangs vertically. With the winch enabled, the production
+controller and motor driver operate the MAC400 simulator. With it disabled,
+the CTD samples at a fixed depth of 0.5 m. The `motor_modbus_port` launch
+argument defaults to 1503 for the IFCB arm and 1504 for the Chanos arm.
+
+The IFCB arm profiles CTD temperature during casts and runs its sampling
+action against the skeletal IFCB routines.
+
 ```bash
-docker exec -it phyto-arm start mock_arm_ifcb /configs/config.yaml
+docker exec -it phyto-arm ./phyto-arm start sim_arm_ifcb /configs/config.yaml
 ```
 and
 ```
-docker exec -it phyto-arm start mock_arm_chanos /configs/config.yaml
+docker exec -it phyto-arm ./phyto-arm start sim_arm_chanos /configs/config.yaml
 ```
 
 ### Unit tests
@@ -491,13 +499,6 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
       - `~sample/feedback` sampling action feedback
       - `~sample/result` sampling action result
 
-  - `mock_ifcb_runner`: Mock version of `ifcb_runner`
-    - Publishes:
-      - `~state` current state for debugging purposes
-      - `~sample/goal` action server for running mock sampling routines
-      - `~sample/feedback` sampling action feedback
-      - `~sample/result` sampling action result
-
   - `arm_chanos`: Orchestrates Chanos sensor payload behaviors
     - Subscribes:
       - `winch/move_to_depth/result` to determine the success of a transit
@@ -523,12 +524,6 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
       - `motor/motion` for monitoring motor state
       - `winch/move_to_depth/goal` for setting the goal depth
       - `winch/move_to_depth/cancel` for canceling the current goal
-    - Publishes:
-      - `winch/move_to_depth/feedback` with progress updates
-      - `winch/move_to_depth/status` with the status of the current goal
-      - `winch/move_to_depth/result` with the result of the goal
-
-  - `mock_winch_node`: Mock version of `winch`
     - Publishes:
       - `winch/move_to_depth/feedback` with progress updates
       - `winch/move_to_depth/status` with the status of the current goal
@@ -588,11 +583,6 @@ These nodes perform lower-level interactions with hardware components. These nod
       - `~set_position_envelope` to set position limits
       - `~set_velocity` to set the motor's velocity
       - `~stop` to stop the motor
-
-  - `mock_ctd`: Mock version of a CTD publisher
-    - Publishes:
-      - `~ctd` with conductivity, temperature, and pressure data
-      - `~depth` with depth and pressure data
 
 
 ### System nodes
