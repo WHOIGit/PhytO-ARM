@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import struct
 import threading
 import unittest
@@ -10,10 +11,12 @@ import rostest
 from actionlib_msgs.msg import GoalStatus
 from ds_sensor_msgs.msg import Ctd, DepthPressure
 from gazebo_msgs.srv import GetLinkState
+from gps_common.msg import GPSFix
 from jvl_motor.msg import Motion
 from jvl_motor.srv import ZeroCmd
 from phyto_arm.msg import MoveToDepthAction, MoveToDepthGoal
 from pyModbusTCP.client import ModbusClient
+from sensor_msgs.msg import NavSatFix, NavSatStatus
 from std_msgs.msg import Float64
 from tf.transformations import quaternion_matrix
 
@@ -90,6 +93,23 @@ class TestGazeboWinch(unittest.TestCase):
                       'encoder %d', target, measured, depth.depth,
                       depth.pressure, encoder)
         return measured, encoder
+
+    def test_gps_fix(self):
+        model = rospy.wait_for_message('sim/gps', NavSatFix, timeout=15)
+
+        # Wait for gpsd to acquire a position and altitude from the receiver
+        for _ in range(8):
+            fix = rospy.wait_for_message('gps/fix', NavSatFix, timeout=10)
+            if (fix.status.status >= NavSatStatus.STATUS_FIX and
+                    all(map(math.isfinite, (fix.latitude, fix.altitude)))):
+                break
+        self.assertGreaterEqual(fix.status.status, NavSatStatus.STATUS_FIX)
+        self.assertAlmostEqual(fix.latitude, model.latitude, places=5)
+        self.assertAlmostEqual(fix.longitude, model.longitude, places=5)
+        self.assertAlmostEqual(fix.altitude, model.altitude, places=2)
+        extended = rospy.wait_for_message('gps/extended_fix', GPSFix, timeout=5)
+        self.assertAlmostEqual(extended.latitude, model.latitude, places=5)
+        self.assertAlmostEqual(extended.longitude, model.longitude, places=5)
 
     def test_round_trip(self):
         initial = rospy.wait_for_message('ctd/depth', DepthPressure, timeout=15)

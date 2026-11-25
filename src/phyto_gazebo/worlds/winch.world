@@ -29,6 +29,16 @@
     <!-- The fixed barge keeps the line geometry independent of sea state -->
     <model name="barge">
       <static>true</static>
+      <plugin name="gps" filename="libhector_gazebo_ros_gps.so">
+        <bodyName>structure</bodyName>
+        <frameId>barge</frameId>
+        <topicName>/sim/gps</topicName>
+        <velocityTopicName>/sim/gps_velocity</velocityTopicName>
+        <referenceLatitude>41.524</referenceLatitude>
+        <referenceLongitude>-70.672</referenceLongitude>
+        <referenceHeading>90</referenceHeading>
+        <updateRate>1</updateRate>
+      </plugin>
       <link name="structure">
         <collision name="hull">
           <pose>-2.13 0 0 0 0 0</pose>

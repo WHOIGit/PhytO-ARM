@@ -75,6 +75,16 @@ rostopic echo -n 1 /ctd/depth
 rostopic echo -n 1 /ctd/ctd
 ```
 
+## Read the GPS
+
+The barge GPS publishes its Gazebo position on `/sim/gps` once per simulated
+second. The world origin is at 41.524° N, 70.672° W near Woods Hole. The GPS
+emulator sends NMEA RMC and GGA sentences over UDP to a real `gpsd`. Its TCP
+client port and UDP input port are both 29470 (set with `gpsd_port`). The
+production `gpsd_client` publishes `/gps/fix` and `/gps/extended_fix` using
+ROS time.
+Receiver UTC starts at the time of the first fix and advances with Gazebo.
+
 ## Physical assumptions
 
 The line is a massless spring and damper that can pull on the lifting eye.

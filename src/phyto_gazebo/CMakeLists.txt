@@ -12,7 +12,10 @@ target_include_directories(phyto_tether SYSTEM PRIVATE
   ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
 target_link_libraries(phyto_tether ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 
-catkin_install_python(PROGRAMS scripts/ctd_bridge.py scripts/winch_drum.py
+catkin_install_python(PROGRAMS
+  scripts/ctd_bridge.py
+  scripts/gps_sim.py
+  scripts/winch_drum.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(PROGRAMS scripts/view_winch
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
