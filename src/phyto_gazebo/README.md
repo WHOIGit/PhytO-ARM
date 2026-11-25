@@ -80,6 +80,11 @@ production `gpsd_client` publishes `/gps/fix` and `/gps/extended_fix` using
 ROS time.
 Receiver UTC starts at the time of the first fix and advances with Gazebo.
 
+Pass `mock_gps:=true` to publish both fixes directly from the barge antenna.
+For a stationary fix, run `rosrun phyto_sim_utils gpsd_client_mock` and set
+the private parameters `latitude`, `longitude` and `altitude`.
+
+
 ## Sample with a lightweight IFCB
 
 Pass `mock_ifcb:=true` to `winch.launch`, or run
