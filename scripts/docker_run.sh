@@ -1,17 +1,17 @@
 #!/bin/bash
 
 # Default command
-COMMAND='./phyto-arm start main mounted_config.yaml'
+COMMAND=(./phyto-arm start main mounted_config.yaml)
 
 # Parse command-line options
 while getopts ":bdh" opt; do
     case ${opt} in
         b)
-            COMMAND='bash'
+            COMMAND=(bash)
             ;;
         d)
             # Use container default (dashboard)
-            COMMAND=''
+            COMMAND=()
             ;;
         h)
             echo "Usage: ./scripts/docker_run.sh [-b] [-d] <config file path>"
@@ -55,4 +55,4 @@ docker run "${DOCKER_FLAGS[@]}" \
     --volume /data:/data \
     --device /dev/ttyS3 \
     whoi/phyto-arm:latest \
-    $COMMAND
+    "${COMMAND[@]}"
