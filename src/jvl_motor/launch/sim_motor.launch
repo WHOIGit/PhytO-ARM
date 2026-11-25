@@ -9,7 +9,7 @@
     </node>
 
     <node pkg="jvl_motor" type="jvl_motor_node.py" name="motor" required="true"
-          launch-prefix="$(find jvl_motor)/scripts/wait_for_socket $(arg port)">
+          launch-prefix="$(find phyto_sim_utils)/scripts/wait_for_socket $(arg port)">
         <param name="address" value="127.0.0.1" />
         <param name="port" value="$(arg port)" />
         <param name="refresh_rate" value="$(arg refresh_rate)" />

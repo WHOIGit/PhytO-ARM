@@ -68,6 +68,7 @@ COPY ./src/dli_power_switch/package.xml ./src/dli_power_switch/package.xml
 COPY ./src/ifcb/package.xml ./src/ifcb/package.xml
 COPY ./src/jvl_motor/package.xml ./src/jvl_motor/package.xml
 COPY ./src/phyto_arm/package.xml ./src/phyto_arm/package.xml
+COPY ./src/phyto_sim_utils/package.xml ./src/phyto_sim_utils/package.xml
 COPY ./src/rbr_maestro3_ctd/package.xml ./src/rbr_maestro3_ctd/package.xml
 
 # Install new rosdep dependencies declared in the above package.xml files
