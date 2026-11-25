@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="phyto_sim_utils" type="gpsd_client_mock" name="gps">
+        <param name="latitude" value="42.1" />
+        <param name="longitude" value="-69.9" />
+    </node>
+    <test pkg="phyto_sim_utils" type="gpsd_client_mock_test.py"
+          test-name="gpsd_client_mock" time-limit="20" />
+</launch>

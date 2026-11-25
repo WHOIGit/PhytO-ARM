@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Publish gpsd_client fixes directly when gpsd is unavailable.
+
+When gpsd is available, gps_sim.py can feed it simulated NMEA sentences
+so the production gpsd_client publishes the fixes.
+"""
+import rospy
+
+from gps_common.msg import GPSFix, GPSStatus
+from sensor_msgs.msg import NavSatFix, NavSatStatus
+
+
+def main():
+    rospy.init_node('gps')
+    fix_pub = rospy.Publisher('~fix', NavSatFix, queue_size=1)
+    extended_pub = rospy.Publisher('~extended_fix', GPSFix, queue_size=1)
+
+    def publish(fix):
+        extended = GPSFix(header=fix.header, latitude=fix.latitude,
+                          longitude=fix.longitude, altitude=fix.altitude,
+                          position_covariance=fix.position_covariance,
+                          position_covariance_type=fix.position_covariance_type)
+        extended.status = GPSStatus(header=fix.header, status=fix.status.status,
+                                    position_source=GPSStatus.SOURCE_GPS)
+        extended.time = fix.header.stamp.to_sec()
+        extended_pub.publish(extended)
+        fix_pub.publish(fix)
+
+    # Use the barge antenna when launched with Gazebo
+    topic = rospy.get_param('~fix_topic', '')
+    if topic:
+        rospy.Subscriber(topic, NavSatFix, publish, queue_size=1)
+    else:
+        fix = NavSatFix(latitude=rospy.get_param('~latitude', 41.524),
+                        longitude=rospy.get_param('~longitude', -70.672),
+                        altitude=rospy.get_param('~altitude', 0.0))
+        fix.header.frame_id = 'barge'
+        fix.status.service = NavSatStatus.SERVICE_GPS
+
+        def tick(event):
+            fix.header.stamp = event.current_real
+            publish(fix)
+
+        rospy.Timer(rospy.Duration(1), tick, reset=True)
+    rospy.spin()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,9 +1,11 @@
 <launch>
+    <arg name="mock_gps" default="false" />
     <arg name="gazebo_port" default="16543" />
     <env name="GAZEBO_MASTER_URI" value="http://127.0.0.1:$(arg gazebo_port)" />
     <arg name="motor_modbus_port" default="16542" />
     <include file="$(find phyto_gazebo)/launch/winch.launch">
         <arg name="dli_port" value="16545" />
+        <arg name="mock_gps" value="$(arg mock_gps)" />
         <arg name="gpsd_port" value="16544" />
         <arg name="gui" value="false" />
         <arg name="paused" value="false" />

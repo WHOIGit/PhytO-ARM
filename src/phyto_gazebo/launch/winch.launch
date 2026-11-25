@@ -2,6 +2,7 @@
     <arg name="dli_port" default="18080" />
     <arg name="gpsd_port" default="29470" />
     <arg name="gui" default="true" />
+    <arg name="mock_gps" default="false" />
     <arg name="mock_ifcb" default="false" />
     <arg name="motor_modbus_port" default="1502" />
     <arg name="paused" default="false" />
@@ -42,10 +43,15 @@
         </rosparam>
     </node>
 
-    <node pkg="phyto_gazebo" type="gps_sim.py" name="gps_sim" required="true">
+    <node if="$(arg mock_gps)" pkg="phyto_sim_utils" type="gpsd_client_mock"
+          name="gps">
+        <param name="fix_topic" value="/sim/gps" />
+    </node>
+    <node unless="$(arg mock_gps)" pkg="phyto_gazebo" type="gps_sim.py"
+          name="gps_sim" required="true">
         <param name="port" value="$(arg gpsd_port)" />
     </node>
-    <node pkg="gpsd_client" type="gpsd_client" name="gps"
+    <node unless="$(arg mock_gps)" pkg="gpsd_client" type="gpsd_client" name="gps"
           launch-prefix="$(arg wait_for_socket) $(arg gpsd_port)">
         <param name="check_fix_by_variance" value="false" />
         <param name="host" value="127.0.0.1" />
