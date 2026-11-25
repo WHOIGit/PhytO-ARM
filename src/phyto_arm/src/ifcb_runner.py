@@ -2,8 +2,9 @@
 
 from dataclasses import dataclass
 import functools
+import json
 import math
-from threading import Event, Condition
+from threading import Condition, Event
 
 import actionlib
 import rospy
@@ -18,6 +19,13 @@ from phyto_arm.msg import ConductorState, ConductorStates, RunIFCBAction, RunIFC
 # Global references to service provided by other node
 ifcb_run_routine = None
 ifcb_action_server = None
+
+
+# The sample has been drawn when the IFCB switches to its sampling speed
+SAMPLING_SPEED = {
+    'StepType': 'ChangeSpeed',
+    'Arguments': ['{#SamplingSpeed}'],
+}
 
 
 # Convenience function to publish state updates for debugging
@@ -54,13 +62,14 @@ def on_ifcb_msg(msg):
     # routine has started and finished. This is the most reliable way to detect
     # this, rather than using the markers.
     #
-    # XXX
-    # The ifcb_is_idle Event should be clear()'d _before_ sending a routine, to
-    # avoid a race condition where a thread sends a routine and then immediately
-    # awaits the Event before we have been told the routine started.
+    # The position hold waits on a separate condition. Set the idle event
+    # and notify under that condition's lock so a stop wakes the hold waiter
+    # even if the IFCB skipped the sampling marker.
     if parsed == ['valuechanged', 'interactive', 'stopped']:
         rospy.loginfo('IFCB routine not running')
-        state.ifcb_is_idle.set()
+        with state.position_hold_condition:
+            state.ifcb_is_idle.set()
+            state.position_hold_condition.notify()
         return
 
     # Remaining behaviors depend on having a parsed marker
@@ -68,25 +77,42 @@ def on_ifcb_msg(msg):
         return
 
     # Detect when we can release our position hold
-    if marker['routine'] == 'runsample' and \
-       marker['kind'] == 'before' and \
-       marker['value'].get('StepType') == 'ChangeSpeed' and \
-       marker['value'].get('Arguments', []) == ['{#SamplingSpeed}']:
-
-        rospy.loginfo('Should release position hold now')
-
+    if (marker['routine'] == 'runsample' and marker['kind'] == 'before'
+            and all(marker['value'].get(k) == v
+                    for k, v in SAMPLING_SPEED.items())):
         with state.position_hold_condition:
-            state.position_hold = False
-            state.position_hold_condition.notify()
+            if not state.ifcb_is_idle.is_set():
+                state.position_hold = False
+                state.position_hold_condition.notify()
 
+
+
+def run_routine(routine):
+    # Arm the hold before the Host can report the sampling step
+    before = []
+    if routine == 'runsample':
+        before = [json.dumps(SAMPLING_SPEED)]
+        with state.position_hold_condition:
+            state.position_hold = True
+
+    # Clear the idle event before sending the routine because the Host can
+    # report completion before the service call returns.
+    state.ifcb_is_idle.clear()
+    result = ifcb_run_routine(routine=routine, instrument_before=before)
+    if not result.success:
+        state.ifcb_is_idle.set()
+        raise ValueError('routine request failed')
+
+    # Wait for sample intake to finish before allowing the winch to move
+    if before:
+        with state.position_hold_condition:
+            state.position_hold_condition.wait_for(
+                lambda: not state.position_hold or state.ifcb_is_idle.is_set())
+            if state.position_hold:
+                raise ValueError('runsample stopped before the sampling step')
 
 
 def run_sample_routines(goal):
-    # Activate position hold, which will be released at a certain point during sampling.
-    rospy.loginfo('Activating position hold')
-    with state.position_hold_condition:
-        state.position_hold = True
-
     # Wait for current IFCB activity to finish
     set_state(ConductorStates.WAIT_FOR_IFCB)
     state.ifcb_is_idle.wait()
@@ -131,22 +157,18 @@ def run_sample_routines(goal):
 
     # Run IFCB steps in sequence
     for state_const, routine in playlist:
-        # Wait for previous routine to finish before we submit a new one. The
-        # loop exits after we start the 'runsample' routine, then we'll wait
-        # for the position hold release.
         state.ifcb_is_idle.wait()
-
         rospy.loginfo(f'Starting {routine} routine')
         set_state(state_const)
-        state.ifcb_is_idle.clear()
-        result = ifcb_run_routine(routine=routine, instrument=True)
-        assert result.success
+        try:
+            run_routine(routine)
+        except (rospy.ServiceException, ValueError) as exc:
+            message = f'Could not run {routine}: {exc}'
+            rospy.logerr(message)
+            ifcb_action_server.set_aborted(text=message)
+            return
 
-    # Wait for position hold release
-    rospy.loginfo('Routines finished - awaiting position hold release')
-    with state.position_hold_condition:
-        state.position_hold_condition.wait_for(lambda: not state.position_hold)
-        ifcb_action_server.set_succeeded(RunIFCBResult())
+    ifcb_action_server.set_succeeded(RunIFCBResult())
     rospy.loginfo('Position hold released')
 
 

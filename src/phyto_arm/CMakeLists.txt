@@ -38,7 +38,11 @@ generate_messages(
 )
 
 if (CATKIN_ENABLE_TESTING)
-  catkin_add_nosetests(tests DEPENDENCIES ${PROJECT_NAME}_generate_messages_py)
+  find_package(ifcb REQUIRED)
+  catkin_add_nosetests(tests DEPENDENCIES
+    ${PROJECT_NAME}_generate_messages_py
+    ${ifcb_EXPORTED_TARGETS}
+  )
 endif()
 
 catkin_package()
