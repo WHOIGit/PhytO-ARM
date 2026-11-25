@@ -9,6 +9,7 @@ import rospy
 import rostest
 
 from actionlib_msgs.msg import GoalStatus
+from aml_ctd.msg import AmlMeasurement
 from dli_power_switch.msg import OutletStatus
 from ds_sensor_msgs.msg import Ctd, DepthPressure
 from gazebo_msgs.srv import GetLinkState
@@ -89,7 +90,9 @@ class TestGazeboWinch(unittest.TestCase):
         self.assertGreater(ctd.header.stamp.to_sec(), 0)
         self.assertGreater(ctd.conductivity, 0)
         self.assertTrue(-2 < ctd.temperature < 40)
-        self.assertTrue(20 < ctd.salinity < 42)
+        salinity = rospy.wait_for_message('ctd/aml/derive/sal_c',
+                                          AmlMeasurement, timeout=5)
+        self.assertTrue(20 < salinity.value < 42)
         rospy.loginfo('Target %.2f m, Gazebo %.3f m, CTD %.3f m, %.3f dbar, '
                       'encoder %d', target, measured, depth.depth,
                       depth.pressure, encoder)

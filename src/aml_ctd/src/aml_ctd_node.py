@@ -7,7 +7,7 @@ import re
 
 import rospy
 
-import amlxparser
+from aml_ctd import amlxparser
 
 from ds_core_msgs.msg import RawData
 from ds_sensor_msgs.msg import Ctd, DepthPressure
