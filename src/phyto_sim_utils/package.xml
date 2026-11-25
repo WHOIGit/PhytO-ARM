@@ -5,5 +5,14 @@
     <description>Shared launch utilities for PhytO-ARM simulators</description>
     <maintainer email="rgovostes@whoi.edu">Ryan Govostes</maintainer>
     <license>GPL-3.0</license>
+
     <buildtool_depend>catkin</buildtool_depend>
+
+    <exec_depend>ds_sensor_msgs</exec_depend>
+    <exec_depend>geometry_msgs</exec_depend>
+    <exec_depend>rospy</exec_depend>
+    <exec_depend>std_msgs</exec_depend>
+
+    <test_depend>ds_sensor_msgs</test_depend>
+    <test_depend>python3-nose</test_depend>
 </package>

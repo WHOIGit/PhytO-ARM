@@ -7,7 +7,7 @@ from ds_sensor_msgs.msg import Ctd, DepthPressure
 from geometry_msgs.msg import PointStamped
 
 
-# Sample a synthetic shallow water column at the Gazebo observation time
+# Sample a synthetic shallow water column at the probe observation time
 def sample_ctd(position, surface_z):
     ctd = Ctd()
     depth = DepthPressure()
@@ -53,7 +53,7 @@ def sample_ctd(position, surface_z):
 
 
 def main():
-    rospy.init_node('ctd_bridge')
+    rospy.init_node('ctd_sim')
     surface_z = rospy.get_param('~water_surface_z', 0.0)
 
     ctd_pub = rospy.Publisher('ctd/ctd', Ctd, queue_size=5)
@@ -62,7 +62,7 @@ def main():
     # Publish both CTD messages from the same physics observation
     def on_position(msg):
         if not math.isfinite(msg.point.z):
-            rospy.logwarn_throttle(5, 'Skipping non-finite Gazebo CTD height')
+            rospy.logwarn_throttle(5, 'Skipping non-finite CTD height')
             return
         ctd, depth = sample_ctd(msg, surface_z)
         ctd_pub.publish(ctd)

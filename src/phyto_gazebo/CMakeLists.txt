@@ -13,9 +13,7 @@ target_include_directories(phyto_tether SYSTEM PRIVATE
 target_link_libraries(phyto_tether ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 
 catkin_install_python(PROGRAMS
-  scripts/ctd_bridge.py
   scripts/gps_sim.py
-  scripts/winch_drum.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(PROGRAMS scripts/view_winch
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -31,9 +29,6 @@ if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
   add_rostest(test/ifcb_mock.test DEPENDENCIES
     ${ifcb_EXPORTED_TARGETS} ${phyto_arm_EXPORTED_TARGETS})
-  catkin_add_nosetests(test/ctd_bridge_tests.py DEPENDENCIES
-    ${ds_sensor_msgs_EXPORTED_TARGETS})
-  catkin_add_nosetests(test/winch_drum_tests.py)
   add_rostest(test/gazebo_winch.test DEPENDENCIES phyto_tether
     ${ds_sensor_msgs_EXPORTED_TARGETS} ${jvl_motor_EXPORTED_TARGETS}
     ${phyto_arm_EXPORTED_TARGETS})
