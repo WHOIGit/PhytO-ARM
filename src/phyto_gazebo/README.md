@@ -52,7 +52,7 @@ rostopic pub -1 /sim/line_length std_msgs/Float64 'data: 1.32'
 frame. The water surface is at `z = 0` and depth increases downward.
 
 To drive the line with the simulated motor, start
-`roslaunch jvl_motor sim_motor.launch` and `rosrun phyto_gazebo winch_drum.py`
+`roslaunch jvl_motor sim_motor.launch` and `rosrun phyto_sim_utils winch_drum.py`
 in separate sourced terminals. The drum uses the 60:1 gearbox and 0.6604 m
 circumference from `configs/example.yaml`. Zeroing the motor encoder leaves
 the paid-out length unchanged.
@@ -62,7 +62,7 @@ the paid-out length unchanged.
 With the world running, start the simulated CTD in another sourced terminal.
 
 ```bash
-rosrun phyto_gazebo ctd_bridge.py
+rosrun phyto_sim_utils ctd_sim.py
 ```
 
 As you pay out or retrieve the line, observe depth in metres and gauge

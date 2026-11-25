@@ -44,10 +44,10 @@
         <arg name="refresh_rate" value="20" />
     </include>
 
-    <node pkg="phyto_gazebo" type="ctd_bridge.py" name="ctd_bridge"
+    <node pkg="phyto_sim_utils" type="ctd_sim.py" name="ctd_sim"
           required="true" />
 
-    <node pkg="phyto_gazebo" type="winch_drum.py" name="winch_drum"
+    <node pkg="phyto_sim_utils" type="winch_drum.py" name="winch_drum"
           required="true">
         <param name="gear_ratio" value="$(arg gear_ratio)" />
         <param name="spool_circumference" value="$(arg spool_circumference)" />

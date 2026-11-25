@@ -9,10 +9,10 @@ from geometry_msgs.msg import PointStamped
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 
-from ctd_bridge import sample_ctd
+from ctd_sim import sample_ctd
 
 
-class TestCTDBridge(unittest.TestCase):
+class TestCTDSim(unittest.TestCase):
     def sample(self, z, surface_z=0.0):
         position = PointStamped()
         position.header.frame_id = 'world'
