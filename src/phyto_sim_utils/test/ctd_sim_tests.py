@@ -13,12 +13,12 @@ from ctd_sim import sample_ctd
 
 
 class TestCTDSim(unittest.TestCase):
-    def sample(self, z, surface_z=0.0):
+    def sample(self, z, surface_z=0.0, warm_layer_depth=None):
         position = PointStamped()
         position.header.frame_id = 'world'
         position.header.stamp = rospy.Time(12, 345)
         position.point.z = z
-        return sample_ctd(position, surface_z)
+        return sample_ctd(position, surface_z, warm_layer_depth)
 
     def test_synchronized_pressure_and_depth(self):
         ctd, depth = self.sample(-1.75, surface_z=0.25)
@@ -42,6 +42,14 @@ class TestCTDSim(unittest.TestCase):
         self.assertEqual(deeper.salinity, 35)
         self.assertLess(deeper.temperature, surface.temperature)
         self.assertLess(deeper.conductivity, surface.conductivity)
+
+    def test_warm_layer_at_configured_depth(self):
+        peak, _ = self.sample(-0.7, warm_layer_depth=0.7)
+        shallow, _ = self.sample(-0.5, warm_layer_depth=0.7)
+        deep, _ = self.sample(-0.9, warm_layer_depth=0.7)
+        self.assertAlmostEqual(peak.temperature, 16.0)
+        self.assertGreater(peak.temperature, shallow.temperature)
+        self.assertGreater(peak.temperature, deep.temperature)
 
     def test_dry_sample(self):
         ctd, depth = self.sample(1)
