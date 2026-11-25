@@ -96,6 +96,18 @@ sampling-speed marker and emits a one-pixel test image. Waits use ROS time.
 For camera, serial and acquisition-file tests, run IFCBacquire with
 ifcb-simulator.
 
+## Switch an outlet
+
+The production DLI driver polls an eight-outlet HTTP simulator on loopback
+port 18080 (configurable with `dli_port`). The launch configures the Starlink
+outlet, initially on. Switching it changes its reported state. The
+simulated instruments keep running.
+
+```bash
+rostopic pub -1 /digital_logger/outlet/starlink/control std_msgs/Bool 'data: false'
+rostopic echo -n 1 /digital_logger/outlet/starlink/status
+```
+
 ## Physical assumptions
 
 The line is a massless spring and damper that can pull on the lifting eye.
