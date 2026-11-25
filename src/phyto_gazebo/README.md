@@ -4,10 +4,35 @@ The world contains a fixed barge with a winch and a suspended IFCB and CTD.
 Gazebo applies tension at the lifting eye when the line is stretched. Paying
 out extra line lets the payload fall until the line catches it again.
 
+## Move to a depth
+
+From a sourced ROS Noetic workspace with Gazebo Classic 11, launch the world,
+the simulated MAC400 and the production winch and motor nodes together.
+
+```bash
+roslaunch phyto_gazebo winch.launch
+```
+
+The payload starts suspended with the motor stopped. In a second sourced
+terminal, send a goal to lower it to 2.20 m at up to 0.18 m/s. Send another
+goal with `depth: 0.85` to bring it back up.
+
+```bash
+rostopic pub -1 /winch/move_to_depth/goal phyto_arm/MoveToDepthActionGoal \
+    '{goal: {depth: 2.20, velocity: 0.18}}'
+rostopic echo -n 1 /ctd/depth
+```
+
+Pass `gui:=false` to run headless. From a development workspace, exercise a
+descent, encoder zero and recovery with the integration test.
+
+```bash
+rostest phyto_gazebo gazebo_winch.test
+```
+
 ## Try the tether
 
-From a sourced ROS Noetic workspace with Gazebo Classic 11, start the world.
-Add `gui:=false` to run headless.
+To command the paid-out length directly, launch just the world.
 
 ```bash
 roslaunch gazebo_ros empty_world.launch \

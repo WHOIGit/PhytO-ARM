@@ -15,10 +15,18 @@
     <exec_depend>ds_sensor_msgs</exec_depend>
     <exec_depend>gazebo_ros</exec_depend>
     <exec_depend>jvl_motor</exec_depend>
+    <exec_depend>phyto_arm</exec_depend>
     <exec_depend>rospy</exec_depend>
 
+    <test_depend>actionlib</test_depend>
+    <test_depend>actionlib_msgs</test_depend>
     <test_depend>ds_sensor_msgs</test_depend>
+    <test_depend>gazebo_msgs</test_depend>
+    <test_depend>jvl_motor</test_depend>
+    <test_depend>phyto_arm</test_depend>
     <test_depend>python3-nose</test_depend>
+    <test_depend>rostest</test_depend>
+    <test_depend>tf</test_depend>
 
     <export>
         <gazebo_ros plugin_path="${prefix}/../../lib" />
