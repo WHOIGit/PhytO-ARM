@@ -11,6 +11,24 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 import arm_ifcb
 
 
+class TestSampleResult(unittest.TestCase):
+    @patch.object(arm_ifcb, 'arm')
+    @patch.object(arm_ifcb, 'ifcb_runner')
+    def test_released_hold_advances_arm(self, runner, arm):
+        runner.get_state.return_value = arm_ifcb.actionlib.GoalStatus.SUCCEEDED
+        arm_ifcb.handle_target_depth(None)
+        arm.start_next_task.assert_called_once_with()
+
+    @patch.object(arm_ifcb, 'arm')
+    @patch.object(arm_ifcb, 'ifcb_runner')
+    def test_aborted_sample_keeps_hold(self, runner, arm):
+        runner.get_state.return_value = arm_ifcb.actionlib.GoalStatus.ABORTED
+        runner.get_goal_status_text.return_value = 'Sampling step missing'
+        with self.assertRaisesRegex(RuntimeError, 'Sampling step missing'):
+            arm_ifcb.handle_target_depth(None)
+        arm.start_next_task.assert_not_called()
+
+
 class TestWizToRosTime(unittest.TestCase):
     @patch('arm_ifcb.datetime', wraps=datetime)
     def test_wiz_to_rostime_next_day(self, mock_datetime):

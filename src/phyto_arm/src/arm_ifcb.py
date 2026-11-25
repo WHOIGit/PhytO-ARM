@@ -229,6 +229,11 @@ def send_ifcb_action():
     ifcb_runner.send_goal(goal)
     ifcb_runner.wait_for_result()
 
+    # End the cast if the IFCB could not release the position hold
+    if ifcb_runner.get_state() != actionlib.GoalStatus.SUCCEEDED:
+        reason = ifcb_runner.get_goal_status_text()
+        raise RuntimeError(f'IFCB sample failed: {reason}')
+
 
 def handle_downcast(move_result):
     # Wait for the profile data for this cast
