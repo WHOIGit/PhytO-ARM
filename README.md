@@ -483,7 +483,8 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
 
   - `ifcb_runner`: Provides one high-level action for running IFCB samples
     - Subscribes:
-      - `/ifcb/in` for IFCB status messages
+      - `/ifcb/in` for routine instrumentation events
+      - `/ifcb/is_routine_running` for the last reported routine state
     - Publishes:
       - `~state` current state for debugging purposes
       - `~sample/goal` action server for running IFCB sampling routines
@@ -567,6 +568,7 @@ These nodes perform lower-level interactions with hardware components. These nod
   - `ifcb`: Bridge for the IFCB websocket API
     - Publishes:
       - `~in` for messages received from the IFCB
+      - `~is_routine_running` for the latched running or stopped state
       - `~out` for messages sent to the IFCB
       - `~image` for full-frame images
       - `~roi/image` for detected ROI images only

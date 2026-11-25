@@ -94,7 +94,7 @@ def send_command(pub, command):
 
 
 # Publish incoming "raw" messages from the IFCB as ROS messages
-def on_any_message(pub, data):
+def on_any_message(publishers, data):
     sender_id, smsgsrc, seqno, data = data
 
     # Publish a copy of the incoming message
@@ -103,7 +103,13 @@ def on_any_message(pub, data):
     msg.header.stamp = msg.ds_header.io_time = rospy.Time.now()
     msg.data_direction = RawData.DATA_IN
     msg.data = data.encode()
-    pub.publish(msg)
+    publishers['rx'].publish(msg)
+
+    # Retain the last reported routine state for runners that subscribe later
+    if data == 'valuechanged:interactive:started':
+        publishers['run'].publish(True)
+    elif data == 'valuechanged:interactive:stopped':
+        publishers['run'].publish(False)
 
 
 # Reset the data folder to the configured data directory
@@ -175,7 +181,7 @@ def create_client(publishers):
 
     # Publish registration status and log connection progress
     client.on_ready(
-        lambda ready: publishers['status'].publish(Bool(data=ready))
+        lambda ready: publishers['conn'].publish(Bool(data=ready))
     )
     client.on_connecting(lambda: rospy.loginfo('Connecting to IFCB...'))
     client.on_started(lambda _: rospy.loginfo('Established connection to IFCB'))
@@ -187,7 +193,7 @@ def create_client(publishers):
     client.on_error(lambda error: rospy.logwarn('IFCB error: %s', error))
 
     # Forward IFCB messages to their ROS publishers
-    client.on_any_message(functools.partial(on_any_message, publishers['rx']))
+    client.on_any_message(functools.partial(on_any_message, publishers))
     for pattern, callback in [
         (('triggerimage',), functools.partial(on_triggerimage, publishers['img'])),
         (('triggercontent',), functools.partial(on_triggercontent, publishers['roi'], publishers['mkr'])),
@@ -214,16 +220,18 @@ def main():
     mkr_pub = rospy.Publisher('~roi/markers', ImageMarkerArray, queue_size=5)
 
     # Publisher for connection status (latched so new subscribers get current state)
-    status_pub = rospy.Publisher('~connected', Bool, queue_size=1, latch=True)
+    conn_pub = rospy.Publisher('~connected', Bool, queue_size=1, latch=True)
 
     # Bundle publishers for the client callbacks
     publishers = {
+        'run': rospy.Publisher('~is_routine_running', Bool, queue_size=1,
+                               latch=True),
         'rx': rx_pub,
         'tx': tx_pub,
         'img': img_pub,
         'roi': roi_pub,
         'mkr': mkr_pub,
-        'status': status_pub
+        'conn': conn_pub
     }
 
 
