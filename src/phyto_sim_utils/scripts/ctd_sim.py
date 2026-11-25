@@ -7,8 +7,11 @@ from ds_sensor_msgs.msg import Ctd, DepthPressure
 from geometry_msgs.msg import PointStamped
 
 
-# Sample a synthetic shallow water column at the probe observation time
-def sample_ctd(position, surface_z):
+# Sample the water column at position, the probe's timestamped PointStamped.
+# surface_z is the water surface height in meters in the same frame as position.
+# Set ~warm_layer_depth to the depth in meters below the surface where temperature
+# peaks. With no setting, the water is warmest at the surface.
+def sample_ctd(position, surface_z, warm_layer_depth=None):
     ctd = Ctd()
     depth = DepthPressure()
     for msg in (ctd, depth):
@@ -36,6 +39,9 @@ def sample_ctd(position, surface_z):
 
     # A warm surface layer over cooler seawater of practical salinity 35
     t = 12 + 3 * math.exp(-immersion / 5)
+    if warm_layer_depth is not None:
+        # A narrow warm layer gives the profiler an interior sampling target.
+        t = 12 + 4 * math.exp(-((immersion - warm_layer_depth) / 0.055) ** 2)
     ctd.temperature = t
     ctd.salinity = 35.0
 
@@ -56,6 +62,7 @@ def main():
     rospy.init_node('ctd_sim')
     surface_z = rospy.get_param('~water_surface_z', 0.0)
 
+    warm_layer_depth = rospy.get_param('~warm_layer_depth', None)
     ctd_pub = rospy.Publisher('ctd/ctd', Ctd, queue_size=5)
     depth_pub = rospy.Publisher('ctd/depth', DepthPressure, queue_size=5)
 
@@ -64,7 +71,7 @@ def main():
         if not math.isfinite(msg.point.z):
             rospy.logwarn_throttle(5, 'Skipping non-finite CTD height')
             return
-        ctd, depth = sample_ctd(msg, surface_z)
+        ctd, depth = sample_ctd(msg, surface_z, warm_layer_depth)
         ctd_pub.publish(ctd)
         depth_pub.publish(depth)
 
