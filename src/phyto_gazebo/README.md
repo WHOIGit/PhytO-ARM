@@ -26,6 +26,12 @@ rostopic pub -1 /sim/line_length std_msgs/Float64 'data: 1.32'
 `/sim/ctd_position` gives the simulated probe position in metres in the world
 frame. The water surface is at `z = 0` and depth increases downward.
 
+To drive the line with the simulated motor, start
+`roslaunch jvl_motor sim_motor.launch` and `rosrun phyto_gazebo winch_drum.py`
+in separate sourced terminals. The drum uses the 60:1 gearbox and 0.6604 m
+circumference from `configs/example.yaml`. Zeroing the motor encoder leaves
+the paid-out length unchanged.
+
 ## Read the CTD
 
 With the world running, start the simulated CTD in another sourced terminal.
