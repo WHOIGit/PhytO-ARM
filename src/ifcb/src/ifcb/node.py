@@ -44,14 +44,7 @@ def do_runroutine(pub, req):
 
     # Deny path traversal
     if '/' in req.routine:
-        return srv.RunRoutineResponse(success=False)
-
-    # Check for beads routines
-    if req.routine == 'beads':
-        sent = send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
-    else:
-        sent = send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
-    if not sent:
+        rospy.logerr(f'Invalid routine name: {req.routine!r}')
         return srv.RunRoutineResponse(success=False)
 
     # Attempt to load the file
@@ -59,19 +52,30 @@ def do_runroutine(pub, req):
     try:
         with open(os.path.expanduser(path), 'rb') as f:
             routine = json.load(f)
-    except:
-        rospy.logerr(f'Could not load {req.routine}.json')
+    except (OSError, ValueError) as exc:
+        rospy.logerr(f'Could not load {req.routine}.json: {exc}')
         return srv.RunRoutineResponse(success=False)
 
-    # Optionally instrument the routine
-    if req.instrument:
-        routine = instrument_routine(routine, name=req.routine)
+    # Resolve required markers before sending any commands to the instrument
+    try:
+        routine = instrument_routine(
+            routine, req.routine, before=req.instrument_before,
+            after=req.instrument_after, trace=req.instrument)
+    except ValueError as exc:
+        rospy.logerr(f'Could not instrument {req.routine}: {exc}')
+        return srv.RunRoutineResponse(success=False)
+
+    # Check for beads routines
+    folder = rospy.get_param('~data_dir')
+    if req.routine == 'beads':
+        folder += '/beads'
+    if not send_command(pub, f'daq:setdatafolder:{folder}'):
+        return srv.RunRoutineResponse(success=False)
 
     # Encode and send the routine
     encoded = json.dumps(routine, separators=(',', ':'))  # less whitespace
     sent = send_command(pub, f'interactive:load:{encoded}')
     sent = sent and send_command(pub, 'interactive:start')
-
     return srv.RunRoutineResponse(success=sent)
         
 

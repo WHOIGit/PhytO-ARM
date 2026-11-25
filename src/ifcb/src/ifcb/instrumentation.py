@@ -38,7 +38,62 @@ def parse_marker(marker: str) -> Optional[Dict[str, Any]]:
     return json.loads(marker[len(MAGIC):])
 
 
-def instrument_routine(routine: Routine, name: str) -> Routine:
+# Index steps by type and arguments, preserving JSON argument types
+def step_key(step: Step):
+    return step['StepType'], json.dumps(step.get('Arguments', []),
+                                        sort_keys=True)
+
+
+# Resolve each selector to a position in the original routine
+def selected_paths(selectors, paths):
+    result = set()
+    for selector in selectors:
+        try:
+            step = json.loads(selector)
+            if (not isinstance(step, dict)
+                    or not isinstance(step.get('StepType'), str)
+                    or not isinstance(step.get('Arguments', []), list)
+                    or step.keys() - {'StepType', 'Arguments'}):
+                raise ValueError
+        except ValueError:
+            raise ValueError(f'Invalid step selector: {selector}') from None
+
+        matches = paths.get(step_key(step), [])
+        if len(matches) != 1:
+            raise ValueError(f'Expected one match for {selector}, '
+                             f'found {len(matches)}')
+        result.add(matches[0])
+    return result
+
+
+def instrument_routine(routine: Routine, name: str, *, before=(), after=(),
+                       trace=True) -> Routine:
+    # Validate required markers even when the caller requests a full trace
+    if before or after:
+        paths = {}
+        for i, group in enumerate(routine):
+            for j, step in enumerate(group.get('Steps', [])):
+                paths.setdefault(step_key(step), []).append((i, j))
+        before = selected_paths(before, paths)
+        after = selected_paths(after, paths)
+
+    # Keep selected markers inside the step's own condition or iteration
+    if not trace:
+        if not before and not after:
+            return routine
+        groups = []
+        for i, group in enumerate(routine):
+            steps = []
+            for j, step in enumerate(group.get('Steps', [])):
+                if (i, j) in before:
+                    steps.append(marker('before', name, [i, j], step))
+                steps.append(step)
+                if (i, j) in after:
+                    steps.append(marker('after', name, [i, j], step))
+            groups.append(dict(group, Steps=steps))
+        return groups
+
+    # Trace the routine, its groups, and each step
     result: Routine = []
     result.append({
         'Type': 'Sequence',
