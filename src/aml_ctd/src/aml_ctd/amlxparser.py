@@ -44,21 +44,24 @@ def parseAMLx(s):
 
 
 
+def checksum(record):
+    result = 0
+    for char in record:
+        result ^= ord(char)
+    return result
+
+
 def iterAMLx(s):
     # Parse the message number and between the {}s
     m = re.match(r'msg(\d+)\{(.*?)\}(?:[*]([0-9a-fA-F]{2}))?', s)
     if not m:
         raise ValueError('Invalid message format')
-    msgnum, inner, checksum = m.groups()
+    msgnum, inner, expected = m.groups()
     msgnum = int(msgnum)
-    checksum = int(checksum, 16) if checksum else None
 
     # Checksums are included when using `set monitor checksum y`
-    if checksum is not None:
-        for c in s[:m.start(3)-1]:
-            checksum ^= ord(c)
-        if checksum != 0:
-            raise ValueError('Incorrect checksum')
+    if expected is not None and checksum(s[:m.start(3)-1]) != int(expected, 16):
+        raise ValueError('Incorrect checksum')
 
     # Split into a list of sensors and their parameter lists
     m = re.findall(r'(.+?)((?:\[.+?\])+)(?:,|$)', inner)

@@ -59,16 +59,11 @@ the paid-out length unchanged.
 
 ## Read the CTD
 
-With the world running, start the simulated CTD in another sourced terminal.
-
-```bash
-rosrun phyto_sim_utils ctd_sim.py
-```
-
-As you pay out or retrieve the line, observe depth in metres and gauge
-pressure in dbar on `/ctd/depth`. The `/ctd/ctd` topic carries temperature,
-salinity, conductivity and sound speed from a synthetic water column. Both
-messages use the Gazebo timestamp of the probe position.
+The water-column model publishes `/sim/ctd` and `/sim/depth` at the Gazebo
+observation time. The AML emulator pairs those samples and sends checksummed
+AMLx monitor records on `/sim/aml`. The production AML driver publishes
+`/ctd/ctd`, `/ctd/depth` and the individual measurements. Read salinity on
+`/ctd/aml/derive/sal_c`. The winch uses the driver's depth in metres.
 
 ```bash
 rostopic echo -n 1 /ctd/depth
