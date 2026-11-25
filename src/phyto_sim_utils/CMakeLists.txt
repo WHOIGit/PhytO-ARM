@@ -2,13 +2,16 @@ cmake_minimum_required(VERSION 3.10)
 project(phyto_sim_utils)
 
 find_package(catkin REQUIRED)
+catkin_python_setup()
 catkin_package()
 
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(PROGRAMS scripts/arm_config scripts/wait_for_socket
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
 
 catkin_install_python(PROGRAMS
   scripts/ctd_sim.py
+  scripts/gps_sim.py
   scripts/gpsd_client_mock
   scripts/vertical_line.py
   scripts/winch_drum.py

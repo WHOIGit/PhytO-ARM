@@ -7,7 +7,8 @@ so the production gpsd_client publishes the fixes.
 import rospy
 
 from gps_common.msg import GPSFix, GPSStatus
-from sensor_msgs.msg import NavSatFix, NavSatStatus
+from phyto_sim_utils.gps import receive_fixes
+from sensor_msgs.msg import NavSatFix
 
 
 def main():
@@ -26,22 +27,7 @@ def main():
         extended_pub.publish(extended)
         fix_pub.publish(fix)
 
-    # Use the barge antenna when launched with Gazebo
-    topic = rospy.get_param('~fix_topic', '')
-    if topic:
-        rospy.Subscriber(topic, NavSatFix, publish, queue_size=1)
-    else:
-        fix = NavSatFix(latitude=rospy.get_param('~latitude', 41.524),
-                        longitude=rospy.get_param('~longitude', -70.672),
-                        altitude=rospy.get_param('~altitude', 0.0))
-        fix.header.frame_id = 'barge'
-        fix.status.service = NavSatStatus.SERVICE_GPS
-
-        def tick(event):
-            fix.header.stamp = event.current_real
-            publish(fix)
-
-        rospy.Timer(rospy.Duration(1), tick, reset=True)
+    receive_fixes(publish)
     rospy.spin()
 
 
