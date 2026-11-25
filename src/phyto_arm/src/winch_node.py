@@ -98,8 +98,8 @@ stop = rospy.ServiceProxy('motor/stop', StopCmd)
 #
 # The smaller the value of half_speed_dist, the more abruptly we will stop.
 def velocity_f(target, max_speed, half_speed_dist):
-    return (lambda x: max_speed * (2/math.pi) * \
-            math.atan((target - x) * (1 / half_speed_dist)))
+    scale = math.atanh(0.5) / half_speed_dist
+    return lambda x: max_speed * math.tanh((target - x) * scale)
 
 
 # Compute an estimate of the move duration using an approximate integral of
