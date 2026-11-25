@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 import functools
 import math
-from threading import Event, Condition
+from threading import Condition, Event, Lock
 
 import actionlib
 import rospy
@@ -21,12 +21,29 @@ ifcb_action_server = None
 
 
 # Convenience function to publish state updates for debugging
+current_state = None
+publish_lock = Lock()
 set_state = None
-def set_pub_state(pub, s):
-    m = ConductorState()
-    m.header.stamp = rospy.Time.now()
-    m.state = s
-    pub.publish(m)
+state_timer = None
+
+
+def set_pub_state(pub, new_state=None):
+    global current_state, state_timer
+
+    # Restart the heartbeat on each transition
+    if new_state is not None:
+        current_state = new_state
+        if state_timer is not None:
+            state_timer.shutdown()
+        state_timer = rospy.Timer(rospy.Duration(1),
+                                  lambda _: set_pub_state(pub), reset=True)
+
+    # Keep an older heartbeat from being latched after a transition
+    with publish_lock:
+        m = ConductorState()
+        m.header.stamp = rospy.Time.now()
+        m.state = current_state
+        pub.publish(m)
 
 
 @dataclass
