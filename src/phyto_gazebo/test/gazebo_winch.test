@@ -1,0 +1,14 @@
+<launch>
+    <arg name="gazebo_port" default="16543" />
+    <env name="GAZEBO_MASTER_URI" value="http://127.0.0.1:$(arg gazebo_port)" />
+    <arg name="port" default="16542" />
+    <include file="$(find phyto_gazebo)/launch/winch.launch">
+        <arg name="gui" value="false" />
+        <arg name="paused" value="false" />
+        <arg name="port" value="$(arg port)" />
+    </include>
+    <test pkg="phyto_gazebo" type="gazebo_winch_test.py"
+          test-name="gazebo_winch" time-limit="240">
+        <param name="port" value="$(arg port)" />
+    </test>
+</launch>

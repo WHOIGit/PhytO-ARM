@@ -42,3 +42,6 @@ if (CATKIN_ENABLE_TESTING)
 endif()
 
 catkin_package()
+
+install(PROGRAMS src/winch_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

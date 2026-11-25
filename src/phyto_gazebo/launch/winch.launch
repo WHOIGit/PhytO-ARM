@@ -1,0 +1,45 @@
+<launch>
+    <arg name="gui" default="true" />
+    <arg name="paused" default="false" />
+    <arg name="port" default="1502" />
+
+    <arg name="gear_ratio" value="60" />
+    <arg name="spool_circumference" value="0.6604" />
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name"
+             value="$(find phyto_gazebo)/worlds/winch.world" />
+        <arg name="gui" value="false" />
+        <arg name="paused" value="$(arg paused)" />
+        <arg name="server_required" value="true" />
+        <arg name="use_clock_frequency" value="true" />
+        <arg name="pub_clock_frequency" value="100" />
+    </include>
+
+    <node if="$(arg gui)" pkg="phyto_gazebo" type="view_winch"
+          name="gazebo_gui" required="true" />
+
+    <include file="$(find jvl_motor)/launch/sim_motor.launch">
+        <arg name="port" value="$(arg port)" />
+        <arg name="refresh_rate" value="20" />
+    </include>
+
+    <node pkg="phyto_gazebo" type="ctd_bridge.py" name="ctd_bridge"
+          required="true" />
+
+    <node pkg="phyto_gazebo" type="winch_drum.py" name="winch_drum"
+          required="true">
+        <param name="gear_ratio" value="$(arg gear_ratio)" />
+        <param name="spool_circumference" value="$(arg spool_circumference)" />
+    </node>
+
+    <param name="ctd_topic" value="/ctd/depth" />
+    <node pkg="phyto_arm" type="winch_node.py" name="winch" required="true">
+        <param name="epsilon" value="0.025" />
+        <param name="gear_ratio" value="$(arg gear_ratio)" />
+        <param name="half_speed_dist" value="0.12" />
+        <param name="max_speed" value="0.25" />
+        <param name="safety_envelopes/position" value="0.20" />
+        <param name="spool_circumference" value="$(arg spool_circumference)" />
+    </node>
+</launch>
