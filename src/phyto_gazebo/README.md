@@ -26,6 +26,24 @@ rostopic pub -1 /sim/line_length std_msgs/Float64 'data: 1.32'
 `/sim/ctd_position` gives the simulated probe position in metres in the world
 frame. The water surface is at `z = 0` and depth increases downward.
 
+## Read the CTD
+
+With the world running, start the simulated CTD in another sourced terminal.
+
+```bash
+rosrun phyto_gazebo ctd_bridge.py
+```
+
+As you pay out or retrieve the line, observe depth in metres and gauge
+pressure in dbar on `/ctd/depth`. The `/ctd/ctd` topic carries temperature,
+salinity, conductivity and sound speed from a synthetic water column. Both
+messages use the Gazebo timestamp of the probe position.
+
+```bash
+rostopic echo -n 1 /ctd/depth
+rostopic echo -n 1 /ctd/ctd
+```
+
 ## Physical assumptions
 
 The line is a massless spring and damper that can pull on the lifting eye.
