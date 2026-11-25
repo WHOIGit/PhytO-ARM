@@ -12,6 +12,7 @@ from ds_core_msgs.msg import RawData
 from ifcbclient.protocol import parse_response as parse_ifcb_msg
 from ifcb.instrumentation import parse_marker as parse_ifcb_marker
 from ifcb.srv import RunRoutine
+from std_msgs.msg import Bool
 
 from phyto_arm.msg import ConductorState, ConductorStates, RunIFCBAction, RunIFCBResult
 
@@ -43,25 +44,19 @@ class IFCBState:
 state = IFCBState()
 
 
+def on_routine_running(msg):
+    if msg.data:
+        state.ifcb_is_idle.clear()
+    else:
+        state.ifcb_is_idle.set()
+
+
 def on_ifcb_msg(msg):
     # Parse the message and see if it is a marker
     marker = None
     parsed = parse_ifcb_msg(msg.data.decode())
     if len(parsed) == 2 and parsed[0] == 'reportevent':
         marker = parse_ifcb_marker(parsed[1])
-
-    # For routines sent with 'interactive:start', the IFCB will tell us when the
-    # routine has started and finished. This is the most reliable way to detect
-    # this, rather than using the markers.
-    #
-    # XXX
-    # The ifcb_is_idle Event should be clear()'d _before_ sending a routine, to
-    # avoid a race condition where a thread sends a routine and then immediately
-    # awaits the Event before we have been told the routine started.
-    if parsed == ['valuechanged', 'interactive', 'stopped']:
-        rospy.loginfo('IFCB routine not running')
-        state.ifcb_is_idle.set()
-        return
 
     # Remaining behaviors depend on having a parsed marker
     if marker is None:
@@ -163,6 +158,7 @@ def main():
 
     # Subscribe to IFCB messages to track routine progress
     rospy.Subscriber('/ifcb/in', RawData, on_ifcb_msg)
+    rospy.Subscriber('/ifcb/is_routine_running', Bool, on_routine_running)
 
     # Initialize service proxy for sending routines to the IFCB
     ifcb_run_routine = rospy.ServiceProxy('/ifcb/routine', RunRoutine)
