@@ -8,7 +8,7 @@
 
     <node pkg="phyto_sim_utils" exec="vertical_line.py" name="vertical_line">
         <param from="$(var params_file)" />
-        <param name="$(var arm).vertical_line.initial_depth" value="$(var initial_depth)" />
+        <param name="initial_depth" value="$(var initial_depth)" />
     </node>
     <include file="$(find-pkg-share phyto_sim_utils)/launch/ctd.launch.py">
         <arg name="ctd" value="$(var ctd)" />

@@ -4,38 +4,48 @@
 The line hangs straight down from the surface, so its length gives the
 probe depth. With the winch disabled, the probe stays at its initial depth.
 """
-import rospy
+import rclpy
 
 from geometry_msgs.msg import PointStamped
+from phyto_sim_utils.parameters import declare_number
+from rclpy.executors import ExternalShutdownException
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from std_msgs.msg import Float64
 
 
 def main():
-    rospy.init_node('vertical_line')
-    length = rospy.get_param('~initial_depth')
-    pub = rospy.Publisher('sim/ctd_position', PointStamped, queue_size=1)
+    rclpy.init()
+    node = rclpy.create_node('vertical_line')
 
     # A taut line hangs straight down from the water surface
     def on_length(msg):
         nonlocal length
         length = msg.data
 
-    rospy.Subscriber('sim/line_length', Float64, on_length, queue_size=1)
-
     # The CTD continues sampling when the drum is stationary or absent
-    rate = rospy.Rate(10, reset=True)
-    while not rospy.is_shutdown():
+    def publish_position():
         position = PointStamped()
         position.header.frame_id = 'world'
-        position.header.stamp = rospy.Time.now()
+        position.header.stamp = node.get_clock().now().to_msg()
         position.point.z = -length
         pub.publish(position)
-        rate.sleep()
+
+    try:
+        length = float(declare_number(node, 'initial_depth'))
+        pub = node.create_publisher(PointStamped, 'sim/ctd_position', 1)
+
+        latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        node.create_subscription(Float64, 'sim/line_length', on_length, latched)
+
+        publish_position()
+        node.create_timer(0.1, publish_position)
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        if not rospy.is_shutdown():
-            raise
+    main()
