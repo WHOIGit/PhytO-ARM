@@ -78,19 +78,22 @@ def convert_to_ros2_params(config, launch_name=None):
             if first_type in (bool, int, float, str) and all(isinstance(x, first_type) for x in v):
                 filtered_params[k] = v
 
-    # ROS 1 sim_cast remaps two private drum parameters to its arm's winch.
+    params = {'/**': {'ros__parameters': filtered_params}}
+
+    # The simulated drum uses its arm's winch geometry.
     if launch_name in ('sim_arm_ifcb', 'sim_arm_chanos'):
         arm = launch_name[len('sim_'):]
         for key in ('warm_layer_depth', 'water_surface_z'):
             source = f'{arm}.ctd.{key}'
             if source in filtered_params:
                 filtered_params[f'{arm}.ctd_sim.{key}'] = filtered_params[source]
+        drum = dict((config.get(arm) or {}).get('winch_drum') or {})
         for key in ('gear_ratio', 'spool_circumference'):
             source = f'{arm}.winch.{key}'
             if source in filtered_params:
-                filtered_params[f'{arm}.winch_drum.{key}'] = filtered_params[source]
-
-    params = {'/**': {'ros__parameters': filtered_params}}
+                drum[key] = filtered_params[source]
+        if drum:
+            params[f'/{arm}/winch_drum'] = {'ros__parameters': drum}
 
     # Native nodes read parameters relative to their own node name.
     seatrac = config.get('seatrac') or {}

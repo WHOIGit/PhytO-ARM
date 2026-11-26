@@ -23,6 +23,7 @@ install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(ctd_sim_tests test/ctd_sim_tests.py)
+  ament_add_pytest_test(parameters_tests test/parameters_tests.py)
   ament_add_pytest_test(winch_drum_tests test/winch_drum_tests.py)
 endif()
 

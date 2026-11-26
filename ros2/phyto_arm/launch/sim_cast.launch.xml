@@ -23,7 +23,7 @@
         </include>
         <node pkg="phyto_sim_utils" exec="winch_drum.py" name="winch_drum">
             <param from="$(var params_file)" />
-            <param name="$(var arm).winch_drum.initial_line_length" value="$(var initial_depth)" />
+            <param name="initial_line_length" value="$(var initial_depth)" />
         </node>
         <node pkg="phyto_arm" exec="winch_node.py" name="winch">
             <param from="$(var params_file)" />
