@@ -3,15 +3,15 @@ import functools
 import json
 import os
 import struct
-from threading import Lock
 
 import rospy
 
+from threading import Lock
+
 import ifcb.srv as srv
 
-from ifcbclient import IFCBClient
-
 from foxglove_msgs.msg import ImageAnnotations, PointsAnnotation, Point2, Color
+from ifcbclient import IFCBClient
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Bool
 from wr2_msgs.msg import RawData
@@ -173,7 +173,7 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
 
 
 # Create a client and wire its lifecycle and ROS message callbacks
-def create_client(publishers):
+def create_client(ros_node, publishers):
     client = IFCBClient(
         f'ws://{rospy.get_param("~address")}:{rospy.get_param("~port", 8092)}/ifcbHub',
         rospy.get_param('~serial'))
@@ -235,7 +235,7 @@ def main(client_factory=create_client, routine_loader=load_routine):
 
 
     # Let the client manage connection attempts and readiness
-    connection = client_factory(publishers)
+    connection = client_factory(rospy.impl.node._get_node(), publishers)
     rospy.on_shutdown(connection.stop)
 
     # Keep a second request from replacing a routine between load and start

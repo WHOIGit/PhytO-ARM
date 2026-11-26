@@ -3,11 +3,13 @@
 import base64
 import json
 import math
+
 from threading import Event, RLock, Thread
 
-import rospy
-
 from ifcb import node
+from rclpy.clock import JumpThreshold
+from rclpy.duration import Duration
+from std_msgs.msg import Bool
 
 
 MAINTENANCE = [{'Type': 'Sequence', 'Steps': [
@@ -61,35 +63,41 @@ def parse_steps(groups):
 
 
 class RoutineRunner:
-    def __init__(self, steps, publishers, report):
+    def __init__(self, ros_node, steps, publishers, report):
         self.steps = iter(steps)
         self.pub = publishers
         self.report = report
+        self.node = ros_node
         self.cancelled = Event()
+        self.clock_changed = Event()
 
     def cancel(self):
         self.cancelled.set()
-        clock = rospy.rostime.get_rostime_cond()
-        with clock:
-            clock.notify_all()
+        self.clock_changed.set()
 
     # Sleep until either the wait expires or interactive:stop wakes the runner
     def wait(self, seconds):
-        if rospy.rostime.is_wallclock():
+        clock = self.node.get_clock()
+        if not clock.ros_time_is_active:
             self.cancelled.wait(seconds)
             return
 
-        # This is the same clock notification used by rospy.sleep
-        clock = rospy.rostime.get_rostime_cond()
-        remaining = rospy.Duration.from_sec(seconds)
-        with clock:
-            previous = rospy.Time.now()
-            while remaining > rospy.Duration() and not self.cancelled.is_set():
-                clock.wait()
-                now = rospy.Time.now()
+        threshold = JumpThreshold(min_forward=Duration(nanoseconds=1),
+                                  min_backward=Duration(nanoseconds=-1))
+        updates = clock.create_jump_callback(
+            threshold, post_callback=lambda _: self.clock_changed.set())
+        try:
+            remaining = Duration(seconds=seconds).nanoseconds
+            previous = clock.now().nanoseconds
+            while remaining > 0 and not self.cancelled.is_set():
+                self.clock_changed.wait()
+                self.clock_changed.clear()
+                now = clock.now().nanoseconds
                 if previous and now > previous:
                     remaining -= now - previous
                 previous = now
+        finally:
+            updates.unregister()
 
     # Return the seconds to wait, or None when the routine is complete
     def run_until_next_wait(self):
@@ -105,8 +113,9 @@ class RoutineRunner:
 
 
 class MockHost:
-    def __init__(self, publishers):
+    def __init__(self, ros_node, publishers):
         self.pub = publishers
+        self.node = ros_node
         self.lock = RLock()  # Protect routine state shared with the worker
         self.loaded = None
         self.running = None
@@ -118,7 +127,7 @@ class MockHost:
         # IFCBacquire sends its settings and state when a client connects.
         # The IFCB runner only needs the initial routine state from that update.
         with self.lock:
-            self.pub['conn'].publish(True)
+            self.pub['conn'].publish(Bool(data=True))
             if self.running is None:
                 self.report('valuechanged:interactive:stopped')
 
@@ -146,7 +155,7 @@ class MockHost:
                     raise ValueError('Routine already running')
                 if self.loaded is None:
                     raise ValueError('No routine loaded')
-                self.running = RoutineRunner(self.loaded, self.pub, self.report)
+                self.running = RoutineRunner(self.node, self.loaded, self.pub, self.report)
                 self.report('valuechanged:interactive:started')
                 self.start_worker()
             else:
