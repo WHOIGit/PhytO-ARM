@@ -35,6 +35,7 @@
     <depend>jvl_motor</depend>
     <depend>rbr_maestro3_ctd</depend>
 
+    <exec_depend>ament_index_python</exec_depend>
     <exec_depend>launch_ros</exec_depend>
     <exec_depend>phyto_sim_utils</exec_depend>
     <exec_depend>python3-scipy</exec_depend>

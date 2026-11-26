@@ -338,6 +338,8 @@ RUN bash -c " \
     colcon build --packages-select jvl_motor"
 
 FROM with-sources AS build-phyto_arm
+COPY phyto-arm ros2/phyto-arm
+COPY configs/example.yaml ros2/configs/example.yaml
 COPY ros2/phyto_arm ros2/src/phyto_arm
 COPY --from=build-aml_ctd /app/ros2/install/aml_ctd /app/ros2/install/aml_ctd
 COPY --from=build-aml_ctd_msgs /app/ros2/install/aml_ctd_msgs /app/ros2/install/aml_ctd_msgs

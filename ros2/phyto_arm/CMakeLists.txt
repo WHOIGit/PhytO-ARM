@@ -6,6 +6,9 @@ find_package(ament_cmake_python REQUIRED)
 
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
+install(PROGRAMS ../../phyto-arm DESTINATION bin)
+install(FILES ../../phyto-arm DESTINATION ${PYTHON_INSTALL_DIR}/${PROJECT_NAME} RENAME deployment.py)
+install(FILES ../../configs/example.yaml DESTINATION share/${PROJECT_NAME}/configs)
 
 # Install Python executables
 install(PROGRAMS

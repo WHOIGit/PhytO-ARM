@@ -120,6 +120,11 @@ function get_all_deps(pkg, visited,    i, n, dep_list, dep, result) {
     # Stage header
     print "FROM with-sources AS build-" pkg
 
+    if (pkg == "phyto_arm") {
+        print "COPY phyto-arm ros2/phyto-arm"
+        print "COPY configs/example.yaml ros2/configs/example.yaml"
+    }
+
     # Copy source if local package
     if (path != "" && is_external == "false") {
         print "COPY ros2/" path " ros2/src/" path

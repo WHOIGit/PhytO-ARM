@@ -1,0 +1,33 @@
+<launch>
+    <arg name="arm" />
+    <arg name="ctd" default="direct" />
+    <arg name="params_file" />
+    <arg name="initial_depth" default="0.5" />
+    <arg name="motor_modbus_port" />
+    <arg name="winch_enabled" />
+
+    <node pkg="phyto_sim_utils" exec="vertical_line.py" name="vertical_line">
+        <param from="$(var params_file)" />
+        <param name="$(var arm).vertical_line.initial_depth" value="$(var initial_depth)" />
+    </node>
+    <include file="$(find-pkg-share phyto_sim_utils)/launch/ctd.launch.py">
+        <arg name="ctd" value="$(var ctd)" />
+        <arg name="params_file" value="$(var params_file)" />
+    </include>
+
+    <group if="$(var winch_enabled)">
+        <include file="$(find-pkg-share jvl_motor)/launch/sim_motor.launch.py">
+            <arg name="motor_modbus_port" value="$(var motor_modbus_port)" />
+            <arg name="refresh_rate" value="20" />
+            <arg name="params_file" value="$(var params_file)" />
+        </include>
+        <node pkg="phyto_sim_utils" exec="winch_drum.py" name="winch_drum">
+            <param from="$(var params_file)" />
+            <param name="$(var arm).winch_drum.initial_line_length" value="$(var initial_depth)" />
+        </node>
+        <node pkg="phyto_arm" exec="winch_node.py" name="winch">
+            <param from="$(var params_file)" />
+            <param name="$(var arm).ctd_topic" value="ctd/depth" />
+        </node>
+    </group>
+</launch>
