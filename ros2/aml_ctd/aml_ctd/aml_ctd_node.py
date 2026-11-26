@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-import asyncio
-import datetime
 import math
+import os
+import random
 import re
 
-import rospy
+import rclpy
 
 from aml_ctd import amlxparser
-
+from aml_ctd_msgs.msg import AmlMeasurement
 from ds_sensor_msgs.msg import Ctd, DepthPressure
+from rclpy.executors import ExternalShutdownException
+from rclpy.time import Time
 from wr2_msgs.msg import RawData
 
-from aml_ctd_msgs.msg import AmlMeasurement
 
-
-# Converts an arbitrary string to a ROS-safe name per http://wiki.ros.org/Names.
+# Converts an arbitrary string to a ROS-safe name.
 def ros_safe(s, keep_slashes=False):
     # Spaces and optionally slashes to underscores
     s = s.replace(' ', '_')
@@ -32,42 +32,19 @@ def ros_safe(s, keep_slashes=False):
     return s
 
 
-async def main():
-    loop = asyncio.get_running_loop()
-    incoming = asyncio.Queue()
-
+def main():
     # Initialize the ROS node
-    rospy.init_node('aml_ctd', anonymous=True)
-    rospy.on_shutdown(lambda: loop.call_soon_threadsafe(incoming.put_nowait, None))
+    rclpy.init()
+    node = rclpy.create_node(f'aml_ctd_{os.getpid()}_{random.getrandbits(32):08x}')
 
-    # Create a mapping of topics to publish on
-    publishers = {
-        '~ctd': rospy.Publisher('~', Ctd, queue_size=5),
-        '~depth': rospy.Publisher('~depth', DepthPressure, queue_size=5),
-    }
-
-    # Subscribe to incoming comms messages
-    def handler(msg):
-        loop.call_soon_threadsafe(incoming.put_nowait, msg)
-
-    rospy.Subscriber('~in', RawData, handler)
-
-    # TODO:
-    # To start logging we should just need to send b"\r\r\rMMONITOR\r" (sic)
-
-    # Process incoming messages in a loop
-    while True:
-        msg = await incoming.get()
-        if msg is None:
-            return
-
+    def handle_message(msg):
         # Parse the message data
         # FIXME: Unsure if we ought to decode to a string or leave as bytes
         try:
             parsed = amlxparser.parseAMLx(bytes(msg.data).decode())
         except:
-            rospy.logerr(f'Failed to parse: {bytes(msg.data).decode()}')
-            continue
+            node.get_logger().error(f'Failed to parse: {bytes(msg.data).decode()}')
+            return
 
         # Create a lookup table of measurements
         data = {}
@@ -138,24 +115,45 @@ async def main():
             dp.pressure = data['Pressure'].value
 
         # Set the appropriate message timestamps and metadata
+        fraction, seconds = math.modf(timestamp.timestamp())
+        stamp = Time(seconds=int(seconds), nanoseconds=int(fraction * 1e9)).to_msg()
         for m in [ctd, dp] + aml_msgs:
             # Associate a frame_id so we can connect these messages together
             m.header.frame_id = f'msg{parsed["msgnum"]}'
 
             # The standard ROS header timestamp reflects when the instrument
             # says the sample was taken. The DsHeader reflects the I/O time.
-            m.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
+            m.header.stamp = stamp
             m.ds_header.io_time = msg.io_stamp
 
         # Publish the messages
         publishers['~ctd'].publish(ctd)
         if 'Pressure' in data: publishers['~depth'].publish(dp)
         for m in aml_msgs:
-            top = f'~aml/{ros_safe(m.port)}/{ros_safe(m.name)}'
+            top = f'~/aml/{ros_safe(m.port)}/{ros_safe(m.name)}'
             if top not in publishers:
-                publishers[top] = rospy.Publisher(top, type(m), queue_size=5)
+                publishers[top] = node.create_publisher(type(m), top, 5)
             publishers[top].publish(m)
+
+    try:
+        # Create a mapping of topics to publish on
+        publishers = {
+            '~ctd': node.create_publisher(Ctd, node.get_name(), 5),
+            '~depth': node.create_publisher(DepthPressure, '~/depth', 5),
+        }
+
+        # TODO:
+        # To start logging we should just need to send b"\r\r\rMMONITOR\r" (sic)
+
+        # Subscribe to incoming comms messages
+        node.create_subscription(RawData, '~/in', handle_message, 10)
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
