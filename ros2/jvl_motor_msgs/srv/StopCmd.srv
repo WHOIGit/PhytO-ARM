@@ -2,3 +2,5 @@
 # Stops the motor by switching it into passive mode.
 
 ---
+bool success
+string message

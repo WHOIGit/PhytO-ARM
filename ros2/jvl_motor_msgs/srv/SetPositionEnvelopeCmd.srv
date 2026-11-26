@@ -6,3 +6,5 @@ int32 min  # encoder counts
 int32 max  # encoder counts
 
 ---
+bool success
+string message

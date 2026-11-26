@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
+import contextlib
 import functools
+import os
+import random
 import threading
 import time
 
-import rospy
-
-import jvl_motor.msg as msg
-import jvl_motor.srv as srv
+import rclpy
 
 from jvl_motor import mac400
-
+from jvl_motor_msgs import msg, srv
+from phyto_sim_utils.parameters import declare_number
 from pyModbusTCP.client import ModbusClient
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
+from rclpy.logging import LoggingSeverity
+from rclpy.node import Node
+from rclpy.parameter import Parameter
 
 
 WATCH_REGISTERS = [
@@ -23,7 +29,7 @@ WATCH_REGISTERS = [
 ]
 
 
-def read_registers(client, registers):
+def read_registers(node, client, registers):
     min_addr, max_addr = \
         min(r.addr[0] for r in registers), \
         max(r.addr[-1] for r in registers)
@@ -34,7 +40,7 @@ def read_registers(client, registers):
 
     with client.lock:
         values = client.read_holding_registers(min_addr, count)
-    timestamp = rospy.Time.now()
+    timestamp = node.get_clock().now().to_msg()
 
     if values is None:
         raise RuntimeError('Failed to read registers')
@@ -71,8 +77,7 @@ def cmd_zero_position(client, request):
             mac400.P_IST:  0
         })
     except RuntimeError as err:
-        raise rospy.ServiceException('Failed to zero motor position') from err
-    return srv.ZeroCmdResponse()
+        raise RuntimeError('Failed to zero motor position') from err
 
 def cmd_set_position(client, request):
     try:
@@ -84,9 +89,8 @@ def cmd_set_position(client, request):
             mac400.A_SOLL:    request.acceleration,
             mac400.T_SOLL:    request.torque,
         })
-    except RuntimeError:
-        rospy.logerr('Failed to command motor movement')
-    return srv.SetPositionCmdResponse()
+    except RuntimeError as err:
+        raise RuntimeError('Failed to command motor movement') from err
 
 
 def cmd_set_velocity(client, request):
@@ -100,8 +104,7 @@ def cmd_set_velocity(client, request):
             mac400.T_SOLL:    request.torque,
         })
     except RuntimeError as err:
-        raise rospy.ServiceException('Failed to set motor velocity') from err
-    return srv.SetVelocityCmdResponse()
+        raise RuntimeError('Failed to set motor velocity') from err
 
 
 def cmd_set_position_envelope(client, request):
@@ -113,11 +116,10 @@ def cmd_set_position_envelope(client, request):
             mac400.MAX_P_IST:  request.max
         })
     except RuntimeError as err:
-        raise rospy.ServiceException('Failed to set position envelope') from err
-    return srv.SetPositionEnvelopeCmdResponse()
+        raise RuntimeError('Failed to set position envelope') from err
 
 
-def cmd_stop(client, request):
+def cmd_stop(node, client, request):
     # Try continually to stop the motor, this is important
     while True:
         try:
@@ -126,18 +128,17 @@ def cmd_stop(client, request):
             })
             break
         except RuntimeError:
-            rospy.logerr('Failed to stop motor!!')
+            node.get_logger().error('Failed to stop motor!!')
             time.sleep(0.1)
 
-    return srv.StopCmdResponse()
 
 
 # Publish the latest motor readings and return the last known error status
-def publish_status(client, electrical_pub, error_pub, motion_pub, last_error):
+def publish_status(node, client, electrical_pub, error_pub, motion_pub, last_error):
     # The range of register addresses is too wide, so we need to do this in
     # two calls.
     try:
-        reg_values, timestamp1 = read_registers(client, [
+        reg_values, timestamp1 = read_registers(node, client, [
             mac400.MODE_REG,
             mac400.P_IST,
             mac400.V_IST_16,
@@ -145,12 +146,12 @@ def publish_status(client, electrical_pub, error_pub, motion_pub, last_error):
             mac400.U_24V,
             mac400.ERR_STAT,
         ])
-        reg_values2, timestamp2 = read_registers(client, [
+        reg_values2, timestamp2 = read_registers(node, client, [
             mac400.U_BUS,
         ])
         reg_values.update(reg_values2)
     except RuntimeError:
-        rospy.logerr('Failed to read registers, retrying on loop')
+        node.get_logger().error('Failed to read registers, retrying on loop')
         return last_error
 
     # Publish information about the electrical state
@@ -181,14 +182,15 @@ def publish_status(client, electrical_pub, error_pub, motion_pub, last_error):
     return err_stat
 
 
-def main():
-    # Initialize this node
-    rospy.init_node('jvl_motor', anonymous=True, log_level=rospy.DEBUG)
+def configure_node(node: Node, cleanup: contextlib.ExitStack) -> None:
+    node.get_logger().set_level(LoggingSeverity.DEBUG)
+
+    node.declare_parameters('', [('address', Parameter.Type.STRING), ('port', 502)])
 
     # Connect to the Modbus server
     client = ModbusClient(
-        host=rospy.get_param('~address'),
-        port=rospy.get_param('~port', 502),
+        host=node.get_parameter('address').value,
+        port=node.get_parameter('port').value,
         auto_open=True  # keep us connected
     )
     client.lock = threading.Lock()
@@ -200,75 +202,67 @@ def main():
         try:
             write_registers(client, {mac400.MODE_REG: mac400.MODE.PASSIVE})
         except RuntimeError as err:
-            rospy.logerr('Motor did not acknowledge PASSIVE during shutdown: %s',
-                         err)
+            node.get_logger().error(
+                f'Motor did not acknowledge PASSIVE during shutdown: {err}')
 
-    if rospy.get_param('~stop_on_exit', True):
-        rospy.on_shutdown(stop_on_exit)
+    if node.declare_parameter('stop_on_exit', True).value:
+        cleanup.callback(stop_on_exit)
 
     # Create publishers for various message types
-    electrical_pub = rospy.Publisher(
-        '~electrical',
-        msg.Electrical,
-        queue_size=1
-    )
-    error_pub = rospy.Publisher(
-        '~error',
-        msg.Error,
-        queue_size=1
-    )
-    motion_pub = rospy.Publisher(
-        '~motion',
-        msg.Motion,
-        queue_size=1
-    )
+    electrical_pub = node.create_publisher(msg.Electrical, '~/electrical', 1)
+    error_pub = node.create_publisher(msg.Error, '~/error', 1)
+    motion_pub = node.create_publisher(msg.Motion, '~/motion', 1)
 
     # Create services
-    services = [
-        rospy.Service(
-            '~zero_position',
-            srv.ZeroCmd,
-            functools.partial(cmd_zero_position, client)
-        ),
-        rospy.Service(
-            '~set_position',
-            srv.SetPositionCmd,
-            functools.partial(cmd_set_position, client)
-        ),
-        rospy.Service(
-            '~set_position_envelope',
-            srv.SetPositionEnvelopeCmd,
-            functools.partial(cmd_set_position_envelope, client)
-        ),
-        rospy.Service(
-            '~set_velocity',
-            srv.SetVelocityCmd,
-            functools.partial(cmd_set_velocity, client)
-        ),
-        rospy.Service(
-            '~stop',
-            srv.StopCmd,
-            functools.partial(cmd_stop, client)
-        ),
-    ]
+    def create_service(kind, name, handler):
+        def handle(request, response):
+            try:
+                handler(client, request)
+                response.success = True
+            except Exception as err:
+                node.get_logger().error(f"Service handler for '{name}' raised: {err}")
+                response.message = str(err)
+            return response
+
+        node.create_service(kind, name, handle, callback_group=MutuallyExclusiveCallbackGroup())
+
+    create_service(srv.ZeroCmd, '~/zero_position', cmd_zero_position)
+    create_service(srv.SetPositionCmd, '~/set_position', cmd_set_position)
+    create_service(srv.SetPositionEnvelopeCmd, '~/set_position_envelope', cmd_set_position_envelope)
+    create_service(srv.SetVelocityCmd, '~/set_velocity', cmd_set_velocity)
+    create_service(srv.StopCmd, '~/stop', functools.partial(cmd_stop, node))
 
     # We only send our error status if one of the bits has changed
     last_error = None
 
+    def poll():
+        nonlocal last_error
+        last_error = publish_status(
+            node, client, electrical_pub, error_pub, motion_pub, last_error
+        )
+
+    # Poll immediately and keep clock and service callbacks available during I/O.
+    refresh_rate = declare_number(node, 'refresh_rate', 1)
+    polling = MutuallyExclusiveCallbackGroup()
+    node.create_guard_condition(poll, callback_group=polling).trigger()
+    node.create_timer(1 / refresh_rate, poll, callback_group=polling)
+
+
+def main():
+    # Initialize this node
+    rclpy.init()
+    node = rclpy.create_node(f'jvl_motor_{os.getpid()}_{random.getrandbits(32):08x}')
+    executor = MultiThreadedExecutor()
     try:
-        # Keep polling if ROS time moves backward during sleep
-        rate = rospy.Rate(rospy.get_param('~refresh_rate', 1), reset=True)  # hz
-        while not rospy.is_shutdown():
-            last_error = publish_status(
-                client, electrical_pub, error_pub, motion_pub, last_error
-            )
-            rate.sleep()
-    except rospy.ROSInterruptException:
-        if not rospy.is_shutdown():
-            raise
+        with contextlib.ExitStack() as cleanup:
+            configure_node(node, cleanup)
+            rclpy.spin(node, executor=executor)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
     finally:
-        for service in services:
-            service.shutdown('node shutting down')
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':
