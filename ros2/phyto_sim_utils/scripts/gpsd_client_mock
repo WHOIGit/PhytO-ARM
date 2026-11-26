@@ -4,17 +4,17 @@
 When gpsd is available, gps_sim.py can feed it simulated NMEA sentences
 so the production gpsd_client publishes the fixes.
 """
-import rospy
+import rclpy
 
 from gps_msgs.msg import GPSFix, GPSStatus
 from phyto_sim_utils.gps import receive_fixes
+from rclpy.executors import ExternalShutdownException
 from sensor_msgs.msg import NavSatFix
 
 
 def main():
-    rospy.init_node('gps')
-    fix_pub = rospy.Publisher('~fix', NavSatFix, queue_size=1)
-    extended_pub = rospy.Publisher('~extended_fix', GPSFix, queue_size=1)
+    rclpy.init()
+    node = rclpy.create_node('gps')
 
     def publish(fix):
         extended = GPSFix(header=fix.header, latitude=fix.latitude,
@@ -23,12 +23,21 @@ def main():
                           position_covariance_type=fix.position_covariance_type)
         extended.status = GPSStatus(header=fix.header, status=fix.status.status,
                                     position_source=GPSStatus.SOURCE_GPS)
-        extended.time = fix.header.stamp.to_sec()
+        extended.time = fix.header.stamp.sec + fix.header.stamp.nanosec / 1e9
         extended_pub.publish(extended)
         fix_pub.publish(fix)
 
-    receive_fixes(publish)
-    rospy.spin()
+    try:
+        fix_pub = node.create_publisher(NavSatFix, '~/fix', 1)
+        extended_pub = node.create_publisher(GPSFix, '~/extended_fix', 1)
+
+        receive_fixes(node, publish)
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':

@@ -22,9 +22,11 @@ install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
+  find_package(launch_testing_ament_cmake REQUIRED)
   ament_add_pytest_test(ctd_sim_tests test/ctd_sim_tests.py)
   ament_add_pytest_test(parameters_tests test/parameters_tests.py)
   ament_add_pytest_test(winch_drum_tests test/winch_drum_tests.py)
+  add_launch_test(test/gpsd_client_mock_test.py TIMEOUT 20)
 endif()
 
 ament_package()

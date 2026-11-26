@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-from datetime import datetime, timedelta, timezone
-from functools import reduce
-from operator import xor
 import socket
 import subprocess
 
 import rospy
 
+from datetime import datetime, timedelta, timezone
+from functools import reduce
+from operator import xor
+
 from phyto_sim_utils.gps import receive_fixes
+from rospy.impl.node import _get_node
 from sensor_msgs.msg import NavSatStatus
 
 
@@ -60,7 +62,7 @@ def main():
         with subprocess.Popen(['gpsd', '-N', '-n', '-b', '-S', str(port),
                                device]) as daemon:
             rospy.on_shutdown(daemon.terminate)
-            receive_fixes(on_fix)
+            receive_fixes(_get_node(), on_fix)
             daemon.wait()
             if not rospy.is_shutdown():
                 raise RuntimeError('gpsd exited while the simulator was active')
