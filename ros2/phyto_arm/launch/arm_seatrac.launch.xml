@@ -1,0 +1,35 @@
+<launch>
+    <!-- Most settings are in config.yaml, which is easier to edit. -->
+    <rosparam command="load" file="$(arg config_file)" />
+
+    <!-- NOTE: Requires wr2_asio, uncomment after switching to Humble
+    <group ns="seatrac">
+        <node name="comms" pkg="wr2_asio" type="adapter_node">
+            <remap from="ros_connection/transmit" to="~in" />
+            <remap from="ros_connection/receive" to="~out" />
+        </node>
+    </group>
+    -->
+
+    <node name="ifcb" pkg="ifcb" type="ifcb" />
+
+    <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
+
+    <!-- Match namespace from arm_ifcb.launch -->
+    <group ns="arm_ifcb">
+        <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
+
+        <!-- NOTE: Requires wr2_asio, uncomment after switching to Humble
+        <node name="ctd_comms" pkg="wr2_asio" type="adapter_node">
+            <remap from="ros_connection/transmit" to="~in" />
+        </node>
+        -->
+
+        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+            <!-- Remap uncommented when ctd_comms is enabled -->
+            <!-- <remap from="~in" to="ctd_comms/in" /> -->
+        </node>
+
+        <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
+    </group>
+</launch>

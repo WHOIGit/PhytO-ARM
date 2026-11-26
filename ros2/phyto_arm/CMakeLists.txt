@@ -22,6 +22,12 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# Install launch files
+install(DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+  FILES_MATCHING PATTERN "*.launch.xml" PATTERN "*.launch.py" PATTERN "*.params.yaml"
+)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   foreach(module arm_chanos arm_ifcb lock_manager network_data_capture)
