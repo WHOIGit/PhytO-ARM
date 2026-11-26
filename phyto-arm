@@ -82,6 +82,9 @@ def convert_to_ros2_params(config, launch_name=None):
 
     if launch_name in ('sim_arm_ifcb', 'sim_arm_chanos'):
         arm = launch_name[len('sim_'):]
+        motor_sim = (config.get(arm) or {}).get('mac400_sim')
+        if motor_sim:
+            params[f'/{arm}/mac400_sim'] = {'ros__parameters': flatten_dict(motor_sim)}
         ctd = (config.get(arm) or {}).get('ctd')
         if ctd:
             params[f'/{arm}/ctd_sim'] = {'ros__parameters': flatten_dict(ctd)}

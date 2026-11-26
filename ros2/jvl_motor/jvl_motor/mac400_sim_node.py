@@ -3,11 +3,15 @@ import socketserver
 import struct
 import threading
 
-import rospy
+import rclpy
 
 from jvl_motor import mac400
 from jvl_motor.mac400_model import MotorModel
 from pyModbusTCP import constants as modbus
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from rclpy.time import Time
 from rosgraph_msgs.msg import Clock
 from std_msgs.msg import Float64
 
@@ -45,7 +49,8 @@ WRITABLE = {
 
 # Serialize clock updates and complete Modbus transactions
 class MotorRegisters:
-    def __init__(self, model, use_sim_time=False):
+    def __init__(self, node, model, use_sim_time=False):
+        self.clock = node.get_clock()
         self.lock = threading.Lock()
         self.model = model
         self.use_sim_time = use_sim_time
@@ -59,20 +64,20 @@ class MotorRegisters:
 
         # Process clock rewinds even when there are no Modbus requests
         if use_sim_time:
-            rospy.Subscriber('/clock', Clock, self.on_clock)
+            node.create_subscription(Clock, '/clock', self.on_clock, qos_profile_sensor_data)
 
-            # Include any tick rospy received before our callback was attached
+            # Include any tick received before our callback was attached
             with self.lock:
-                self.model.advance(rospy.Time.now().to_nsec())
+                self.model.advance(self.clock.now().nanoseconds)
 
     def on_clock(self, message):
         with self.lock:
-            self.model.advance(message.clock.to_nsec())
+            self.model.advance(Time.from_msg(message.clock).nanoseconds)
 
     # In wall time, advance to the request before reading or applying a command
     def advance_for_request(self):
         if not self.use_sim_time:
-            self.model.advance(rospy.Time.now().to_nsec())
+            self.model.advance(self.clock.now().nanoseconds)
 
     def shaft_position(self):
         with self.lock:
@@ -184,30 +189,41 @@ class MotorServer(socketserver.ThreadingTCPServer):
     daemon_threads = True
 
 
-def main():
+def create_server(node: Node) -> MotorServer:
     # Read the endpoint and encoder configuration from the node's namespace
-    rospy.init_node('mac400_sim')
-    address = rospy.get_param('~address', '127.0.0.1')
-    counts_per_turn = rospy.get_param('~counts_per_turn', 8192)
-    port = rospy.get_param('~port', 1502)
+    address = node.declare_parameter('address', '127.0.0.1').value
+    counts_per_turn = node.declare_parameter('counts_per_turn', 8192).value
+    port = node.declare_parameter('port', 1502).value
 
     # Use the same clock source as the production driver
-    use_sim_time = rospy.get_param('/use_sim_time', False)
-    registers = MotorRegisters(MotorModel(counts_per_turn), use_sim_time)
+    use_sim_time = node.get_parameter('use_sim_time').value
+    registers = MotorRegisters(node, MotorModel(counts_per_turn), use_sim_time)
 
     # Publish mechanical travel even when the encoder has been re-zeroed
-    shaft = rospy.Publisher('~shaft_position', Float64, queue_size=1)
-    rospy.Timer(rospy.Duration(0.05),
-                lambda event: shaft.publish(registers.shaft_position()),
-                reset=True)
+    shaft = node.create_publisher(Float64, '~/shaft_position', 1)
+    node.create_timer(0.05, lambda: shaft.publish(Float64(data=registers.shaft_position())))
 
-    # A wall-time socket timeout allows shutdown while ROS time is paused
-    with MotorServer((address, port), ModbusConnection) as server:
-        server.registers = registers
-        server.timeout = 0.25
-        rospy.loginfo('MAC400 simulator listening on %s:%s', address, port)
-        while not rospy.is_shutdown():
-            server.handle_request()
+    server = MotorServer((address, port), ModbusConnection)
+    server.registers = registers
+    node.get_logger().info(f'MAC400 simulator listening on {address}:{port}')
+    return server
+
+
+def main():
+    rclpy.init()
+    node = rclpy.create_node('mac400_sim')
+    try:
+        with create_server(node) as server:
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                rclpy.spin(node)
+            finally:
+                server.shutdown()
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':

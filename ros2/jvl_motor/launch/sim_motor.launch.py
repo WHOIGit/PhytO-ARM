@@ -16,8 +16,7 @@ def launch_motor(context):
     wait = ExecutableInPackage(package='phyto_sim_utils', executable='wait_for_socket')
     return [
         Node(package='jvl_motor', executable='mac400_sim_node.py', name='mac400_sim',
-             parameters=params + [{prefix + 'mac400_sim.address': '127.0.0.1',
-                                   prefix + 'mac400_sim.port': port}],
+             parameters=params + [{'address': '127.0.0.1', 'port': port}],
              on_exit=[Shutdown(reason='MAC400 simulator exited')]),
         Node(package='jvl_motor', executable='jvl_motor_node.py', name='motor',
              prefix=[wait, ' ', port],
