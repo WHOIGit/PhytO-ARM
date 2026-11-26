@@ -28,9 +28,9 @@
         </node>
         <node if="$(var ifcb_winch)" name="profiler" pkg="phyto_arm" exec="profiler_node.py">
             <param from="$(var params_file)" />
-            <param name="arm_ifcb.ctd_topic" value="ctd/depth" />
-            <param name="arm_ifcb.profiler.data_topic" value="ctd/ctd" />
-            <param name="arm_ifcb.profiler.data_field" value="temperature" />
+            <param name="ctd_topic" value="ctd/depth" />
+            <param name="data_topic" value="ctd/ctd" />
+            <param name="data_field" value="temperature" />
         </node>
     </group>
 </launch>

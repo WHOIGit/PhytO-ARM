@@ -121,6 +121,10 @@ def convert_to_ros2_params(config, launch_name=None):
             params[f'/{arm}/arm'] = {'ros__parameters': arm_params}
 
     # Native nodes read parameters relative to their own node name.
+    ifcb_arm = config.get('arm_ifcb') or {}
+    profiler = dict(ifcb_arm.get('profiler') or {})
+    if ifcb_arm.get('ctd_topic') is not None:
+        profiler['ctd_topic'] = ifcb_arm['ctd_topic']
     seatrac = config.get('seatrac') or {}
     outlets = seatrac.get('outlets') or []
     if outlets:
@@ -133,6 +137,7 @@ def convert_to_ros2_params(config, launch_name=None):
     for node, settings in (
         ('/arm_chanos/motor', (config.get('arm_chanos') or {}).get('motor')),
         ('/arm_ifcb/motor', (config.get('arm_ifcb') or {}).get('motor')),
+        ('/arm_ifcb/profiler', profiler),
         ('/digital_logger', config.get('digital_logger')),
         ('/ifcb', config.get('ifcb')),
         ('/lock_manager', config.get('lock_manager')),
