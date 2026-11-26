@@ -225,6 +225,15 @@ RUN bash -c " \
     cd /app/ros2 && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select rospy_too"
 
+FROM with-sources AS build-seatrac
+COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+RUN bash -c " \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source /app/ros2/install/setup.bash && \
+    cd /app/ros2 && \
+    colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select seatrac"
+
 FROM with-sources AS build-wr2_base
 COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
 COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
@@ -345,6 +354,7 @@ COPY --from=build-rbr_maestro3_ctd /app/ros2/install/rbr_maestro3_ctd /app/ros2/
 COPY --from=build-rbr_maestro3_ctd_msgs /app/ros2/install/rbr_maestro3_ctd_msgs /app/ros2/install/rbr_maestro3_ctd_msgs
 COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
 COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
+COPY --from=build-seatrac /app/ros2/install/seatrac /app/ros2/install/seatrac
 COPY --from=build-wr2_asio /app/ros2/install/wr2_asio /app/ros2/install/wr2_asio
 COPY --from=build-wr2_base /app/ros2/install/wr2_base /app/ros2/install/wr2_base
 COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs

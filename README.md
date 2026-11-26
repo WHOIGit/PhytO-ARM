@@ -172,6 +172,12 @@ To launch all three simultaneously as separate panes in a tmux session, run the 
 
 PhytO-ARM can run with simulated hardware. To run automatic IFCB casts or operate the winch in Gazebo, follow the [simulation guide](SIMULATION.md). In an existing deployment container, use `sim_arm_ifcb` or `sim_arm_chanos` as the launch name in the `phyto-arm start` commands above.
 
+### SeaTrac
+
+The SeaTrac arm uses the native ROS 2 `seatrac_node`. Its UDP adapter publishes inbound vessel data to `/seatrac/comms/in` and subscribes to outbound data on `/seatrac/comms/out`. The Starlink manager reads power and outlet telemetry from the driver. Set the UDP ports, destination address and Starlink outlet number under `seatrac` in the deployment YAML.
+
+In a sourced deployment workspace, use `./phyto-arm start seatrac configs/example.yaml` to start just SeaTrac and the Starlink manager, or select `arm_seatrac` to include the IFCB arm. Supply the deployment's actual configuration file when connecting to the vessel.
+
 ### Unit tests
 
 From the root of a built ROS 2 workspace:

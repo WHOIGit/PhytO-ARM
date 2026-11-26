@@ -22,3 +22,8 @@
     local-name: foxglove_schemas
     uri: https://github.com/foxglove/schemas.git
     version: 3bac3cab1aad594eeb8404ea0338e7eaedfb0a22
+
+- git:
+    local-name: seatrac
+    uri: https://github.com/WHOIGit/seatrac-api.git
+    version: 6903f98628b278fb036cd93bd8922f7f142c0149

@@ -2,14 +2,9 @@
     <arg name="params_file" />
     <arg name="ifcb_winch" default="false" />
 
-    <group>
-        <push-ros-namespace namespace="seatrac" />
-        <node name="comms" pkg="wr2_asio" exec="adapter_node">
-            <param from="$(var params_file)" />
-            <remap from="ros_connection/receive" to="~/in" />
-            <remap from="ros_connection/transmit" to="~/out" />
-        </node>
-    </group>
+    <include file="$(find-pkg-share phyto_arm)/launch/seatrac.launch.xml">
+        <arg name="params_file" value="$(var params_file)" />
+    </include>
 
     <node name="ifcb" pkg="ifcb" exec="ifcb">
         <param from="$(var params_file)" />

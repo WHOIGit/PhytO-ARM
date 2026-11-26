@@ -1,0 +1,19 @@
+<launch>
+    <arg name="params_file" />
+
+    <node pkg="seatrac" exec="seatrac_node" name="seatrac">
+        <param from="$(var params_file)" />
+        <remap from="~/in" to="~/comms/in" />
+        <remap from="~/out" to="~/comms/out" />
+    </node>
+
+    <node pkg="wr2_asio" exec="adapter_node" name="comms" namespace="seatrac">
+        <param from="$(var params_file)" />
+        <remap from="ros_connection/transmit" to="~/in" />
+        <remap from="ros_connection/receive" to="~/out" />
+    </node>
+
+    <node pkg="phyto_arm" exec="seatrac_starlink_manager.py" name="seatrac_starlink_manager">
+        <param from="$(var params_file)" />
+    </node>
+</launch>

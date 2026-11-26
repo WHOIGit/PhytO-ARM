@@ -79,9 +79,20 @@ def convert_to_ros2_params(config):
                 filtered_params[k] = v
 
     params = {'/**': {'ros__parameters': filtered_params}}
-    settings = (config.get('arm_ifcb') or {}).get('ctd_comms')
-    if settings:
-        params['/arm_ifcb/ctd_comms'] = {'ros__parameters': flatten_dict(settings)}
+
+    # Native nodes read parameters relative to their own node name.
+    seatrac = config.get('seatrac') or {}
+    outlets = seatrac.get('outlets') or []
+    if outlets:
+        params['/seatrac'] = {'ros__parameters': {
+            'outlets.' + outlet['name']: outlet['outlet'] for outlet in outlets
+        }}
+    for node, settings in (
+        ('/seatrac/comms', seatrac.get('comms')),
+        ('/arm_ifcb/ctd_comms', (config.get('arm_ifcb') or {}).get('ctd_comms')),
+    ):
+        if settings:
+            params[node] = {'ros__parameters': flatten_dict(settings)}
     return params
 
 

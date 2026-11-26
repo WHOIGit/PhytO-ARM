@@ -30,7 +30,8 @@ install(DIRECTORY launch/
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
-  foreach(module arm_chanos arm_ifcb lock_manager network_data_capture)
+  foreach(module arm_chanos arm_ifcb lock_manager network_data_capture
+                 seatrac_starlink_manager)
     ament_add_pytest_test(${module}_tests tests/${module}_tests.py)
   endforeach()
 endif()

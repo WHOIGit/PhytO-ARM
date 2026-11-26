@@ -44,6 +44,7 @@
     <exec_depend>python3-numpy</exec_depend>
 
     <exec_depend>gpsd_client</exec_depend>
+    <exec_depend>seatrac</exec_depend>
 
     <exec_depend>rosbridge_suite</exec_depend>
 
