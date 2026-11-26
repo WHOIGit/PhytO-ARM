@@ -102,6 +102,12 @@ def convert_to_ros2_params(config, launch_name=None):
         if ctd.get('channels') is not None:
             params['/arm_chanos/ctd'] = {'ros__parameters': {'channels': ctd['channels']}}
 
+    for arm in ('arm_chanos', 'arm_ifcb'):
+        settings = config.get(arm) or {}
+        base = {key: settings[key] for key in ('geofence', 'winch', 'winch_enabled') if key in settings}
+        if base:
+            params[f'/{arm}/arm'] = {'ros__parameters': flatten_dict(base)}
+
     # Native nodes read parameters relative to their own node name.
     seatrac = config.get('seatrac') or {}
     outlets = seatrac.get('outlets') or []

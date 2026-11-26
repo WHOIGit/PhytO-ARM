@@ -22,6 +22,7 @@
         <node name="arm" pkg="phyto_arm" exec="arm_ifcb.py">
             <param from="$(var params_file)" />
             <param name="arm_ifcb.winch_enabled" value="$(var ifcb_winch)" />
+            <param name="winch_enabled" value="$(var ifcb_winch)" />
         </node>
         <node if="$(var mock_ifcb)" name="ifcb_runner" pkg="phyto_arm" exec="ifcb_runner.py">
             <param from="$(var params_file)" />

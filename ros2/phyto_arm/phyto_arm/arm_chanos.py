@@ -4,6 +4,7 @@ import rospy
 
 from phyto_arm.arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile
+from rospy.impl.node import _get_node
 
 
 class ArmChanos(ArmBase):
@@ -183,7 +184,7 @@ def main():
     winch_name = None
     if rospy.get_param('winch_enabled') is True:
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
-    arm = ArmChanos(rospy.get_name(), winch_name)
+    arm = ArmChanos(_get_node(), winch_name)
 
     # Subscribe to profiler messages that follow each transit
     rospy.Subscriber('/arm_ifcb/profiler', DepthProfile, on_profile_msg)

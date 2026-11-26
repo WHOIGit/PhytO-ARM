@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 import math
 
-from datetime import datetime, timedelta
-from threading import Event
-
 import actionlib
 import numpy as np
 import rospy
 
+from datetime import datetime, timedelta
+from threading import Event
+
 from phyto_arm.arm_base import ArmBase, Task
 from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
+from rospy.impl.node import _get_node
 from std_msgs.msg import Bool
 
 
@@ -272,7 +273,7 @@ def main():
     winch_name = None
     if rospy.get_param('winch_enabled', False):
         winch_name = rospy.get_namespace() + 'winch/move_to_depth'
-    arm = ArmIFCB(rospy.get_name(), winch_name)
+    arm = ArmIFCB(_get_node(), winch_name)
 
     # Subscribe to profiler messages that follow each transit
     rospy.Subscriber('profiler', DepthProfile, on_profile_msg)
