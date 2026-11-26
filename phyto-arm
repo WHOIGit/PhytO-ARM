@@ -21,7 +21,7 @@ import urllib.request
 import yaml
 
 
-def flatten_value(value, parent_key='', sep='.'):
+def flatten_value(value, parent_key='', sep='.', *, keep_empty_lists=False):
     """Flatten a nested value (dict or list) using dot-separated keys.
 
     Lists are flattened using integer indices (e.g., outlets.0.name).
@@ -31,19 +31,19 @@ def flatten_value(value, parent_key='', sep='.'):
     if isinstance(value, dict):
         for k, v in value.items():
             new_key = f"{parent_key}{sep}{k}" if parent_key else k
-            items.extend(flatten_value(v, new_key, sep))
-    elif isinstance(value, list):
+            items.extend(flatten_value(v, new_key, sep, keep_empty_lists=keep_empty_lists))
+    elif isinstance(value, list) and (value or not keep_empty_lists):
         for i, item in enumerate(value):
             new_key = f"{parent_key}{sep}{i}" if parent_key else str(i)
-            items.extend(flatten_value(item, new_key, sep))
+            items.extend(flatten_value(item, new_key, sep, keep_empty_lists=keep_empty_lists))
     else:
         items.append((parent_key, value))
     return items
 
 
-def flatten_dict(d, parent_key='', sep='.'):
+def flatten_dict(d, parent_key='', sep='.', *, keep_empty_lists=False):
     """Flatten a nested dictionary using dot-separated keys."""
-    return dict(flatten_value(d, parent_key, sep))
+    return dict(flatten_value(d, parent_key, sep, keep_empty_lists=keep_empty_lists))
 
 
 def convert_to_ros2_params(config, launch_name=None):
@@ -116,10 +116,13 @@ def convert_to_ros2_params(config, launch_name=None):
         ('/lock_manager', config.get('lock_manager')),
         ('/network_data_capture', config.get('network_data_capture')),
         ('/seatrac/comms', seatrac.get('comms')),
+        ('/web', config.get('web')),
         ('/arm_ifcb/ctd_comms', (config.get('arm_ifcb') or {}).get('ctd_comms')),
     ):
         if settings:
-            params[node] = {'ros__parameters': flatten_dict(settings)}
+            params[node] = {
+                'ros__parameters': flatten_dict(settings, keep_empty_lists=(node == '/web'))
+            }
     return params
 
 

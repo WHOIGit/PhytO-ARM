@@ -50,6 +50,7 @@
     <exec_depend>seatrac</exec_depend>
 
     <exec_depend>rosbridge_suite</exec_depend>
+    <exec_depend>rosidl_runtime_py</exec_depend>
 
     <exec_depend>gscam</exec_depend>
     <exec_depend>image_transport</exec_depend>

@@ -19,6 +19,11 @@ class TestParameterDeclarations(unittest.TestCase):
         self.addCleanup(node.destroy_node)
         return node
 
+    def test_empty_web_default(self):
+        node = self.node_with(**{'field_map.sample.default': None})
+        declare_matching_parameters(node, r'field_map\.[^.]+\.default')
+        self.assertEqual(node.get_parameter('field_map.sample.default').value, [])
+
     def test_numeric_defaults_and_overrides(self):
         node = self.node_with(gear_ratio=60, depth=1.5, invalid='60')
         self.assertEqual(declare_number(node, 'gear_ratio', 60.0), 60)
