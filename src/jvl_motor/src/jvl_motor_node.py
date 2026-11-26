@@ -55,6 +55,9 @@ def write_registers(client, reg_values):
         encoded.extend(r.encode(v))
 
     with client.lock:
+        if not client.accept_commands:
+            if reg_values.get(mac400.MODE_REG) != mac400.MODE.PASSIVE:
+                raise RuntimeError('Motor driver is shutting down')
         min_addr = list(reg_values.keys())[0].addr[0]
         success = client.write_multiple_registers(min_addr, encoded)
 
@@ -188,6 +191,19 @@ def main():
         auto_open=True  # keep us connected
     )
     client.lock = threading.Lock()
+    client.accept_commands = True
+
+    def stop_on_exit():
+        # An in-flight write finishes under the lock before this final stop
+        client.accept_commands = False
+        try:
+            write_registers(client, {mac400.MODE_REG: mac400.MODE.PASSIVE})
+        except RuntimeError as err:
+            rospy.logerr('Motor did not acknowledge PASSIVE during shutdown: %s',
+                         err)
+
+    if rospy.get_param('~stop_on_exit', True):
+        rospy.on_shutdown(stop_on_exit)
 
     # Create publishers for various message types
     electrical_pub = rospy.Publisher(
