@@ -1,5 +1,4 @@
 #!/bin/sh
 
-# Noetic's gazebo_ros client can keep running after its window closes.
-# Run gzclient directly so roslaunch sees it exit and stops the winch.
+# Run gzclient directly so closing the window stops the ROS 2 launch.
 exec gzclient

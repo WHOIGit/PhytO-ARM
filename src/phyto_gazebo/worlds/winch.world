@@ -1,6 +1,16 @@
 <?xml version="1.0"?>
 <sdf version="1.6">
   <world name="default">
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>41.524</latitude_deg>
+      <longitude_deg>-70.672</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+    <plugin name="gazebo_state" filename="libgazebo_ros_state.so">
+      <ros><namespace>/gazebo</namespace></ros>
+    </plugin>
     <gravity>0 0 -9.81</gravity>
     <physics name="ode" type="ode">
       <max_step_size>0.002</max_step_size>
@@ -29,17 +39,18 @@
     <!-- The fixed barge keeps the line geometry independent of sea state -->
     <model name="barge">
       <static>true</static>
-      <plugin name="gps" filename="libhector_gazebo_ros_gps.so">
-        <bodyName>structure</bodyName>
-        <frameId>barge</frameId>
-        <topicName>/sim/gps</topicName>
-        <velocityTopicName>/sim/gps_velocity</velocityTopicName>
-        <referenceLatitude>41.524</referenceLatitude>
-        <referenceLongitude>-70.672</referenceLongitude>
-        <referenceHeading>90</referenceHeading>
-        <updateRate>1</updateRate>
-      </plugin>
       <link name="structure">
+        <sensor name="gps" type="gps">
+          <always_on>true</always_on>
+          <update_rate>1</update_rate>
+          <plugin name="gps_sensor" filename="libgazebo_ros_gps_sensor.so">
+            <ros>
+              <remapping>~/out:=/sim/gps</remapping>
+              <remapping>~/vel:=/sim/gps_velocity</remapping>
+            </ros>
+            <frame_name>barge</frame_name>
+          </plugin>
+        </sensor>
         <collision name="hull">
           <pose>-2.13 0 0 0 0 0</pose>
           <geometry><box><size>2.86 1.55 0.6</size></box></geometry>

@@ -1,35 +1,27 @@
 cmake_minimum_required(VERSION 3.10)
 project(phyto_gazebo)
 
-find_package(catkin REQUIRED COMPONENTS geometry_msgs roscpp std_msgs)
-find_package(gazebo REQUIRED)
+find_package(ament_cmake REQUIRED)
+find_package(gazebo_dev REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 
-catkin_package()
-link_directories(${GAZEBO_LIBRARY_DIRS})
+link_directories(${gazebo_dev_LIBRARY_DIRS})
 add_library(phyto_tether SHARED plugins/tether.cpp)
 target_compile_features(phyto_tether PRIVATE cxx_std_17)
-target_include_directories(phyto_tether SYSTEM PRIVATE
-  ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
-target_link_libraries(phyto_tether ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
+ament_target_dependencies(phyto_tether gazebo_dev geometry_msgs rclcpp std_msgs)
 
-install(PROGRAMS scripts/view_winch
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-install(TARGETS phyto_tether
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
-install(DIRECTORY launch worlds DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(PROGRAMS scripts/view_winch DESTINATION lib/${PROJECT_NAME})
+install(TARGETS phyto_tether LIBRARY DESTINATION lib)
+install(DIRECTORY launch worlds DESTINATION share/${PROJECT_NAME})
 
-if(CATKIN_ENABLE_TESTING)
-  find_package(aml_ctd REQUIRED)
-  find_package(dli_power_switch REQUIRED)
-  find_package(ds_sensor_msgs REQUIRED)
-  find_package(ifcb REQUIRED)
-  find_package(jvl_motor REQUIRED)
-  find_package(phyto_arm REQUIRED)
-  find_package(rostest REQUIRED)
-  add_rostest(test/ifcb_mock.test DEPENDENCIES
-    ${ifcb_EXPORTED_TARGETS} ${phyto_arm_EXPORTED_TARGETS})
-  add_rostest(test/gazebo_winch.test DEPENDENCIES phyto_tether
-    ${aml_ctd_EXPORTED_TARGETS} ${dli_power_switch_EXPORTED_TARGETS}
-    ${ds_sensor_msgs_EXPORTED_TARGETS} ${jvl_motor_EXPORTED_TARGETS}
-    ${phyto_arm_EXPORTED_TARGETS})
+if(BUILD_TESTING)
+  find_package(launch_testing_ament_cmake REQUIRED)
+  add_launch_test(test/ifcb_mock_test.py TIMEOUT 45
+    APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/test)
+  add_launch_test(test/gazebo_winch_test.py TIMEOUT 240
+    APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
+
+ament_package()

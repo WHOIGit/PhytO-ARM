@@ -1,65 +1,90 @@
 #!/usr/bin/env python3
 import json
 import threading
-import time
-import unittest
 
-import actionlib
-import rospy
-import rostest
+from pathlib import Path
 
-from actionlib_msgs.msg import GoalStatus
-from ds_core_msgs.msg import RawData
+from action_msgs.msg import GoalStatus
+from ament_index_python.packages import get_package_share_directory
+from ifcb.instrumentation import parse_marker
+from ifcb_msgs.srv import Command, RunRoutine
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
+from launch_testing.actions import ReadyToTest
+from phyto_arm_msgs.action import RunIFCB
+from rclpy.action import ActionClient
+from rclpy.qos import DurabilityPolicy, QoSProfile
+from ros_test import RosTest
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Bool
-
-from ifcb.instrumentation import parse_marker
-from ifcb.srv import Command, RunRoutine
-from phyto_arm.msg import RunIFCBAction, RunIFCBGoal
+from wr2_msgs.msg import RawData
 
 
-class TestIFCBMock(unittest.TestCase):
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+
+
+def generate_test_description():
+    launch = Path(get_package_share_directory('ifcb')) / 'launch' / 'ifcb_mock.launch.py'
+    return LaunchDescription([
+        IncludeLaunchDescription(PythonLaunchDescriptionSource(str(launch))),
+        Node(package='phyto_arm', executable='ifcb_runner.py', name='ifcb_runner',
+             namespace='arm_ifcb', parameters=[{
+                 'arm_ifcb.ifcb_maintenance.bead_interval': 0,
+                 'arm_ifcb.ifcb_maintenance.cartridge_debubble_interval': 0,
+                 'arm_ifcb.ifcb_maintenance.clean_interval': 0,
+                 'arm_ifcb.ifcb_maintenance.flush_after_sample': False,
+             }]),
+        ReadyToTest(),
+    ])
+
+
+class TestIFCBMock(RosTest):
+    def setUp(self):
+        super().setUp()
+        self.command_client = self.node.create_client(Command, '/ifcb/command')
+
+    def command(self, command):
+        return self.call(self.command_client, Command.Request(command=command))
+
     def test_late_subscriber(self):
         topic = '/ifcb/is_routine_running'
-        self.assertFalse(rospy.wait_for_message(topic, Bool, timeout=5).data)
-        command = rospy.ServiceProxy('/ifcb/command', Command)
-        command.wait_for_service(timeout=5)
+        self.assertFalse(self.wait_for_message(topic, Bool, timeout=5, qos=LATCHED).data)
         report = threading.Event()
 
         def on_input(msg):
-            if (msg.data == b'reportevent:waiting' and
-                    msg._connection_header['latching'] == '0'):
+            if bytes(msg.data) == b'reportevent:waiting':
                 report.set()
 
-        rx = rospy.Subscriber('/ifcb/in', RawData, on_input)
-        self.addCleanup(rx.unregister)
-        deadline = time.monotonic() + 3
-        while not rx.get_num_connections() and time.monotonic() < deadline:
-            rospy.sleep(0.01)
-        self.assertTrue(rx.get_num_connections())
+        self.node.create_subscription(RawData, '/ifcb/in', on_input, 10)
+        self.assertTrue(self.wait_until(lambda: self.node.count_publishers('/ifcb/in'), 3))
+        publishers = self.node.get_publishers_info_by_topic('/ifcb/in')
+        self.assertTrue(publishers)
+        self.assertTrue(all(p.qos_profile.durability == DurabilityPolicy.VOLATILE
+                            for p in publishers))
         routine = [{'Type': 'Sequence', 'Steps': [
             {'StepType': 'Report', 'Arguments': ['waiting']},
             {'StepType': 'Wait', 'Arguments': [60000]},
         ]}]
-        loaded = command('interactive:load:' + json.dumps(routine))
+        loaded = self.command('interactive:load:' + json.dumps(routine))
         self.assertTrue(loaded.success)
         try:
-            self.assertTrue(command('interactive:start').success)
-            self.assertTrue(report.wait(3))
-            self.assertTrue(rospy.wait_for_message(topic, Bool, timeout=3).data)
-            self.assertFalse(command('interactive:load:[]').success)
-            self.assertFalse(command('interactive:start').success)
-            self.assertTrue(command('daq:setdatafolder:/sim').success)
+            self.assertTrue(self.command('interactive:start').success)
+            self.assertTrue(self.wait_until(report.is_set, 3))
+            self.assertTrue(self.wait_for_message(topic, Bool, timeout=3, qos=LATCHED).data)
+            self.assertFalse(self.command('interactive:load:[]').success)
+            self.assertFalse(self.command('interactive:start').success)
+            self.assertTrue(self.command('daq:setdatafolder:/sim').success)
         finally:
-            self.assertTrue(command('interactive:stop').success)
+            self.assertTrue(self.command('interactive:stop').success)
 
     def test_sampling(self):
-        ready = rospy.wait_for_message('/ifcb/connected', Bool, timeout=5)
+        ready = self.wait_for_message('/ifcb/connected', Bool, timeout=5, qos=LATCHED)
         self.assertTrue(ready.data)
-        routine = rospy.ServiceProxy('/ifcb/routine', RunRoutine)
-        self.assertFalse(routine(routine='missing').success)
-        command = rospy.ServiceProxy('/ifcb/command', Command)
-        self.assertTrue(command('daq:setdatafolder:/sim').success)
+        routine = self.node.create_client(RunRoutine, '/ifcb/routine')
+        self.assertFalse(self.call(routine, RunRoutine.Request(routine='missing')).success)
+        self.assertTrue(self.command('daq:setdatafolder:/sim').success)
 
         # Track the release marker and the later end of the same sample
         release = threading.Event()
@@ -67,7 +92,7 @@ class TestIFCBMock(unittest.TestCase):
         image = threading.Event()
 
         def on_input(msg):
-            text = msg.data.decode()
+            text = bytes(msg.data).decode()
             if text.startswith('reportevent:'):
                 marker = parse_marker(text.split(':', 1)[1])
                 if (marker and marker['routine'] == 'runsample' and
@@ -77,24 +102,17 @@ class TestIFCBMock(unittest.TestCase):
             if release.is_set() and text == 'valuechanged:interactive:stopped':
                 stopped.set()
 
-        rx = rospy.Subscriber('/ifcb/in', RawData, on_input)
-        roi = rospy.Subscriber('/ifcb/roi/image/compressed', CompressedImage,
-                               lambda msg: image.set() if msg.format == 'png'
-                               else None)
-        self.addCleanup(rx.unregister)
-        self.addCleanup(roi.unregister)
-        client = actionlib.SimpleActionClient('/arm_ifcb/ifcb_runner/sample',
-                                              RunIFCBAction)
-        self.assertTrue(client.wait_for_server(rospy.Duration(8)))
-        client.send_goal(RunIFCBGoal())
-        self.assertTrue(client.wait_for_result(rospy.Duration(12)))
-        self.assertEqual(client.get_state(), GoalStatus.SUCCEEDED)
-        self.assertTrue(release.wait(1))
+        self.node.create_subscription(RawData, '/ifcb/in', on_input, 10)
+        self.node.create_subscription(CompressedImage, '/ifcb/roi/image/compressed',
+                                      lambda msg: image.set() if msg.format == 'png' else None, 10)
+        client = ActionClient(self.node, RunIFCB, '/arm_ifcb/ifcb_runner/sample')
+        self.addCleanup(client.destroy)
+        self.assertTrue(client.wait_for_server(timeout_sec=8))
+        goal = self.result(client.send_goal_async(RunIFCB.Goal()), 8)
+        self.assertTrue(goal.accepted)
+        result = self.result(goal.get_result_async(), 12)
+        self.assertEqual(result.status, GoalStatus.STATUS_SUCCEEDED)
+        self.assertTrue(self.wait_until(release.is_set, 1))
         self.assertFalse(stopped.is_set())
-        self.assertTrue(image.wait(4))
-        self.assertTrue(stopped.wait(4))
-
-
-if __name__ == '__main__':
-    rospy.init_node('ifcb_mock_test')
-    rostest.rosrun('phyto_gazebo', 'ifcb_mock', TestIFCBMock)
+        self.assertTrue(self.wait_until(image.is_set, 4))
+        self.assertTrue(self.wait_until(stopped.is_set, 4))

@@ -11,10 +11,9 @@
 #include <gazebo/msgs/msgs.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/transport/transport.hh>
-#include <geometry_msgs/PointStamped.h>
-#include <ros/callback_queue.h>
-#include <ros/ros.h>
-#include <std_msgs/Float64.h>
+#include <geometry_msgs/msg/point_stamped.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/float64.hpp>
 
 namespace gazebo
 {
@@ -27,7 +26,7 @@ class Tether : public ModelPlugin
     // The probe collision locates the CTD within the moving payload
     body = model->GetLink("body");
     const auto probe = body ? body->GetCollision("probe") : nullptr;
-    if (!probe || !ros::isInitialized())
+    if (!probe || !rclcpp::ok())
     {
       gzerr << "The tether needs the payload, CTD probe and gazebo_ros\n";
       return;
@@ -49,10 +48,20 @@ class Tether : public ModelPlugin
     displacedMass = sdf->Get<double>("displaced_mass");
 
     // Consume length commands on the physics thread at the start of each step
-    node = std::make_unique<ros::NodeHandle>();
-    node->setCallbackQueue(&queue);
-    lineSub = node->subscribe("sim/line_length", 1, &Tether::SetLength, this);
-    ctdPub = node->advertise<geometry_msgs::PointStamped>(
+    node = std::make_shared<rclcpp::Node>("winch_tether");
+    executor = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
+    executor->add_node(node);
+    lineSub = node->create_subscription<std_msgs::msg::Float64>(
+        "sim/line_length", 1, std::bind(&Tether::SetLength, this, std::placeholders::_1));
+
+    // Recover the last drum position if it was published before the world loaded.
+    initialLineSub = node->create_subscription<std_msgs::msg::Float64>(
+        "sim/line_length", rclcpp::QoS(1).transient_local(),
+        [this](std_msgs::msg::Float64::ConstSharedPtr msg) {
+          if (initialLineSub)
+            SetLength(msg);
+        });
+    ctdPub = node->create_publisher<geometry_msgs::msg::PointStamped>(
         "sim/ctd_position", 1);
 
     // Gazebo clients receive drum and line geometry over the visual topic
@@ -63,15 +72,18 @@ class Tether : public ModelPlugin
         std::bind(&Tether::Step, this, std::placeholders::_1));
   }
 
-  private: void SetLength(const std_msgs::Float64ConstPtr &msg)
+  private: void SetLength(std_msgs::msg::Float64::ConstSharedPtr msg)
   {
     if (std::isfinite(msg->data) && msg->data >= 0)
+    {
+      initialLineSub.reset();
       length = msg->data;
+    }
   }
 
   private: void Step(const common::UpdateInfo &info)
   {
-    queue.callAvailable(ros::WallDuration(0));
+    executor->spin_some();
     const auto pose = body->WorldPose();
     const auto liftingEye = pose.Pos() + pose.Rot().RotateVector(eye);
     const auto span = liftingEye - anchor;
@@ -100,14 +112,14 @@ class Tether : public ModelPlugin
     // Sample the probe at 10 Hz and draw the line at 25 Hz in simulated time
     if (Due(info.simTime, lastSample, 0.1))
     {
-      geometry_msgs::PointStamped sample;
-      sample.header.stamp = ros::Time(info.simTime.sec, info.simTime.nsec);
+      geometry_msgs::msg::PointStamped sample;
+      sample.header.stamp = rclcpp::Time(info.simTime.sec, info.simTime.nsec);
       sample.header.frame_id = "world";
       const auto probe = pose.Pos() + pose.Rot().RotateVector(probeOffset);
       sample.point.x = probe.X();
       sample.point.y = probe.Y();
       sample.point.z = probe.Z();
-      ctdPub.publish(sample);
+      ctdPub->publish(sample);
       lastSample = info.simTime;
     }
 
@@ -201,10 +213,10 @@ class Tether : public ModelPlugin
   private: double circumference, damping, displacedMass, initialLength;
   private: double length, stiffness;
   private: common::Time lastSample, lastVisual;
-  private: ros::CallbackQueue queue;
-  private: std::unique_ptr<ros::NodeHandle> node;
-  private: ros::Subscriber lineSub;
-  private: ros::Publisher ctdPub;
+  private: rclcpp::Node::SharedPtr node;
+  private: std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor;
+  private: rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr lineSub, initialLineSub;
+  private: rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr ctdPub;
   private: transport::NodePtr transport;
   private: transport::PublisherPtr visualPub;
   private: event::ConnectionPtr update;
