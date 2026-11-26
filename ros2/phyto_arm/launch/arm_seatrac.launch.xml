@@ -1,31 +1,45 @@
 <launch>
-    <!-- Most settings are in config.yaml, which is easier to edit. -->
-    <rosparam command="load" file="$(arg config_file)" />
+    <arg name="params_file" />
+    <arg name="ifcb_winch" default="false" />
 
-    <group ns="seatrac">
-        <node name="comms" pkg="wr2_asio" type="adapter_node">
+    <group>
+        <push-ros-namespace namespace="seatrac" />
+        <node name="comms" pkg="wr2_asio" exec="adapter_node">
+            <param from="$(var params_file)" />
             <remap from="ros_connection/receive" to="~/in" />
             <remap from="ros_connection/transmit" to="~/out" />
         </node>
     </group>
 
-    <node name="ifcb" pkg="ifcb" type="ifcb" />
+    <node name="ifcb" pkg="ifcb" exec="ifcb">
+        <param from="$(var params_file)" />
+    </node>
 
-    <node name="ifcb_logfilter" pkg="ifcb" type="ifcb_logfilter" />
+    <node name="ifcb_logfilter" pkg="ifcb" exec="ifcb_logfilter">
+        <param from="$(var params_file)" />
+    </node>
 
     <!-- Match namespace from arm_ifcb.launch -->
-    <group ns="arm_ifcb">
-        <node name="arm" pkg="phyto_arm" type="arm_ifcb.py" />
+    <group>
+        <push-ros-namespace namespace="arm_ifcb" />
+        <node name="arm" pkg="phyto_arm" exec="arm_ifcb.py">
+            <param from="$(var params_file)" />
+            <param name="arm_ifcb.winch_enabled" value="$(var ifcb_winch)" />
+        </node>
 
-        <node name="ctd_comms" pkg="wr2_asio" type="adapter_node">
+        <node name="ctd_comms" pkg="wr2_asio" exec="adapter_node">
+            <param from="$(var params_file)" />
             <remap from="ros_connection/receive" to="~/out" />
             <remap from="ros_connection/transmit" to="~/in" />
         </node>
 
-        <node name="ctd" pkg="aml_ctd" type="aml_ctd_node.py">
+        <node name="ctd" pkg="aml_ctd" exec="aml_ctd_node.py">
+            <param from="$(var params_file)" />
             <remap from="~/in" to="ctd_comms/in" />
         </node>
 
-        <node name="ifcb_runner" pkg="phyto_arm" type="ifcb_runner.py" />
+        <node name="ifcb_runner" pkg="phyto_arm" exec="ifcb_runner.py">
+            <param from="$(var params_file)" />
+        </node>
     </group>
 </launch>
