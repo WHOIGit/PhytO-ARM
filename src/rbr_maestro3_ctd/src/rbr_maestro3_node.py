@@ -59,7 +59,10 @@ async def main():
     
     # Check a few channel types we are inflexible about
     has_depth = False
+    conductivity_scale = 1.0
     for c, u in channels:
+        if c.lower() == 'conductivity':
+            conductivity_scale = {'mS/cm': 0.1, 'S/m': 1.0}[u]  # Ctd uses S/m
         if c.lower() == 'depth':
             has_depth = True
             assert u == 'm'
@@ -113,7 +116,7 @@ async def main():
 
         # Construct the Ctd message
         ctd = Ctd()
-        ctd.conductivity = values.get('conductivity', math.nan)
+        ctd.conductivity = values.get('conductivity', math.nan) * conductivity_scale
         ctd.temperature = values.get('temperature', math.nan)
         ctd.pressure = values.get('pressure', math.nan)
 
