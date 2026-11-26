@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="rbr_maestro3_ctd" type="rbr_sim.py" name="rbr_sim" required="true" />
+    <node pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py" name="ctd">
+        <remap from="~in" to="sim/rbr" />
+        <rosparam param="channels">["conductivity(mS/cm)", "temperature(C)", "pressure(dbar)", "depth(m)"]</rosparam>
+        <remap from="~" to="ctd/ctd" />
+    </node>
+</launch>

@@ -1,4 +1,5 @@
 <launch>
+    <arg name="ctd" default="direct" />
     <arg name="dli_port" default="18080" />
     <arg name="gpsd_port" default="29470" />
     <arg name="gui" default="true" />
@@ -54,17 +55,9 @@
         <arg name="refresh_rate" value="20" />
     </include>
 
-    <node pkg="phyto_sim_utils" type="ctd_sim.py" name="ctd_sim"
-          required="true">
-        <remap from="ctd/ctd" to="sim/ctd" />
-        <remap from="ctd/depth" to="sim/depth" />
-    </node>
-
-    <node pkg="aml_ctd" type="aml_sim.py" name="aml_sim" required="true" />
-    <node pkg="aml_ctd" type="aml_ctd_node.py" name="ctd">
-        <remap from="~" to="/ctd/ctd" />
-        <remap from="~in" to="/sim/aml" />
-    </node>
+    <include file="$(find phyto_sim_utils)/launch/ctd.launch">
+        <arg name="ctd" value="$(arg ctd)" />
+    </include>
 
     <node pkg="phyto_sim_utils" type="winch_drum.py" name="winch_drum"
           required="true">

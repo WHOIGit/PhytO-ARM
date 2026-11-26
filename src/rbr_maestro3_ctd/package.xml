@@ -16,6 +16,8 @@
 
     <buildtool_depend>catkin</buildtool_depend>
 
+    <exec_depend>message_filters</exec_depend>
+    <test_depend>rostest</test_depend>
     <exec_depend>rospy</exec_depend>
 
     <!-- We use the DsHeader message type -->
