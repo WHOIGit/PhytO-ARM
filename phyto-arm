@@ -252,13 +252,13 @@ def start(args):
         # Start the rosbag logging process. We run this separately from the main
         # launch file so that if the main nodes crash, we don't terminate the rosbag
         # prematurely.
-        command, env = prep_ros2_launch(args, config, env, 'phyto_arm', 'rosbag.launch.xml')
+        command, env = prep_ros2_launch(args, config, env, 'phyto_arm', 'rosbag.launch.py')
         rosbag = subprocess.Popen(command, shell=True, env=env)
         children[rosbag.pid] = rosbag
         atexit.register(lambda: cleanup('rosbag record', rosbag, dont_kill=True))
 
     # Prepare our ros2 launch command
-    launchfile = 'simulator.launch.py' if args.launch_name == 'simulator' else f'{args.launch_name}.launch.xml'
+    launchfile = f'{args.launch_name}.launch.py'
     command, env = prep_ros2_launch(args, config, env, 'phyto_arm', launchfile, params_file.name)
     nodes = subprocess.Popen(command, shell=True, env=env)
     children[nodes.pid] = nodes

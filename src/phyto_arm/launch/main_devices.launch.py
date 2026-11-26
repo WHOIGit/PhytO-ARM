@@ -1,4 +1,5 @@
 """Launch the GPS component and the configured RTSP cameras."""
+
 import yaml
 
 from launch import LaunchDescription
@@ -13,12 +14,22 @@ def launch_devices(context):
     with open(LaunchConfiguration('config_file').perform(context)) as f:
         config = yaml.safe_load(f)
 
-    gps = ComposableNode(package='gpsd_client', plugin='gpsd_client::GPSDClientComponent',
-                         name='gps', parameters=[config.get('gps') or {}],
-                         remappings=[('fix', '~/fix'), ('extended_fix', '~/extended_fix')])
-    nodes = [ComposableNodeContainer(package='rclcpp_components', executable='component_container',
-                                     name='gps_container', namespace='',
-                                     composable_node_descriptions=[gps])]
+    gps = ComposableNode(
+        package='gpsd_client',
+        plugin='gpsd_client::GPSDClientComponent',
+        name='gps',
+        parameters=[config.get('gps') or {}],
+        remappings=[('fix', '~/fix'), ('extended_fix', '~/extended_fix')],
+    )
+    nodes = [
+        ComposableNodeContainer(
+            package='rclcpp_components',
+            executable='component_container',
+            name='gps_container',
+            namespace='',
+            composable_node_descriptions=[gps],
+        )
+    ]
     cameras = config.get('camera') or {}
     for name, camera in cameras.items():
         url = (camera or {}).get('video_stream_url', '')
@@ -47,7 +58,9 @@ def launch_devices(context):
 
 
 def generate_launch_description():
-    return LaunchDescription([
-        DeclareLaunchArgument('config_file'),
-        OpaqueFunction(function=launch_devices),
-    ])
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument('config_file'),
+            OpaqueFunction(function=launch_devices),
+        ]
+    )
