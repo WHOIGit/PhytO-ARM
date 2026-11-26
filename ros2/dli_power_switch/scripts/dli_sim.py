@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import re
 
+import rclpy
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-import rospy
+from rclpy.executors import ExternalShutdownException
+from rclpy.parameter import Parameter
 
 
 class OutletHandler(BaseHTTPRequestHandler):
@@ -47,13 +50,22 @@ class OutletHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    rospy.init_node('dli_sim')
-    address = ('127.0.0.1', rospy.get_param('~port'))
-    with HTTPServer(address, OutletHandler) as server:
-        server.outlets = [True] * 8
-        server.timeout = 0.25
-        while not rospy.is_shutdown():
-            server.handle_request()
+    rclpy.init()
+    node = rclpy.create_node('dli_sim')
+    try:
+        node.declare_parameter('port', Parameter.Type.INTEGER)
+        address = ('127.0.0.1', node.get_parameter('port').value)
+        with HTTPServer(address, OutletHandler) as server:
+            server.outlets = [True] * 8
+            server.timeout = 0.25
+            while rclpy.ok():
+                rclpy.spin_once(node, timeout_sec=0)
+                server.handle_request()
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':
