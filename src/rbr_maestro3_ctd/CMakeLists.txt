@@ -21,3 +21,12 @@ generate_messages(
 )
 
 catkin_package()
+
+catkin_install_python(PROGRAMS scripts/rbr_sim.py src/rbr_maestro3_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  add_rostest(test/rbr_sim.test DEPENDENCIES ${${PROJECT_NAME}_EXPORTED_TARGETS})
+endif()

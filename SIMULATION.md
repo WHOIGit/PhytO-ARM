@@ -11,6 +11,7 @@ With the defaults, the arm runs automatic casts and samples with a mock IFCB. Ap
 | Option | Default | What it controls |
 | --- | --- | --- |
 | `gazebo` | `false` | Set to `true` to command the winch in a Gazebo world. |
+| `ctd` | `direct` | Publishes water-column readings directly. Select `aml` or `rbr` to run the matching emulator and production CTD driver. |
 | `gui` | `true` | Shows the Gazebo 3D view. Set to `false` for headless Gazebo. |
 | `gpsd` | `false` | Set to `true` to send simulated NMEA sentences through an installed `gpsd` daemon and the production GPS client. |
 | `mock_ifcb` | `true` | Set to `false` to run IFCBacquire with a simulated camera and serial ports. |
@@ -51,7 +52,9 @@ To raise the payload, send the winch goal again with `depth: 0.85`.
 
 Both deployments run the production winch controller and motor driver against a simulated MAC400. Motor rotation pays line off the drum or takes it up. The lightweight arm assumes a taut vertical line. In Gazebo the payload can swing in a steady current or fall when the line goes slack. The water surface is fixed, and payload mass and drag are estimates.
 
-Both CTDs sample the same water column at the probe's depth. Pressure increases with depth and the surface layer is warmer. The lightweight arm publishes depth and water properties directly on `/arm_ifcb/ctd/depth` and `/arm_ifcb/ctd/ctd`. Gazebo passes those readings through an AML emulator. The production AML driver decodes its monitor records and publishes `/ctd/depth` and `/ctd/ctd`.
+Both deployments sample the same water column at the probe's depth and publish the model readings directly by default. Pressure increases with depth and the surface layer is warmer. To exercise the RBR Maestro3 driver in either deployment, add `ctd:=rbr` to `roslaunch phyto_arm simulator.launch`.
+
+The AML emulator sends monitor records on `sim/aml`. The RBR emulator sends timestamped CSV records on `sim/rbr`. Both drivers publish `ctd/depth` and `ctd/ctd` under `/arm_ifcb` in the lightweight deployment and at the root in Gazebo. The RBR driver reports conductivity in mS/cm on `ctd/rbr/conductivity` and in S/m on `ctd/ctd`.
 
 ### GPS
 

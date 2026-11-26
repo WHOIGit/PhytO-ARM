@@ -4,6 +4,7 @@
     <env name="GAZEBO_MASTER_URI" value="http://127.0.0.1:$(arg gazebo_port)" />
     <arg name="motor_modbus_port" default="16542" />
     <include file="$(find phyto_arm)/launch/simulator.launch">
+        <arg name="ctd" value="aml" />
         <arg name="dli_port" value="16545" />
         <arg name="gazebo" value="true" />
         <arg name="gpsd" value="$(arg gpsd)" />

@@ -1,4 +1,5 @@
 <launch>
+    <arg name="ctd" default="direct" />
     <arg name="config_file" />
     <arg name="ifcb_winch" />
     <arg name="mock_ifcb" default="true" />
@@ -13,6 +14,7 @@
 
     <group ns="arm_ifcb">
         <include file="$(find phyto_arm)/launch/sim_cast.launch">
+            <arg name="ctd" value="$(arg ctd)" />
             <arg name="motor_modbus_port" value="$(arg motor_modbus_port)" />
             <arg name="winch_enabled" value="$(arg ifcb_winch)" />
         </include>

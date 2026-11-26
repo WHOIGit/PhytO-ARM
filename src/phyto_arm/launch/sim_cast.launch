@@ -1,4 +1,5 @@
 <launch>
+    <arg name="ctd" default="direct" />
     <arg name="initial_depth" default="0.5" />
     <arg name="motor_modbus_port" />
     <arg name="winch_enabled" />
@@ -9,7 +10,13 @@
     <node pkg="phyto_sim_utils" type="vertical_line.py" name="vertical_line">
         <param name="initial_depth" value="$(arg initial_depth)" />
     </node>
-    <node pkg="phyto_sim_utils" type="ctd_sim.py" name="ctd" />
+    <group>
+        <remap from="ctd_sim/warm_layer_depth" to="ctd/warm_layer_depth" />
+        <remap from="ctd_sim/water_surface_z" to="ctd/water_surface_z" />
+        <include file="$(find phyto_sim_utils)/launch/ctd.launch">
+            <arg name="ctd" value="$(arg ctd)" />
+        </include>
+    </group>
 
     <group if="$(arg winch_enabled)">
         <include file="$(find jvl_motor)/launch/sim_motor.launch">

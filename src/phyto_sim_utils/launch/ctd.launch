@@ -1,0 +1,13 @@
+<launch>
+    <arg name="ctd" default="direct" />
+    <arg name="use_driver" value="$(eval ctd != 'direct')" />
+
+    <node pkg="phyto_sim_utils" type="ctd_sim.py" name="ctd_sim" required="true">
+        <remap if="$(arg use_driver)" from="ctd/ctd" to="sim/ctd" />
+        <remap if="$(arg use_driver)" from="ctd/depth" to="sim/depth" />
+    </node>
+    <group if="$(arg use_driver)">
+        <arg name="driver_pkg" value="$(eval {'aml': 'aml_ctd', 'rbr': 'rbr_maestro3_ctd'}[ctd])" />
+        <include file="$(eval find(driver_pkg) + '/launch/sim_ctd.launch')" />
+    </group>
+</launch>

@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="aml_ctd" type="aml_sim.py" name="aml_sim" required="true" />
+    <node pkg="aml_ctd" type="aml_ctd_node.py" name="ctd">
+        <remap from="~" to="ctd/ctd" />
+        <remap from="~in" to="sim/aml" />
+    </node>
+</launch>
