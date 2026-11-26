@@ -643,7 +643,7 @@ The config file controls where the bag files are written:
     launch_args:
         rosbag_prefix: /mnt/data/rosbags/phyto-arm_hades
 
-The recorder uses `/mnt/data/rosbags/phyto-arm_hades` as the bag directory. Its compressed data files are numbered starting with `phyto-arm_hades_0.db3.zstd`.
+Each recorder run creates a timestamped directory such as `/mnt/data/rosbags/phyto-arm_hades_2026-01-02-03-04-05-123456` and writes numbered `.mcap` files inside it. Each file contains indexed, zstd-compressed chunks and can be opened directly in Foxglove.
 
 The recorder writes `metadata.yaml` when it closes the bag. An abrupt shutdown can leave the directory without this file.
 
