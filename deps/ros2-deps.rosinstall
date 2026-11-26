@@ -1,9 +1,4 @@
 - git:
-    local-name: rospy_too
-    uri: https://github.com/rgov/rospy-compat.git
-    version: 74903059e61cc97750979a655a469aab28ee881e
-
-- git:
     local-name: wr2_asio
     uri: https://git.whoi.edu/whoi-ros/wr2_asio.git
     version: 4323d9e930928d107b44fd35cbde8a5a14a24371

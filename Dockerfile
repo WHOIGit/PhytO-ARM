@@ -25,16 +25,16 @@ RUN apt-get update \
 RUN if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
         rosdep init; \
     fi \
- && rosdep update --rosdistro="${ROS_DISTRO}" --include-eol-distros
+ && rosdep update --rosdistro="${ROS_DISTRO}"
 
 
 
 # ==============================================================================
-# Share one checkout of the pinned native ports and compatibility layer.
+# Share one checkout of the pinned external packages.
 FROM base-with-build-tools AS external-sources
 COPY deps/ros2-deps.rosinstall ./deps/
-RUN mkdir -p ros2/src \
- && cd ros2/src \
+RUN mkdir -p src \
+ && cd src \
  && vcs import < /app/deps/ros2-deps.rosinstall
 
 # ==============================================================================
@@ -44,27 +44,24 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Generate list of external packages defined in rosinstall (for filtering)
 RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
- && cd ros2 \
  && colcon list --names-only --base-paths src \
         > /tmp/external-packages.txt
 
 # Copy local source packages (we really only need package.xml files).
-COPY ros2/ ros2/src/
+COPY src/ src/
 
 # Generate rosdep apt requirements (apt:<package>)
 RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
- && cd ros2 \
- && colcon list --packages-up-to phyto_arm --paths-only > /tmp/package-paths.txt \
+ && colcon list --packages-up-to phyto_gazebo --paths-only > /tmp/package-paths.txt \
  && rosdep install --from-paths $(cat /tmp/package-paths.txt) --ignore-src \
         --rosdistro="${ROS_DISTRO}" --simulate > /tmp/rosdep-install.txt \
  && sed -n 's/^ *apt-get install //p' /tmp/rosdep-install.txt \
     | tr ' ' '\n' | grep -v '^-' | sort -u | sed 's/^/apt:/' > /tmp/apt-packages.txt
 
 # Generate package info (pkg:<name>\t<path>\t<is_external>)
-# Path is relative to ros2/src/ for local packages, empty for external
+# Path is relative to src/ for local packages, empty for external
 RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
- && cd ros2 \
- && colcon list --packages-up-to phyto_arm --topological-order \
+ && colcon list --packages-up-to phyto_gazebo --topological-order \
     | awk -F'\t' '\
         NR==FNR { ext[$1]; next } \
         { \
@@ -79,8 +76,7 @@ RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
 # Generate dependency graph (dep:<package>\t<dependency>)
 # Each line represents: <package> depends on <dependency>
 RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
- && cd ros2 \
- && colcon graph --dot --packages-up-to phyto_arm 2>/dev/null \
+ && colcon graph --dot --packages-up-to phyto_gazebo 2>/dev/null \
     | grep -- '->' \
     | sed 's/^[[:space:]]*"\([^"]*\)"[[:space:]]*->[[:space:]]*"\([^"]*\)".*/dep:\1\t\2/' \
     > /tmp/deps.txt
@@ -100,7 +96,12 @@ FROM base-with-build-tools AS with-deps
 # Install native extensions with the distro Python and keep the remaining
 # Python dependencies outside the distribution's package-managed environment.
 COPY --from=generate-dependencies /tmp/apt-packages.txt /tmp/apt-packages.txt
-RUN apt-get update \
+COPY deps/gazebo11-non-amd64.asc deps/install-gazebo-humble-arm64.sh deps/ros2-humble-arm64-deps.rosinstall ./deps/
+RUN if [ "${ROS_DISTRO}:$(dpkg --print-architecture)" = humble:arm64 ]; then \
+        deps/install-gazebo-humble-arm64.sh; \
+    else \
+        apt-get update; \
+    fi \
  && apt-get install -y $(sed 's/^apt://' /tmp/apt-packages.txt) \
  && rm -rf /var/lib/apt/lists/*
 
@@ -111,8 +112,8 @@ ENV PYTHONPATH=/opt/phyto-python
 ################################################################################
 FROM with-deps AS with-sources
 ARG CMAKE_BUILD_PARALLEL_LEVEL
-RUN mkdir -p ros2/src && cd ros2 && colcon build
-COPY --from=external-sources /app/ros2/src /app/ros2/src
+RUN mkdir -p src && colcon build
+COPY --from=external-sources /app/src /app/src
 
 ################################################################################
 # Build packages in separate stages because colcon is super slow.
@@ -124,250 +125,260 @@ COPY --from=external-sources /app/ros2/src /app/ros2/src
 FROM with-sources AS build-ds_core_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select ds_core_msgs"
 
 FROM with-sources AS build-ds_nmea_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select ds_nmea_msgs"
 
 FROM with-sources AS build-foxglove_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select foxglove_msgs"
 
 FROM with-sources AS build-ifcb_msgs
-COPY ros2/ifcb_msgs ros2/src/ifcb_msgs
+COPY src/ifcb_msgs src/ifcb_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select ifcb_msgs"
 
 FROM with-sources AS build-phyto_arm_msgs
-COPY ros2/phyto_arm_msgs ros2/src/phyto_arm_msgs
+COPY src/phyto_arm_msgs src/phyto_arm_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select phyto_arm_msgs"
-
-FROM with-sources AS build-rospy_too_interfaces
-RUN bash -c " \
-    source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
-    colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select rospy_too_interfaces"
 
 FROM with-sources AS build-wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select wr2_msgs"
 
 FROM with-sources AS build-aml_ctd_msgs
-COPY ros2/aml_ctd_msgs ros2/src/aml_ctd_msgs
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+COPY src/aml_ctd_msgs src/aml_ctd_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select aml_ctd_msgs"
 
 FROM with-sources AS build-dli_power_switch_msgs
-COPY ros2/dli_power_switch_msgs ros2/src/dli_power_switch_msgs
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+COPY src/dli_power_switch_msgs src/dli_power_switch_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select dli_power_switch_msgs"
 
 FROM with-sources AS build-ds_sensor_msgs
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-ds_nmea_msgs /app/ros2/install/ds_nmea_msgs /app/ros2/install/ds_nmea_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-ds_nmea_msgs /app/install/ds_nmea_msgs /app/install/ds_nmea_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select ds_sensor_msgs"
 
-FROM with-sources AS build-jvl_motor_msgs
-COPY ros2/jvl_motor_msgs ros2/src/jvl_motor_msgs
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+FROM with-sources AS build-ifcb
+COPY src/ifcb src/ifcb
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-foxglove_msgs /app/install/foxglove_msgs /app/install/foxglove_msgs
+COPY --from=build-ifcb_msgs /app/install/ifcb_msgs /app/install/ifcb_msgs
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
+    colcon build --packages-select ifcb"
+
+FROM with-sources AS build-jvl_motor_msgs
+COPY src/jvl_motor_msgs src/jvl_motor_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+RUN bash -c " \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select jvl_motor_msgs"
 
 FROM with-sources AS build-rbr_maestro3_ctd_msgs
-COPY ros2/rbr_maestro3_ctd_msgs ros2/src/rbr_maestro3_ctd_msgs
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+COPY src/rbr_maestro3_ctd_msgs src/rbr_maestro3_ctd_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select rbr_maestro3_ctd_msgs"
 
-FROM with-sources AS build-rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
-RUN bash -c " \
-    source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
-    colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select rospy_too"
-
 FROM with-sources AS build-seatrac
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select seatrac"
 
 FROM with-sources AS build-wr2_base
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select wr2_base"
 
 FROM with-sources AS build-aml_ctd
-COPY ros2/aml_ctd ros2/src/aml_ctd
-COPY --from=build-aml_ctd_msgs /app/ros2/install/aml_ctd_msgs /app/ros2/install/aml_ctd_msgs
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-ds_nmea_msgs /app/ros2/install/ds_nmea_msgs /app/ros2/install/ds_nmea_msgs
-COPY --from=build-ds_sensor_msgs /app/ros2/install/ds_sensor_msgs /app/ros2/install/ds_sensor_msgs
-COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
-COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+COPY src/aml_ctd src/aml_ctd
+COPY --from=build-aml_ctd_msgs /app/install/aml_ctd_msgs /app/install/aml_ctd_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-ds_nmea_msgs /app/install/ds_nmea_msgs /app/install/ds_nmea_msgs
+COPY --from=build-ds_sensor_msgs /app/install/ds_sensor_msgs /app/install/ds_sensor_msgs
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select aml_ctd"
 
 FROM with-sources AS build-dli_power_switch
-COPY ros2/dli_power_switch ros2/src/dli_power_switch
-COPY --from=build-dli_power_switch_msgs /app/ros2/install/dli_power_switch_msgs /app/ros2/install/dli_power_switch_msgs
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
+COPY src/dli_power_switch src/dli_power_switch
+COPY --from=build-dli_power_switch_msgs /app/install/dli_power_switch_msgs /app/install/dli_power_switch_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select dli_power_switch"
 
-FROM with-sources AS build-ifcb
-COPY ros2/ifcb ros2/src/ifcb
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-foxglove_msgs /app/ros2/install/foxglove_msgs /app/ros2/install/foxglove_msgs
-COPY --from=build-ifcb_msgs /app/ros2/install/ifcb_msgs /app/ros2/install/ifcb_msgs
-COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
-COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
-RUN bash -c " \
-    source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
-    colcon build --packages-select ifcb"
-
-FROM with-sources AS build-phyto_sim_utils
-COPY ros2/phyto_sim_utils ros2/src/phyto_sim_utils
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-ds_nmea_msgs /app/ros2/install/ds_nmea_msgs /app/ros2/install/ds_nmea_msgs
-COPY --from=build-ds_sensor_msgs /app/ros2/install/ds_sensor_msgs /app/ros2/install/ds_sensor_msgs
-COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
-RUN bash -c " \
-    source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
-    colcon build --packages-select phyto_sim_utils"
-
 FROM with-sources AS build-rbr_maestro3_ctd
-COPY ros2/rbr_maestro3_ctd ros2/src/rbr_maestro3_ctd
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-ds_nmea_msgs /app/ros2/install/ds_nmea_msgs /app/ros2/install/ds_nmea_msgs
-COPY --from=build-ds_sensor_msgs /app/ros2/install/ds_sensor_msgs /app/ros2/install/ds_sensor_msgs
-COPY --from=build-rbr_maestro3_ctd_msgs /app/ros2/install/rbr_maestro3_ctd_msgs /app/ros2/install/rbr_maestro3_ctd_msgs
-COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
-COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+COPY src/rbr_maestro3_ctd src/rbr_maestro3_ctd
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-ds_nmea_msgs /app/install/ds_nmea_msgs /app/install/ds_nmea_msgs
+COPY --from=build-ds_sensor_msgs /app/install/ds_sensor_msgs /app/install/ds_sensor_msgs
+COPY --from=build-rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select rbr_maestro3_ctd"
 
 FROM with-sources AS build-wr2_asio
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-wr2_base /app/ros2/install/wr2_base /app/ros2/install/wr2_base
-COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-wr2_base /app/install/wr2_base /app/install/wr2_base
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select wr2_asio"
 
-FROM with-sources AS build-jvl_motor
-COPY ros2/jvl_motor ros2/src/jvl_motor
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-ds_nmea_msgs /app/ros2/install/ds_nmea_msgs /app/ros2/install/ds_nmea_msgs
-COPY --from=build-ds_sensor_msgs /app/ros2/install/ds_sensor_msgs /app/ros2/install/ds_sensor_msgs
-COPY --from=build-jvl_motor_msgs /app/ros2/install/jvl_motor_msgs /app/ros2/install/jvl_motor_msgs
-COPY --from=build-phyto_sim_utils /app/ros2/install/phyto_sim_utils /app/ros2/install/phyto_sim_utils
-COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
+FROM with-sources AS build-phyto_sim_utils
+COPY src/phyto_sim_utils src/phyto_sim_utils
+COPY --from=build-aml_ctd /app/install/aml_ctd /app/install/aml_ctd
+COPY --from=build-aml_ctd_msgs /app/install/aml_ctd_msgs /app/install/aml_ctd_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-ds_nmea_msgs /app/install/ds_nmea_msgs /app/install/ds_nmea_msgs
+COPY --from=build-ds_sensor_msgs /app/install/ds_sensor_msgs /app/install/ds_sensor_msgs
+COPY --from=build-rbr_maestro3_ctd /app/install/rbr_maestro3_ctd /app/install/rbr_maestro3_ctd
+COPY --from=build-rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
+    colcon build --packages-select phyto_sim_utils"
+
+FROM with-sources AS build-jvl_motor
+COPY src/jvl_motor src/jvl_motor
+COPY --from=build-aml_ctd /app/install/aml_ctd /app/install/aml_ctd
+COPY --from=build-aml_ctd_msgs /app/install/aml_ctd_msgs /app/install/aml_ctd_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-ds_nmea_msgs /app/install/ds_nmea_msgs /app/install/ds_nmea_msgs
+COPY --from=build-ds_sensor_msgs /app/install/ds_sensor_msgs /app/install/ds_sensor_msgs
+COPY --from=build-jvl_motor_msgs /app/install/jvl_motor_msgs /app/install/jvl_motor_msgs
+COPY --from=build-phyto_sim_utils /app/install/phyto_sim_utils /app/install/phyto_sim_utils
+COPY --from=build-rbr_maestro3_ctd /app/install/rbr_maestro3_ctd /app/install/rbr_maestro3_ctd
+COPY --from=build-rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
+RUN bash -c " \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select jvl_motor"
 
 FROM with-sources AS build-phyto_arm
-COPY phyto-arm ros2/phyto-arm
-COPY configs/example.yaml ros2/configs/example.yaml
-COPY ros2/phyto_arm ros2/src/phyto_arm
-COPY --from=build-aml_ctd /app/ros2/install/aml_ctd /app/ros2/install/aml_ctd
-COPY --from=build-aml_ctd_msgs /app/ros2/install/aml_ctd_msgs /app/ros2/install/aml_ctd_msgs
-COPY --from=build-dli_power_switch /app/ros2/install/dli_power_switch /app/ros2/install/dli_power_switch
-COPY --from=build-dli_power_switch_msgs /app/ros2/install/dli_power_switch_msgs /app/ros2/install/dli_power_switch_msgs
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-ds_nmea_msgs /app/ros2/install/ds_nmea_msgs /app/ros2/install/ds_nmea_msgs
-COPY --from=build-ds_sensor_msgs /app/ros2/install/ds_sensor_msgs /app/ros2/install/ds_sensor_msgs
-COPY --from=build-foxglove_msgs /app/ros2/install/foxglove_msgs /app/ros2/install/foxglove_msgs
-COPY --from=build-ifcb /app/ros2/install/ifcb /app/ros2/install/ifcb
-COPY --from=build-ifcb_msgs /app/ros2/install/ifcb_msgs /app/ros2/install/ifcb_msgs
-COPY --from=build-jvl_motor /app/ros2/install/jvl_motor /app/ros2/install/jvl_motor
-COPY --from=build-jvl_motor_msgs /app/ros2/install/jvl_motor_msgs /app/ros2/install/jvl_motor_msgs
-COPY --from=build-phyto_arm_msgs /app/ros2/install/phyto_arm_msgs /app/ros2/install/phyto_arm_msgs
-COPY --from=build-phyto_sim_utils /app/ros2/install/phyto_sim_utils /app/ros2/install/phyto_sim_utils
-COPY --from=build-rbr_maestro3_ctd /app/ros2/install/rbr_maestro3_ctd /app/ros2/install/rbr_maestro3_ctd
-COPY --from=build-rbr_maestro3_ctd_msgs /app/ros2/install/rbr_maestro3_ctd_msgs /app/ros2/install/rbr_maestro3_ctd_msgs
-COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
-COPY --from=build-seatrac /app/ros2/install/seatrac /app/ros2/install/seatrac
-COPY --from=build-wr2_asio /app/ros2/install/wr2_asio /app/ros2/install/wr2_asio
-COPY --from=build-wr2_base /app/ros2/install/wr2_base /app/ros2/install/wr2_base
-COPY --from=build-wr2_msgs /app/ros2/install/wr2_msgs /app/ros2/install/wr2_msgs
+COPY phyto-arm ./phyto-arm
+COPY configs/example.yaml ./configs/example.yaml
+COPY src/phyto_arm src/phyto_arm
+COPY --from=build-aml_ctd /app/install/aml_ctd /app/install/aml_ctd
+COPY --from=build-aml_ctd_msgs /app/install/aml_ctd_msgs /app/install/aml_ctd_msgs
+COPY --from=build-dli_power_switch /app/install/dli_power_switch /app/install/dli_power_switch
+COPY --from=build-dli_power_switch_msgs /app/install/dli_power_switch_msgs /app/install/dli_power_switch_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-ds_nmea_msgs /app/install/ds_nmea_msgs /app/install/ds_nmea_msgs
+COPY --from=build-ds_sensor_msgs /app/install/ds_sensor_msgs /app/install/ds_sensor_msgs
+COPY --from=build-foxglove_msgs /app/install/foxglove_msgs /app/install/foxglove_msgs
+COPY --from=build-ifcb /app/install/ifcb /app/install/ifcb
+COPY --from=build-ifcb_msgs /app/install/ifcb_msgs /app/install/ifcb_msgs
+COPY --from=build-jvl_motor /app/install/jvl_motor /app/install/jvl_motor
+COPY --from=build-jvl_motor_msgs /app/install/jvl_motor_msgs /app/install/jvl_motor_msgs
+COPY --from=build-phyto_arm_msgs /app/install/phyto_arm_msgs /app/install/phyto_arm_msgs
+COPY --from=build-phyto_sim_utils /app/install/phyto_sim_utils /app/install/phyto_sim_utils
+COPY --from=build-rbr_maestro3_ctd /app/install/rbr_maestro3_ctd /app/install/rbr_maestro3_ctd
+COPY --from=build-rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs
+COPY --from=build-seatrac /app/install/seatrac /app/install/seatrac
+COPY --from=build-wr2_asio /app/install/wr2_asio /app/install/wr2_asio
+COPY --from=build-wr2_base /app/install/wr2_base /app/install/wr2_base
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
 RUN bash -c " \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
+    source /app/install/setup.bash && \
+    cd /app && \
     colcon build --packages-select phyto_arm"
+
+FROM with-sources AS build-phyto_gazebo
+COPY src/phyto_gazebo src/phyto_gazebo
+COPY --from=build-aml_ctd /app/install/aml_ctd /app/install/aml_ctd
+COPY --from=build-aml_ctd_msgs /app/install/aml_ctd_msgs /app/install/aml_ctd_msgs
+COPY --from=build-dli_power_switch /app/install/dli_power_switch /app/install/dli_power_switch
+COPY --from=build-dli_power_switch_msgs /app/install/dli_power_switch_msgs /app/install/dli_power_switch_msgs
+COPY --from=build-ds_core_msgs /app/install/ds_core_msgs /app/install/ds_core_msgs
+COPY --from=build-ds_nmea_msgs /app/install/ds_nmea_msgs /app/install/ds_nmea_msgs
+COPY --from=build-ds_sensor_msgs /app/install/ds_sensor_msgs /app/install/ds_sensor_msgs
+COPY --from=build-foxglove_msgs /app/install/foxglove_msgs /app/install/foxglove_msgs
+COPY --from=build-ifcb /app/install/ifcb /app/install/ifcb
+COPY --from=build-ifcb_msgs /app/install/ifcb_msgs /app/install/ifcb_msgs
+COPY --from=build-jvl_motor /app/install/jvl_motor /app/install/jvl_motor
+COPY --from=build-jvl_motor_msgs /app/install/jvl_motor_msgs /app/install/jvl_motor_msgs
+COPY --from=build-phyto_arm /app/install/phyto_arm /app/install/phyto_arm
+COPY --from=build-phyto_arm_msgs /app/install/phyto_arm_msgs /app/install/phyto_arm_msgs
+COPY --from=build-phyto_sim_utils /app/install/phyto_sim_utils /app/install/phyto_sim_utils
+COPY --from=build-rbr_maestro3_ctd /app/install/rbr_maestro3_ctd /app/install/rbr_maestro3_ctd
+COPY --from=build-rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs /app/install/rbr_maestro3_ctd_msgs
+COPY --from=build-seatrac /app/install/seatrac /app/install/seatrac
+COPY --from=build-wr2_asio /app/install/wr2_asio /app/install/wr2_asio
+COPY --from=build-wr2_base /app/install/wr2_base /app/install/wr2_base
+COPY --from=build-wr2_msgs /app/install/wr2_msgs /app/install/wr2_msgs
+RUN bash -c " \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source /app/install/setup.bash && \
+    cd /app && \
+    colcon build --packages-select phyto_gazebo"
 
 # END GENERATED BUILD STEPS
 
@@ -386,7 +397,7 @@ EXPOSE 8080
 
 # Source ROS2 environment automatically for all bash sessions
 RUN echo 'source /opt/ros/${ROS_DISTRO}/setup.bash' >> /etc/bash.bashrc \
- && echo 'source /app/ros2/install/setup.bash' >> /etc/bash.bashrc
+ && echo 'source /app/install/setup.bash' >> /etc/bash.bashrc
 
 # Install the entrypoint script.
 # Also provide a trampoline so you can do `docker exec ... ros2 ...`
@@ -398,6 +409,6 @@ CMD ["/bin/bash"]
 
 # Copy the ROS2 workspace from the final build stage.
 # src and build subdirectories are only needed for a symlinked install space
-COPY --from=build-phyto_arm /app/ros2/install /app/ros2/install
-COPY --from=build-phyto_arm /app/ros2/build /app/ros2/build
-COPY --from=build-phyto_arm /app/ros2/src /app/ros2/src
+COPY --from=build-phyto_gazebo /app/install /app/install
+COPY --from=build-phyto_gazebo /app/build /app/build
+COPY --from=build-phyto_gazebo /app/src /app/src

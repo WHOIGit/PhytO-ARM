@@ -25,7 +25,6 @@ def flatten_value(value, parent_key='', sep='.', *, keep_empty_lists=False):
     """Flatten a nested value (dict or list) using dot-separated keys.
 
     Lists are flattened using integer indices (e.g., outlets.0.name).
-    rospy_too will reconstruct these back to lists on get_param().
     """
     items = []
     if isinstance(value, dict):
@@ -48,9 +47,9 @@ def flatten_dict(d, parent_key='', sep='.', *, keep_empty_lists=False):
 
 def convert_to_ros2_params(config, launch_name=None):
     """
-    Convert ROS1-style YAML config to ROS2 parameter format.
+    Convert the deployment config to ROS 2 parameters.
 
-    ROS1 uses nested dicts with slash hierarchy:
+    The deployment config uses nested dictionaries:
         winch:
           range:
             min: 0.7

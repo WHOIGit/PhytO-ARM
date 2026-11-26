@@ -2,7 +2,7 @@
 set -eo pipefail
 
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
-source /app/ros2/install/setup.bash
+source /app/install/setup.bash
 
 # Allow `ros2` command to be a symlink to this script in order to set up the ROS
 # environment and then run the real `ros2`.

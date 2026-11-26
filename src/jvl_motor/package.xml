@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-    <name>aml_ctd</name>
+    <name>jvl_motor</name>
     <version>1.0.0</version>
-    <description>Captures data from an AML CTD</description>
+    <description>Controls a JVL MAC400 servo motor</description>
     <license>TODO</license>
 
     <url type="repository">https://github.com/whoigit/PhytO-ARM</url>
@@ -18,17 +18,19 @@
     <buildtool_depend>ament_cmake</buildtool_depend>
     <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-    <depend>aml_ctd_msgs</depend>
-    <depend>std_msgs</depend>
-    <depend>ds_core_msgs</depend>
-    <depend>ds_sensor_msgs</depend>
-    <depend>wr2_msgs</depend>
+    <depend>jvl_motor_msgs</depend>
 
-    <exec_depend>message_filters</exec_depend>
+    <exec_depend>launch_ros</exec_depend>
+    <exec_depend>phyto_sim_utils</exec_depend>
+    <exec_depend>rosgraph_msgs</exec_depend>
+    <exec_depend>std_msgs</exec_depend>
     <exec_depend>rclpy</exec_depend>
-    <exec_depend>rospy_too</exec_depend>
 
     <test_depend>ament_cmake_pytest</test_depend>
+    <test_depend>ament_index_python</test_depend>
+    <test_depend>launch</test_depend>
+    <test_depend>launch_testing</test_depend>
+    <test_depend>launch_testing_ament_cmake</test_depend>
 
     <export>
         <build_type>ament_cmake</build_type>

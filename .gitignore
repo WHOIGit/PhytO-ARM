@@ -1,10 +1,7 @@
-# Catkin workspace files
-.catkin_tools
-.catkin_workspace
-build
-build_isolated
-devel
-devel_isolated
+# Colcon workspace files
+/build/
+/install/
+/log/
 rosbags
 __pycache__
 .venv

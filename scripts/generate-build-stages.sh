@@ -121,13 +121,13 @@ function get_all_deps(pkg, visited,    i, n, dep_list, dep, result) {
     print "FROM with-sources AS build-" pkg
 
     if (pkg == "phyto_arm") {
-        print "COPY phyto-arm ros2/phyto-arm"
-        print "COPY configs/example.yaml ros2/configs/example.yaml"
+        print "COPY phyto-arm ./phyto-arm"
+        print "COPY configs/example.yaml ./configs/example.yaml"
     }
 
     # Copy source if local package
     if (path != "" && is_external == "false") {
-        print "COPY ros2/" path " ros2/src/" path
+        print "COPY src/" path " src/" path
     }
 
     # Get all transitive dependencies
@@ -159,9 +159,9 @@ function get_all_deps(pkg, visited,    i, n, dep_list, dep, result) {
 
     # Copy all transitive dependencies
     for (i = 1; i <= dep_count; i++) {
-        print "COPY --from=build-" dep_list[i] " /app/ros2/install/" dep_list[i] " /app/ros2/install/" dep_list[i]
+        print "COPY --from=build-" dep_list[i] " /app/install/" dep_list[i] " /app/install/" dep_list[i]
         if (symlink == "true") {
-            print "COPY --from=build-" dep_list[i] " /app/ros2/build/" dep_list[i] " /app/ros2/build/" dep_list[i]
+            print "COPY --from=build-" dep_list[i] " /app/build/" dep_list[i] " /app/build/" dep_list[i]
         }
     }
 
@@ -177,8 +177,8 @@ function get_all_deps(pkg, visited,    i, n, dep_list, dep, result) {
 
     print "RUN bash -c \" \\"
     print "    source /opt/ros/${ROS_DISTRO}/setup.bash && \\"
-    print "    source /app/ros2/install/setup.bash && \\"
-    print "    cd /app/ros2 && \\"
+    print "    source /app/install/setup.bash && \\"
+    print "    cd /app && \\"
     print "    colcon build " symlink_flag cmake_args "--packages-select " pkg "\""
     print ""
 }
