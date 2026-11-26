@@ -33,6 +33,8 @@ install(DIRECTORY launch/
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
+  find_package(launch_testing_ament_cmake REQUIRED)
+  add_launch_test(test/chanos_cast_test.py TIMEOUT 40)
   foreach(module arm_chanos arm_ifcb lock_manager network_data_capture
                  seatrac_starlink_manager)
     ament_add_pytest_test(${module}_tests tests/${module}_tests.py)

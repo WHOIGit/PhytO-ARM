@@ -47,6 +47,7 @@
     <exec_depend>python3-yaml</exec_depend>
 
     <exec_depend>gpsd_client</exec_depend>
+    <exec_depend>rcl_interfaces</exec_depend>
     <exec_depend>rclcpp_components</exec_depend>
     <exec_depend>seatrac</exec_depend>
 
@@ -60,6 +61,8 @@
     <exec_depend>gstreamer1.0-libav</exec_depend> <!-- for h264 codec -->
 
     <test_depend>ament_cmake_pytest</test_depend>
+    <test_depend>launch_testing</test_depend>
+    <test_depend>launch_testing_ament_cmake</test_depend>
 
     <export>
         <build_type>ament_cmake</build_type>

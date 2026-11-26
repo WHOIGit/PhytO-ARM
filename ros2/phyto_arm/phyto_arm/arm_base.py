@@ -4,6 +4,7 @@ import traceback
 
 import rclpy
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from threading import Event, Lock, Thread
 
@@ -11,12 +12,56 @@ from action_msgs.msg import GoalStatus
 from geopy.distance import distance as vincenty_distance
 from phyto_arm_msgs.action import MoveToDepth
 from phyto_arm_msgs.srv import LockCheck, LockOperation
+from phyto_sim_utils.parameters import declare_matching_parameters, declare_number
 from rclpy.action import ActionClient
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
+from rclpy.logging import LoggingSeverity
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import String
+
+
+@contextmanager
+def arm_node(name):
+    rclpy.init()
+    node = rclpy.create_node(name)
+    node.get_logger().set_level(LoggingSeverity.DEBUG)
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+
+    # The arm task loop can block on services or wait for sensor callbacks.
+    def dispatch():
+        try:
+            executor.spin()
+        except ExternalShutdownException:
+            pass
+
+    thread = Thread(target=dispatch)
+    thread.start()
+    try:
+        node.declare_parameters('', [
+            ('geofence.enabled', Parameter.Type.BOOL),
+            ('geofence.strict', Parameter.Type.BOOL),
+            ('winch_enabled', Parameter.Type.BOOL),
+        ])
+
+        for parameter_name in ('winch.max_speed', 'winch.range.max', 'winch.range.min'):
+            declare_number(node, parameter_name)
+
+        declare_matching_parameters(node, r'geofence\.deny\.[0-9]+\.(latitude|longitude|radius)',
+                                    Parameter.Type.DOUBLE, Parameter.Type.INTEGER)
+
+        yield node
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        executor.shutdown()
+        thread.join()
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 @dataclass

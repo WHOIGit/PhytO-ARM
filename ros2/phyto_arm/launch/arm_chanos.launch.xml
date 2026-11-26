@@ -10,7 +10,6 @@
         </node>
         <node name="arm" pkg="phyto_arm" exec="arm_chanos.py">
             <param from="$(var params_file)" />
-            <param name="arm_chanos.winch_enabled" value="$(var chanos_winch)" />
             <param name="winch_enabled" value="$(var chanos_winch)" />
         </node>
         <group if="$(var chanos_winch)">

@@ -105,8 +105,18 @@ def convert_to_ros2_params(config, launch_name=None):
     for arm in ('arm_chanos', 'arm_ifcb'):
         settings = config.get(arm) or {}
         base = {key: settings[key] for key in ('geofence', 'winch', 'winch_enabled') if key in settings}
-        if base:
-            params[f'/{arm}/arm'] = {'ros__parameters': flatten_dict(base)}
+        arm_params = flatten_dict(base)
+        if arm == 'arm_chanos' and settings.get('tasks'):
+            tasks = dict(settings['tasks'])
+            if 'default_steps' in tasks:
+                tasks['default_steps'] = [float(step) for step in tasks['default_steps']]
+            peak = dict(tasks.get('profiler_peak') or {})
+            if 'offset_steps' in peak:
+                peak['offset_steps'] = [float(step) for step in peak['offset_steps']]
+                tasks['profiler_peak'] = peak
+            arm_params['tasks'] = tasks
+        if arm_params:
+            params[f'/{arm}/arm'] = {'ros__parameters': arm_params}
 
     # Native nodes read parameters relative to their own node name.
     seatrac = config.get('seatrac') or {}
