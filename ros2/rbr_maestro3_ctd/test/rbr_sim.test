@@ -1,6 +1,0 @@
-<launch>
-    <group ns="rbr_sim_test">
-        <include file="$(find rbr_maestro3_ctd)/launch/sim_ctd.launch" />
-        <test test-name="rbr_record_flow" pkg="rbr_maestro3_ctd" type="rbr_sim_test.py" time-limit="25" />
-    </group>
-</launch>

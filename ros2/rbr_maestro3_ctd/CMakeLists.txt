@@ -16,4 +16,9 @@ install(PROGRAMS
 
 install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 
+if(BUILD_TESTING)
+  find_package(launch_testing_ament_cmake REQUIRED)
+  add_launch_test(test/rbr_sim_test.py TIMEOUT 25)
+endif()
+
 ament_package()
