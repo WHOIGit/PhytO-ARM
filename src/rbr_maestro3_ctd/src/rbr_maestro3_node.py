@@ -62,7 +62,7 @@ async def main():
     conductivity_scale = 1.0
     for c, u in channels:
         if c.lower() == 'conductivity':
-            conductivity_scale = 0.1 if u == 'mS/cm' else 1.0  # Ctd uses S/m
+            conductivity_scale = {'mS/cm': 0.1, 'S/m': 1.0}[u]  # Ctd uses S/m
         if c.lower() == 'depth':
             has_depth = True
             assert u == 'm'
