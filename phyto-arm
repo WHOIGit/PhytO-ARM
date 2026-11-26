@@ -94,6 +94,10 @@ def convert_to_ros2_params(config, launch_name=None):
                 drum[key] = filtered_params[source]
         if drum:
             params[f'/{arm}/winch_drum'] = {'ros__parameters': drum}
+    else:
+        ctd = (config.get('arm_chanos') or {}).get('ctd') or {}
+        if ctd.get('channels') is not None:
+            params['/arm_chanos/ctd'] = {'ros__parameters': {'channels': ctd['channels']}}
 
     # Native nodes read parameters relative to their own node name.
     seatrac = config.get('seatrac') or {}

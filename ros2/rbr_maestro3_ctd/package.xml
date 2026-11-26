@@ -25,6 +25,7 @@
     <depend>wr2_msgs</depend>
 
     <exec_depend>message_filters</exec_depend>
+    <exec_depend>rcl_interfaces</exec_depend>
     <exec_depend>rclpy</exec_depend>
     <exec_depend>rospy_too</exec_depend>
 

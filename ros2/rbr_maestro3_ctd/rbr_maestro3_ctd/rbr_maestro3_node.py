@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-import asyncio
 import datetime
 import math
+import os
+import random
 import re
 
-import rospy
+import rclpy
 
 from ds_sensor_msgs.msg import Ctd, DepthPressure
+from rbr_maestro3_ctd_msgs.msg import RbrMeasurement
+from rcl_interfaces.msg import ParameterDescriptor
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.time import Time
 from wr2_msgs.msg import RawData
 
-from rbr_maestro3_ctd_msgs.msg import RbrMeasurement
 
-
-# Converts an arbitrary string to a ROS-safe name per http://wiki.ros.org/Names.
+# Converts an arbitrary string to a ROS-safe name.
 # TODO: Copied from aml_ctd_node.py; move to a common library.
 def ros_safe(s, keep_slashes=False):
     # Spaces and optionally slashes to underscores
@@ -32,15 +36,8 @@ def ros_safe(s, keep_slashes=False):
 
 
 
-async def main():
-    loop = asyncio.get_running_loop()
-    incoming = asyncio.Queue()
-
-    # Initialize the ROS node
-    rospy.init_node('rbr_maestro3_ctd', anonymous=True)
-    rospy.on_shutdown(lambda: loop.call_soon_threadsafe(incoming.put_nowait, None))
-
-    # Load the list of channels to publish from the ROS parameter server. The
+def configure_node(node: Node) -> None:
+    # Load the list of channels to publish from the ROS parameters. The
     # channels list should correspond with the `outputformat channelslist`
     # configuration of the instrument.
     #
@@ -48,7 +45,10 @@ async def main():
     #     O2_concentration(umol/L) -> ('O2_concentration', 'umol/L')
     #
     # TODO: Query the instrument for its outputformat configuration.
-    channels = rospy.get_param('~channels', [])
+    channels = node.declare_parameter(
+        'channels', descriptor=ParameterDescriptor(dynamic_typing=True)).value
+    if channels is None:
+        channels = []
     if isinstance(channels, str):
         channels = channels.split('|')
     channels = [
@@ -71,33 +71,22 @@ async def main():
 
 
     # Create publishers for each channel
-    ctd_publisher = rospy.Publisher('~', Ctd, queue_size=5)
+    ctd_publisher = node.create_publisher(Ctd, node.get_name(), 5)
     if has_depth:
-        depth_publisher = rospy.Publisher('~depth', DepthPressure, queue_size=5)
+        depth_publisher = node.create_publisher(DepthPressure, '~/depth', 5)
     channel_publishers = [
-        rospy.Publisher(f'~rbr/{ros_safe(c)}', RbrMeasurement, queue_size=5)
+        node.create_publisher(RbrMeasurement, f'~/rbr/{ros_safe(c)}', 5)
         for c, u in channels
     ]
 
-    # Subscribe to incoming comms messages
-    def handler(msg):
-        loop.call_soon_threadsafe(incoming.put_nowait, msg)
-
-    rospy.Subscriber('~in', RawData, handler)
-
-    # Process incoming messages in a loop
-    while not rospy.is_shutdown():
-        msg = await incoming.get()
-        if msg is None:
-            return
-
+    def handle_message(msg):
         # Crummy parser
-        fields = [ x.strip() for x in msg.data.split(b',') ]
+        fields = [ x.strip() for x in bytes(msg.data).split(b',') ]
         if len(fields) != len(channels) + 1:
-            rospy.logwarn('Discarding malformed RBR message - expected '
-                          f'{len(channels)+1} fields but received '
-                          f'{len(fields)}')
-            continue
+            node.get_logger().warning('Discarding malformed RBR message - expected '
+                                      f'{len(channels)+1} fields but received '
+                                      f'{len(fields)}')
+            return
 
         try:
             # Parse all channel values as floats
@@ -110,8 +99,8 @@ async def main():
                                                    '%Y-%m-%d %H:%M:%S.%f')
             timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
         except ValueError as e:
-            rospy.logwarn(f'Discarding RBR message due to error during parsing: {e}')
-            continue
+            node.get_logger().warning(f'Discarding RBR message due to error during parsing: {e}')
+            return
 
 
         # Construct the Ctd message
@@ -126,7 +115,7 @@ async def main():
 
         # Set covariance fields to -1, the standard "not valid" value
         ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
-            ctd.salinity_covar = ctd.sound_speed_covar = -1
+            ctd.salinity_covar = ctd.sound_speed_covar = -1.0
 
 
         # Construct the DepthPressure message
@@ -155,14 +144,32 @@ async def main():
             all_msgs.append((dp, depth_publisher))
 
         # Set the appropriate message timestamps and publish
+        fraction, seconds = math.modf(timestamp.timestamp())
+        stamp = Time(seconds=int(seconds), nanoseconds=int(fraction * 1e9)).to_msg()
         for m, publisher in all_msgs:
             # The standard ROS header timestamp reflects when the instrument
             # says the sample was taken. The DsHeader reflects the I/O time.
-            m.header.stamp = rospy.Time.from_sec(timestamp.timestamp())
+            m.header.stamp = stamp
             m.ds_header.io_time = msg.io_stamp
 
             publisher.publish(m)
 
+    node.create_subscription(RawData, '~/in', handle_message, 10)
+
+
+def main():
+    # Initialize the ROS node
+    rclpy.init()
+    node = rclpy.create_node(f'rbr_maestro3_ctd_{os.getpid()}_{random.getrandbits(32):08x}')
+    try:
+        configure_node(node)
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
+
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
