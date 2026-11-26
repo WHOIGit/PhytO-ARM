@@ -164,6 +164,7 @@ arm_ifcb:
         address: "192.168.13.3"
         port: 502
         refresh_rate: 1  # hz
+        stop_on_exit: true #optional
         counts_per_turn: 8192  # defined in manual p.9
 
     winch: #optional
@@ -253,6 +254,7 @@ arm_chanos: #optional
         address: "192.168.13.4"
         port: 502
         refresh_rate: 1  # hz
+        stop_on_exit: true #optional
         counts_per_turn: 8192  # defined in manual p.9
 
     winch: #optional
