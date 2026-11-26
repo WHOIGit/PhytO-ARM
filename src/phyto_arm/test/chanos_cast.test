@@ -1,0 +1,26 @@
+<launch>
+    <node pkg="phyto_arm" type="lock_manager.py" name="lock_manager">
+        <param name="max_moving_winches" value="1" />
+    </node>
+    <group ns="arm_chanos">
+        <rosparam>
+            winch_enabled: true
+            winch:
+                range: {min: 0.5, max: 0.9}
+                max_speed: 0.04
+            tasks:
+                continuous_speed: 0.04
+                downcast_type: stepped
+                upcast_type: continuous
+                dwell_time: 0.3
+                default_steps: [0.60]
+                profiler_peak:
+                    enabled: true
+                    threshold: 1.0
+                    peak_expiration: 60.0
+                    offset_steps: [-0.035, 0.035]
+        </rosparam>
+        <node pkg="phyto_arm" type="arm_chanos.py" name="arm" />
+        <test pkg="phyto_arm" type="chanos_cast_test.py" test-name="chanos_cast" time-limit="40" />
+    </group>
+</launch>

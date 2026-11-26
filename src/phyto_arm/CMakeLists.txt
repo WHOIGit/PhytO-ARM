@@ -38,7 +38,9 @@ generate_messages(
 )
 
 if (CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
   catkin_add_nosetests(tests DEPENDENCIES ${PROJECT_NAME}_generate_messages_py)
+  add_rostest(test/chanos_cast.test DEPENDENCIES ${PROJECT_NAME}_generate_messages_py)
 endif()
 
 catkin_package()
