@@ -104,6 +104,11 @@ def convert_to_ros2_params(config, launch_name=None):
 
     for arm in ('arm_chanos', 'arm_ifcb'):
         settings = config.get(arm) or {}
+        winch = dict(settings.get('winch') or {})
+        if settings.get('ctd_topic') is not None:
+            winch['ctd_topic'] = settings['ctd_topic']
+        if winch:
+            params[f'/{arm}/winch'] = {'ros__parameters': flatten_dict(winch)}
         base = {key: settings[key] for key in ('geofence', 'winch', 'winch_enabled') if key in settings}
         arm_params = flatten_dict(base)
         if arm == 'arm_chanos' and settings.get('tasks'):

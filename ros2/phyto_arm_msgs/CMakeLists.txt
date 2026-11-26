@@ -12,6 +12,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ConductorState.msg"
   "msg/ConductorStates.msg"
   "msg/DepthProfile.msg"
+  "msg/MoveToDepthFinished.msg"
+  "msg/MoveToDepthStarted.msg"
   "srv/LockCheck.srv"
   "srv/LockOperation.srv"
   "action/MoveToDepth.action"

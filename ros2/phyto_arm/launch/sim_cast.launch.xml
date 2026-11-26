@@ -27,7 +27,7 @@
         </node>
         <node pkg="phyto_arm" exec="winch_node.py" name="winch">
             <param from="$(var params_file)" />
-            <param name="$(var arm).ctd_topic" value="ctd/depth" />
+            <param name="ctd_topic" value="ctd/depth" />
         </node>
     </group>
 </launch>

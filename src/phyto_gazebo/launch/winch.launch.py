@@ -61,9 +61,9 @@ def generate_launch_description():
              parameters=[geometry], on_exit=[Shutdown()]),
         Node(package='phyto_arm', executable='winch_node.py', name='winch',
              parameters=[{'ctd_topic': '/ctd/depth',
-                          'winch.gear_ratio': geometry['gear_ratio'],
-                          'winch.spool_circumference': geometry['spool_circumference'],
-                          'winch.epsilon': 0.025, 'winch.half_speed_dist': 0.12,
-                          'winch.max_speed': 0.25, 'winch.safety_envelopes.position': 0.20}],
+                          'gear_ratio': geometry['gear_ratio'],
+                          'spool_circumference': geometry['spool_circumference'],
+                          'epsilon': 0.025, 'half_speed_dist': 0.12,
+                          'max_speed': 0.25, 'safety_envelopes.position': 0.20}],
              on_exit=[Shutdown()]),
     ])

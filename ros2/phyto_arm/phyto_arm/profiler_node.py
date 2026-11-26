@@ -11,17 +11,13 @@ import scipy.interpolate
 import scipy.signal
 
 from ds_sensor_msgs.msg import DepthPressure
-from phyto_arm_msgs.action import MoveToDepth
-from phyto_arm_msgs.msg import DepthProfile
+from phyto_arm.sensor_subscription import subscribe_sensor
+from phyto_arm_msgs.msg import DepthProfile, MoveToDepthFinished, MoveToDepthStarted
 from phyto_sim_utils.parameters import declare_number
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
-from rclpy.serialization import deserialize_message
-from rosidl_runtime_py.utilities import get_message
-from rospy_too_interfaces.msg import ActionEvent
 
 
 # This semaphore protects us from a data race when we get new data/depth
@@ -56,8 +52,6 @@ def record_data(dest, msg):
 
 def on_action_start(node, subscribe_data, action_msg):
     global is_recording, data_field, data_sub
-    if action_msg.payload_type != 'phyto_arm_msgs/action/MoveToDepth_Goal':
-        return
 
     # Wait a short while to make sure that the 'result' message from the
     # previous goal is processed first.
@@ -101,8 +95,6 @@ def on_action_start(node, subscribe_data, action_msg):
 
 def on_action_stop(node, pub, action_msg):
     global is_recording
-    if action_msg.payload_type != 'phyto_arm_msgs/action/MoveToDepth_Result':
-        return
 
     # Acquire exclusive access to the buffers
     for _ in range(NUM_COLLECTORS):
@@ -159,8 +151,8 @@ def on_action_stop(node, pub, action_msg):
 
     # Publish the resampled profile data
     profile = DepthProfile()
-    profile.header.stamp = action_msg.header.stamp
-    profile.goal_uuid = deserialize_message(bytes(action_msg.payload), MoveToDepth.Result).uuid
+    profile.header.stamp = action_msg.stamp
+    profile.goal_uuid = action_msg.uuid
     profile.data_topic = data_sub.topic_name
     profile.data_field = data_field
     profile.depths = x.tolist()
@@ -197,17 +189,8 @@ def configure_node(node: Node) -> None:
 
     # Discover sensor publishers as they appear and match their offered QoS.
     def subscribe(topic, dest, msg_type=None):
-        publishers = node.get_publishers_info_by_topic(topic)
-        if not publishers:
-            return None
-        qos = QoSProfile(depth=10)
-        if all(p.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL for p in publishers):
-            qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
-        if any(p.qos_profile.reliability == ReliabilityPolicy.BEST_EFFORT for p in publishers):
-            qos.reliability = ReliabilityPolicy.BEST_EFFORT
-        return node.create_subscription(
-            msg_type or get_message(publishers[0].topic_type), topic,
-            functools.partial(record_data, dest), qos, callback_group=MutuallyExclusiveCallbackGroup())
+        return subscribe_sensor(node, topic, functools.partial(record_data, dest), msg_type,
+                                callback_group=MutuallyExclusiveCallbackGroup())
 
     depth_topic = node.get_parameter('ctd_topic').value
     depth_sub = data_topic = None
@@ -233,9 +216,9 @@ def configure_node(node: Node) -> None:
     discover()
 
     # A result must be able to wake the next goal's waiting callback.
-    node.create_subscription(ActionEvent, 'winch/move_to_depth/goal',
+    node.create_subscription(MoveToDepthStarted, 'winch/move_to_depth/goal',
         functools.partial(on_action_start, node, subscribe_data), 10, callback_group=starts)
-    node.create_subscription(ActionEvent, 'winch/move_to_depth/result',
+    node.create_subscription(MoveToDepthFinished, 'winch/move_to_depth/result',
         functools.partial(on_action_stop, node, pub), 10, callback_group=MutuallyExclusiveCallbackGroup())
 
 
