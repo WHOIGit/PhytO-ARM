@@ -43,8 +43,10 @@
     <exec_depend>python3-flask</exec_depend>
     <exec_depend>python3-geopy</exec_depend>
     <exec_depend>python3-numpy</exec_depend>
+    <exec_depend>python3-yaml</exec_depend>
 
     <exec_depend>gpsd_client</exec_depend>
+    <exec_depend>rclcpp_components</exec_depend>
     <exec_depend>seatrac</exec_depend>
 
     <exec_depend>rosbridge_suite</exec_depend>

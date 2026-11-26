@@ -2,16 +2,22 @@
     <!-- This is the launch file for PhytO-ARM's core processes.
          See arm launch files for payload specific settings. -->
 
-    <!-- Most settings are in config.yaml, which is easier to edit. -->
-    <rosparam command="load" file="$(arg config_file)" />
+    <arg name="config_file" />
+    <arg name="params_file" />
+    <arg name="digital_logger" default="true" />
+    <arg name="network_data_capture" default="false" />
 
     <include file="$(find-pkg-share rosbridge_server)/launch/rosbridge_websocket_launch.xml">
         <arg name="use_compression" value="true" />
     </include>
 
-    <node name="lock_manager" pkg="phyto_arm" type="lock_manager.py" />
+    <node name="lock_manager" pkg="phyto_arm" exec="lock_manager.py">
+        <param from="$(var params_file)" />
+    </node>
 
-    <node if="$(arg network_data_capture)" name="network_data_capture" pkg="phyto_arm" type="network_data_capture.py" required="false" />
+    <node if="$(var network_data_capture)" name="network_data_capture" pkg="phyto_arm" exec="network_data_capture.py">
+        <param from="$(var params_file)" />
+    </node>
 
     <!-- NOTE: triton_classifier dependency removed
     <group if="$(arg classifier)">
@@ -22,16 +28,15 @@
     </group>
     -->
 
-    <node name="gps" pkg="gpsd_client" type="gpsd_client">
-        <remap from="/fix" to="~fix" />
-        <remap from="/extended_fix" to="~extended_fix" />
-    </node>
-
-    <node name="web" pkg="phyto_arm" type="web_node.py" />
-
     <include file="$(find-pkg-share phyto_arm)/launch/main_devices.launch.py">
         <arg name="config_file" value="$(var config_file)" />
     </include>
 
-    <node if="$(arg digital_logger)" name="digital_logger" pkg="dli_power_switch" type="dli_power_switch_node.py"/>
+    <node name="web" pkg="phyto_arm" exec="web_node.py">
+        <param from="$(var params_file)" />
+    </node>
+
+    <node if="$(var digital_logger)" name="digital_logger" pkg="dli_power_switch" exec="dli_power_switch_node.py">
+        <param from="$(var params_file)" />
+    </node>
 </launch>
