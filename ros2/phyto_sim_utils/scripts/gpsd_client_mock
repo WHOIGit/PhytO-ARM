@@ -6,7 +6,7 @@ so the production gpsd_client publishes the fixes.
 """
 import rospy
 
-from gps_common.msg import GPSFix, GPSStatus
+from gps_msgs.msg import GPSFix, GPSStatus
 from phyto_sim_utils.gps import receive_fixes
 from sensor_msgs.msg import NavSatFix
 

@@ -25,7 +25,7 @@
         "source=${localWorkspaceFolder}/ros2/jvl_motor,target=/app/ros2/src/jvl_motor,type=bind",
         "source=${localWorkspaceFolder}/ros2/jvl_motor_msgs,target=/app/ros2/src/jvl_motor_msgs,type=bind",
         "source=${localWorkspaceFolder}/ros1/phyto_arm,target=/app/ros1/src/phyto_arm,type=bind",
-        "source=${localWorkspaceFolder}/src/phyto_sim_utils,target=/app/ros1/src/phyto_sim_utils,type=bind",
+        "source=${localWorkspaceFolder}/ros2/phyto_sim_utils,target=/app/ros2/src/phyto_sim_utils,type=bind",
         "source=${localWorkspaceFolder}/ros2/rbr_maestro3_ctd,target=/app/ros2/src/rbr_maestro3_ctd,type=bind",
         "source=${localWorkspaceFolder}/ros2/rbr_maestro3_ctd_msgs,target=/app/ros2/src/rbr_maestro3_ctd_msgs,type=bind",
         "source=${localWorkspaceFolder}/.gitignore,target=/app/.gitignore,type=bind",
