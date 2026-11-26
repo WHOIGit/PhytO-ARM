@@ -26,6 +26,7 @@
     <depend>foxglove_msgs</depend>
     <depend>wr2_msgs</depend>
 
+    <exec_depend>launch_ros</exec_depend>
     <exec_depend>rclpy</exec_depend>
     <exec_depend>rospy_too</exec_depend>
 
