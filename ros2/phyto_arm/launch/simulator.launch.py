@@ -56,7 +56,7 @@ def generate_launch_description():
 
         OpaqueFunction(function=prepare_params, condition=UnlessCondition(gazebo)),
         Node(package='phyto_arm', executable='lock_manager.py', name='lock_manager',
-             parameters=[{'lock_manager.max_moving_winches': 1}]),
+             parameters=[{'max_moving_winches': 1}]),
         include('phyto_sim_utils', 'gps.launch.py', UnlessCondition(gazebo),
                 gpsd=gpsd, gpsd_port=gpsd_port),
         include('phyto_arm', 'sim_arm_ifcb.launch.xml', UnlessCondition(gazebo),

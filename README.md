@@ -360,7 +360,7 @@ PhytO-ARM has evolved to handle multiple mission types and deployment configurat
 
 PhytO-ARM has been modularized to support any configuration of winch and scientific payload. Scientific payloads are isolated into distinct "arms", each of which may have a winch providing movement for that arm. All arms should implement `ArmBase`, an interface class which handles winch movement logic and coordinates movement between arms by communicating with a central `lock_manager` node. 
 
-`lock_manager` is primarily to limit how many winches can move concurrently, as configured by the parameter `/lock_manager/max_moving_winches`. This is primarily to accommodate missions which may require inter-arm coordination, or to prevent overdraw of power on battery-powered setups.
+`lock_manager` is primarily to limit how many winches can move concurrently, as configured by the node's `max_moving_winches` parameter. This is primarily to accommodate missions which may require inter-arm coordination, or to prevent overdraw of power on battery-powered setups.
 
 PhytO-ARM comes with two arm implementations included, see `arm_ifcb.py` and `arm_chanos.py` in the `phyto_arm` package. Any number of arms is supported however, as illustrated below. Each box represents a set of nodes with an independent launch file.
 

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
+import rclpy
+
 from threading import Lock, Semaphore
 
-import rospy
-from phyto_arm.srv import LockOperation, LockCheck, LockOperationResponse, LockCheckResponse
+from phyto_arm_msgs.srv import LockCheck, LockOperation
+from rclpy.executors import ExternalShutdownException
+from rclpy.parameter import Parameter
+
 
 class NamedLockManager:
     def __init__(self, max_concurrent_locks):
@@ -37,23 +41,30 @@ class NamedLockManager:
 
 
 if __name__ == "__main__":
-    rospy.init_node('lock_manager')
-    lock_manager = NamedLockManager(rospy.get_param('~max_moving_winches'))
+    rclpy.init()
+    node = rclpy.create_node('lock_manager')
 
-    def handle_acquire(req):
-        success = lock_manager.acquire_lock(req.arm_name)
-        return LockOperationResponse(success=success)
+    def handle_acquire(req, response):
+        response.success = lock_manager.acquire_lock(req.arm_name)
+        return response
 
-    def handle_release(req):
-        success = lock_manager.release_lock(req.arm_name)
-        return LockOperationResponse(success=success)
+    def handle_release(req, response):
+        response.success = lock_manager.release_lock(req.arm_name)
+        return response
 
-    def handle_check(req):
-        has_lock = lock_manager.check_lock(req.arm_name)
-        return LockCheckResponse(has_lock=has_lock)
+    def handle_check(req, response):
+        response.has_lock = lock_manager.check_lock(req.arm_name)
+        return response
 
-    rospy.Service('~acquire', LockOperation, handle_acquire)
-    rospy.Service('~release', LockOperation, handle_release)
-    rospy.Service('~check', LockCheck, handle_check)
-
-    rospy.spin()
+    try:
+        node.declare_parameter('max_moving_winches', Parameter.Type.INTEGER)
+        lock_manager = NamedLockManager(node.get_parameter('max_moving_winches').value)
+        node.create_service(LockOperation, '~/acquire', handle_acquire)
+        node.create_service(LockOperation, '~/release', handle_release)
+        node.create_service(LockCheck, '~/check', handle_check)
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
