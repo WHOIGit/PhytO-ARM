@@ -20,6 +20,8 @@
 
     <depend>jvl_motor_msgs</depend>
 
+    <exec_depend>launch_ros</exec_depend>
+    <exec_depend>phyto_sim_utils</exec_depend>
     <exec_depend>rosgraph_msgs</exec_depend>
     <exec_depend>std_msgs</exec_depend>
     <exec_depend>rclpy</exec_depend>

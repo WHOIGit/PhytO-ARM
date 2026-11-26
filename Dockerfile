@@ -284,18 +284,6 @@ RUN bash -c " \
     cd /app/ros2 && \
     colcon build --packages-select ifcb"
 
-FROM with-sources AS build-jvl_motor
-COPY ros2/jvl_motor ros2/src/jvl_motor
-COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
-COPY --from=build-jvl_motor_msgs /app/ros2/install/jvl_motor_msgs /app/ros2/install/jvl_motor_msgs
-COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
-COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
-RUN bash -c " \
-    source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    source /app/ros2/install/setup.bash && \
-    cd /app/ros2 && \
-    colcon build --packages-select jvl_motor"
-
 FROM with-sources AS build-phyto_sim_utils
 COPY ros2/phyto_sim_utils ros2/src/phyto_sim_utils
 COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
@@ -333,6 +321,21 @@ RUN bash -c " \
     source /app/ros2/install/setup.bash && \
     cd /app/ros2 && \
     colcon build --cmake-args -DBUILD_TESTING=OFF --packages-select wr2_asio"
+
+FROM with-sources AS build-jvl_motor
+COPY ros2/jvl_motor ros2/src/jvl_motor
+COPY --from=build-ds_core_msgs /app/ros2/install/ds_core_msgs /app/ros2/install/ds_core_msgs
+COPY --from=build-ds_nmea_msgs /app/ros2/install/ds_nmea_msgs /app/ros2/install/ds_nmea_msgs
+COPY --from=build-ds_sensor_msgs /app/ros2/install/ds_sensor_msgs /app/ros2/install/ds_sensor_msgs
+COPY --from=build-jvl_motor_msgs /app/ros2/install/jvl_motor_msgs /app/ros2/install/jvl_motor_msgs
+COPY --from=build-phyto_sim_utils /app/ros2/install/phyto_sim_utils /app/ros2/install/phyto_sim_utils
+COPY --from=build-rospy_too /app/ros2/install/rospy_too /app/ros2/install/rospy_too
+COPY --from=build-rospy_too_interfaces /app/ros2/install/rospy_too_interfaces /app/ros2/install/rospy_too_interfaces
+RUN bash -c " \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source /app/ros2/install/setup.bash && \
+    cd /app/ros2 && \
+    colcon build --packages-select jvl_motor"
 
 FROM with-sources AS build-phyto_arm
 COPY ros2/phyto_arm ros2/src/phyto_arm
