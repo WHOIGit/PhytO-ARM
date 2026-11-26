@@ -28,7 +28,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         Node(package='phyto_sim_utils', executable='gps_sim.py', name='gps_sim',
              condition=IfCondition(gpsd),
-             parameters=[{'fix_topic': fix_topic, 'gps_sim.port': port, 'use_sim_time': sim_time}],
+             parameters=[{'fix_topic': fix_topic, 'port': port, 'use_sim_time': sim_time}],
              on_exit=[Shutdown()]),
         ComposableNodeContainer(package='rclcpp_components', executable='component_container',
                                 name='gps_container', namespace='', prefix=[wait, ' ', port],

@@ -6,15 +6,12 @@ from sensor_msgs.msg import NavSatFix, NavSatStatus
 
 # Use the barge antenna in Gazebo or a stationary receiver on ROS time
 def receive_fixes(node: Node, callback):
-    topic = (node.get_parameter('fix_topic').value if node.has_parameter('fix_topic')
-             else node.declare_parameter('fix_topic', '').value)
+    topic = node.declare_parameter('fix_topic', '').value
     if topic:
         qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
         return node.create_subscription(NavSatFix, topic, callback, qos)
 
     def coordinate(name, default):
-        if node.has_parameter(name):
-            return float(node.get_parameter(name).value)
         return float(declare_number(node, name, default))
 
     fix = NavSatFix(latitude=coordinate('latitude', 41.524),

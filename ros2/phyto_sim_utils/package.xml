@@ -12,6 +12,7 @@
     <exec_depend>ds_sensor_msgs</exec_depend>
     <exec_depend>geometry_msgs</exec_depend>
     <exec_depend>gps_msgs</exec_depend>
+    <exec_depend>gpsd</exec_depend>
     <exec_depend>gpsd_client</exec_depend>
     <exec_depend>launch_ros</exec_depend>
     <exec_depend>python3-yaml</exec_depend>
