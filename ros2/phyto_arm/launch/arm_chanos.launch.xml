@@ -1,23 +1,24 @@
 <launch>
-    <!-- Most settings are in config.yaml, which is easier to edit. -->
-    <rosparam command="load" file="$(arg config_file)" />
+    <arg name="params_file" />
+    <arg name="chanos_winch" default="false" />
 
-    <!-- RBR winch namespace. Important for separating similar nodes on different arms -->
-    <group ns="arm_chanos">
-        <node name="ctd" pkg="rbr_maestro3_ctd" type="rbr_maestro3_node.py">
+    <group>
+        <push-ros-namespace namespace="arm_chanos" />
+        <node name="ctd" pkg="rbr_maestro3_ctd" exec="rbr_maestro3_node.py">
+            <param from="$(var params_file)" />
             <remap from="~/in" to="udp_stream" />
         </node>
-
-        <node name="arm" pkg="phyto_arm" type="arm_chanos.py" />
-
-        <!-- Map launch arg to parameter for driving arm behavior -->
-        <param name="winch_enabled" value="$(arg chanos_winch)" type="bool" />
-
-        <!-- Conditionally run the motor, winch, and profiler nodes based on the winch_enabled argument -->
-        <group if="$(arg chanos_winch)">
-            <node name="motor" pkg="jvl_motor" type="jvl_motor_node.py" />
-
-            <node name="winch" pkg="phyto_arm" type="winch_node.py" />
+        <node name="arm" pkg="phyto_arm" exec="arm_chanos.py">
+            <param from="$(var params_file)" />
+            <param name="arm_chanos.winch_enabled" value="$(var chanos_winch)" />
+        </node>
+        <group if="$(var chanos_winch)">
+            <node name="motor" pkg="jvl_motor" exec="jvl_motor_node.py">
+                <param from="$(var params_file)" />
+            </node>
+            <node name="winch" pkg="phyto_arm" exec="winch_node.py">
+                <param from="$(var params_file)" />
+            </node>
         </group>
     </group>
 </launch>
