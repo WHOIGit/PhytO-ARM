@@ -116,6 +116,7 @@ def convert_to_ros2_params(config, launch_name=None):
         ('/arm_chanos/motor', (config.get('arm_chanos') or {}).get('motor')),
         ('/arm_ifcb/motor', (config.get('arm_ifcb') or {}).get('motor')),
         ('/digital_logger', config.get('digital_logger')),
+        ('/ifcb', config.get('ifcb')),
         ('/lock_manager', config.get('lock_manager')),
         ('/network_data_capture', config.get('network_data_capture')),
         ('/seatrac/comms', seatrac.get('comms')),

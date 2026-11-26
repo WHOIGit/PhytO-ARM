@@ -107,8 +107,8 @@ class RoutineRunner:
             if kind == 'Report':
                 self.report('reportevent:' + value)
             elif kind == 'TriggerOnce':
-                node.on_triggerimage(self.pub['img'], None, PIXEL)
-                node.on_triggerrois(self.pub['roi'], self.pub['mkr'], None,
+                node.on_triggerimage(self.node, self.pub['img'], None, PIXEL)
+                node.on_triggerrois(self.node, self.pub['roi'], self.pub['mkr'], None,
                                     [(0, 0, PIXEL)])
 
 
@@ -121,7 +121,7 @@ class MockHost:
         self.running = None
 
     def report(self, text):
-        node.on_any_message(self.pub, (None, None, 0, text))
+        node.on_any_message(self.node, self.pub, (None, None, 0, text))
 
     def connect(self, wait_until_ready=False):
         # IFCBacquire sends its settings and state when a client connects.
@@ -164,7 +164,7 @@ class MockHost:
     def finish(self):
         self.stop()
         self.report('valuechanged:interactive:stopped')
-        node.on_interactive_stopped(self.pub['tx'])
+        node.on_interactive_stopped(self.node, self.pub['tx'])
 
     def start_worker(self):
         runner = self.running  # Hold a local reference before the thread starts

@@ -2,16 +2,21 @@
 import functools
 import json
 import os
+import random
 import struct
+import traceback
 
-import rospy
+import rclpy
 
-from threading import Lock
+import ifcb_msgs.srv as srv
 
-import ifcb.srv as srv
-
-from foxglove_msgs.msg import ImageAnnotations, PointsAnnotation, Point2, Color
+from foxglove_msgs.msg import Color, ImageAnnotations, Point2, PointsAnnotation
 from ifcbclient import IFCBClient
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
+from rclpy.node import Node
+from rclpy.parameter import Parameter
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Bool
 from wr2_msgs.msg import RawData
@@ -23,19 +28,19 @@ connection = None
 
 # Apologies for the horrible naming. This is the ROS service handler that
 # invokes send_command() and returns an empty response.
-def do_command(pub, req):
-    sent = send_command(pub, req.command)
-    return srv.CommandResponse(success=sent)
+def do_command(node, pub, req, response):
+    response.success = send_command(node, pub, req.command)
+    return response
 
 
-def load_routine(name):
-    path = os.path.join(rospy.get_param('~routines_dir'), f'{name}.json')
+def load_routine(node, name):
+    path = os.path.join(node.get_parameter('routines_dir').value, f'{name}.json')
     with open(os.path.expanduser(path), 'rb') as f:
         return json.load(f)
 
 
 # The ROS service handler that runs a routine, optionally with instrumentation
-def do_runroutine(pub, req, load_routine):
+def do_runroutine(node, pub, req, response, load_routine):
     # XXX
     # We always use the 'interactive:start' command instead of 'routine' because
     # the latter does not (as of Apr 21, 2022) provide any feedback when the
@@ -46,22 +51,22 @@ def do_runroutine(pub, req, load_routine):
 
     # Deny path traversal
     if '/' in req.routine:
-        return srv.RunRoutineResponse(success=False)
+        return response
 
     # Check for beads routines
     if req.routine == 'beads':
-        sent = send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}/beads')
+        sent = send_command(node, pub, f'daq:setdatafolder:{node.get_parameter("data_dir").value}/beads')
     else:
-        sent = send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}')
+        sent = send_command(node, pub, f'daq:setdatafolder:{node.get_parameter("data_dir").value}')
     if not sent:
-        return srv.RunRoutineResponse(success=False)
+        return response
 
     # Look up the routine before adding instrumentation
     try:
         routine = load_routine(req.routine)
     except (KeyError, OSError, ValueError):
-        rospy.logerr(f'Could not load routine {req.routine}')
-        return srv.RunRoutineResponse(success=False)
+        node.get_logger().error(f'Could not load routine {req.routine}')
+        return response
 
     # Optionally instrument the routine
     if req.instrument:
@@ -69,24 +74,25 @@ def do_runroutine(pub, req, load_routine):
 
     # Encode and send the routine
     encoded = json.dumps(routine, separators=(',', ':'))  # less whitespace
-    sent = send_command(pub, f'interactive:load:{encoded}')
-    sent = sent and send_command(pub, 'interactive:start')
+    sent = send_command(node, pub, f'interactive:load:{encoded}')
+    sent = sent and send_command(node, pub, 'interactive:start')
 
-    return srv.RunRoutineResponse(success=sent)
+    response.success = sent
+    return response
         
 
 
 # Send a command to the IFCB host and publish it to ROS
-def send_command(pub, command):
+def send_command(node, pub, command):
     try:
         connection.relay_message_to_host(command)
     except Exception:
-        rospy.logerr('Failed to send IFCB command "%s"', command, exc_info=True)
+        node.get_logger().error(f'Failed to send IFCB command "{command}"\n{traceback.format_exc()}')
         return False
 
     # Construct the message we are going to publish
     msg = RawData()
-    msg.io_stamp = rospy.Time.now()
+    msg.io_stamp = node.get_clock().now().to_msg()
     msg.data_direction = RawData.DIRECTION_DATA_OUT
     msg.data = command.encode()
     pub.publish(msg)
@@ -94,51 +100,51 @@ def send_command(pub, command):
 
 
 # Publish incoming "raw" messages from the IFCB as ROS messages
-def on_any_message(publishers, data):
+def on_any_message(node, publishers, data):
     sender_id, smsgsrc, seqno, data = data
 
     # Publish a copy of the incoming message
     msg = RawData()
-    msg.io_stamp = rospy.Time.now()
+    msg.io_stamp = node.get_clock().now().to_msg()
     msg.data_direction = RawData.DIRECTION_DATA_IN
     msg.data = data.encode()
     publishers['rx'].publish(msg)
 
     # Retain the last reported routine state for runners that subscribe later
     if data == 'valuechanged:interactive:started':
-        publishers['run'].publish(True)
+        publishers['run'].publish(Bool(data=True))
     elif data == 'valuechanged:interactive:stopped':
-        publishers['run'].publish(False)
+        publishers['run'].publish(Bool(data=False))
 
 
 # Reset the data folder to the configured data directory
-def on_interactive_stopped(pub, *_):
-    if not send_command(pub, f'daq:setdatafolder:{rospy.get_param("~data_dir")}'):
+def on_interactive_stopped(node, pub, *_):
+    if not send_command(node, pub, f'daq:setdatafolder:{node.get_parameter("data_dir").value}'):
         raise ConnectionError("Unable to reset IFCB data dir.")
 
-def on_triggerimage(pub, _, image):
+def on_triggerimage(node, pub, _, image):
     # The image data should be in PNG format, which is an allowed ROS image type
     assert image.startswith(b'\x89PNG\x0D\x0A\x1A\x0A')  # magic bytes
 
     msg = CompressedImage()
-    msg.header.stamp = rospy.Time.now()
+    msg.header.stamp = node.get_clock().now().to_msg()
     msg.format = 'png'
     msg.data = image
     pub.publish(msg)
 
 
-def on_triggercontent(roi_pub, mkr_pub, _, daq, rois):
-    timestamp = rospy.Time.now()
+def on_triggercontent(node, roi_pub, mkr_pub, _, daq, rois):
+    timestamp = node.get_clock().now().to_msg()
 
     # TODO: Publish DAQ messages too
     pass
 
     # Delegate publishing of ROI images and markers to on_triggerrois
-    on_triggerrois(roi_pub, mkr_pub, _, rois, timestamp=timestamp)
+    on_triggerrois(node, roi_pub, mkr_pub, _, rois, timestamp=timestamp)
 
 
-def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
-    timestamp = timestamp or rospy.Time.now()
+def on_triggerrois(node, roi_pub, mkr_pub, _, rois, *, timestamp=None):
+    timestamp = timestamp or node.get_clock().now().to_msg()
     markers = ImageAnnotations()
     for i, (left, top, image) in enumerate(rois):
         # IFCB does not give us the width and height so we must extract from
@@ -173,58 +179,59 @@ def on_triggerrois(roi_pub, mkr_pub, _, rois, *, timestamp=None):
 
 
 # Create a client and wire its lifecycle and ROS message callbacks
-def create_client(ros_node, publishers):
+def create_client(node, publishers):
+    port = node.get_parameter('port').value
     client = IFCBClient(
-        f'ws://{rospy.get_param("~address")}:{rospy.get_param("~port", 8092)}/ifcbHub',
-        rospy.get_param('~serial'))
+        f'ws://{node.get_parameter("address").value}:{port}/ifcbHub',
+        node.get_parameter('serial').value)
 
     # Publish registration status and log connection progress
-    client.on_ready(
-        lambda ready: publishers['conn'].publish(Bool(data=ready))
-    )
-    client.on_connecting(lambda: rospy.loginfo('Connecting to IFCB...'))
-    client.on_started(lambda _: rospy.loginfo('Established connection to IFCB'))
-    client.on_close(lambda *_: rospy.loginfo('IFCB connection closed'))
-    client.on_reconnect(lambda: rospy.loginfo('IFCB connection restored'))
-    client.on_retry(lambda delay: rospy.logwarn(
-        'IFCB connection unavailable; retrying in %g seconds...', delay
+    def on_ready(ready):
+        # Stopping the client can report disconnection after ROS shutdown.
+        if node.context.ok():
+            publishers['conn'].publish(Bool(data=ready))
+
+    client.on_ready(on_ready)
+    client.on_connecting(lambda: node.get_logger().info('Connecting to IFCB...'))
+    client.on_started(lambda _: node.get_logger().info('Established connection to IFCB'))
+    client.on_close(lambda *_: node.get_logger().info('IFCB connection closed'))
+    client.on_reconnect(lambda: node.get_logger().info('IFCB connection restored'))
+    client.on_retry(lambda delay: node.get_logger().warning(
+        f'IFCB connection unavailable; retrying in {delay:g} seconds...'
     ))
-    client.on_error(lambda error: rospy.logwarn('IFCB error: %s', error))
+    client.on_error(lambda error: node.get_logger().warning(f'IFCB error: {error}'))
 
     # Forward IFCB messages to their ROS publishers
-    client.on_any_message(functools.partial(on_any_message, publishers))
+    client.on_any_message(functools.partial(on_any_message, node, publishers))
     for pattern, callback in [
-        (('triggerimage',), functools.partial(on_triggerimage, publishers['img'])),
-        (('triggercontent',), functools.partial(on_triggercontent, publishers['roi'], publishers['mkr'])),
-        (('triggerrois',), functools.partial(on_triggerrois, publishers['roi'], publishers['mkr'])),
-        (('valuechanged', 'interactive', 'stopped'), functools.partial(on_interactive_stopped, publishers['tx'])),
+        (('triggerimage',), functools.partial(on_triggerimage, node, publishers['img'])),
+        (('triggercontent',), functools.partial(on_triggercontent, node, publishers['roi'], publishers['mkr'])),
+        (('triggerrois',), functools.partial(on_triggerrois, node, publishers['roi'], publishers['mkr'])),
+        (('valuechanged', 'interactive', 'stopped'), functools.partial(on_interactive_stopped, node, publishers['tx'])),
     ]:
         client.on(pattern, callback)
     return client
 
 
-def main(client_factory=create_client, routine_loader=load_routine):
+def configure_node(node: Node, client_factory, routine_loader) -> None:
     global connection
-    rospy.init_node('ifcb', anonymous=True)
 
     # Publishers for raw messages coming in and out of the IFCB
-    rx_pub = rospy.Publisher('~in', RawData, queue_size=32)
-    tx_pub = rospy.Publisher('~out', RawData, queue_size=5)
+    rx_pub = node.create_publisher(RawData, '~/in', 32)
+    tx_pub = node.create_publisher(RawData, '~/out', 5)
 
     # Publishers for images, ROI images, and ROI markers
-    img_pub = rospy.Publisher('~image/compressed', CompressedImage,
-                              queue_size=5)
-    roi_pub = rospy.Publisher('~roi/image/compressed', CompressedImage,
-                              queue_size=5)
-    mkr_pub = rospy.Publisher('~roi/markers', ImageAnnotations, queue_size=5)
+    img_pub = node.create_publisher(CompressedImage, '~/image/compressed', 5)
+    roi_pub = node.create_publisher(CompressedImage, '~/roi/image/compressed', 5)
+    mkr_pub = node.create_publisher(ImageAnnotations, '~/roi/markers', 5)
 
     # Publisher for connection status (latched so new subscribers get current state)
-    conn_pub = rospy.Publisher('~connected', Bool, queue_size=1, latch=True)
+    latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+    conn_pub = node.create_publisher(Bool, '~/connected', latched)
 
     # Bundle publishers for the client callbacks
     publishers = {
-        'run': rospy.Publisher('~is_routine_running', Bool, queue_size=1,
-                               latch=True),
+        'run': node.create_publisher(Bool, '~/is_routine_running', latched),
         'rx': rx_pub,
         'tx': tx_pub,
         'img': img_pub,
@@ -235,43 +242,53 @@ def main(client_factory=create_client, routine_loader=load_routine):
 
 
     # Let the client manage connection attempts and readiness
-    connection = client_factory(rospy.impl.node._get_node(), publishers)
-    rospy.on_shutdown(connection.stop)
+    connection = client_factory(node, publishers)
 
     # Keep a second request from replacing a routine between load and start
-    request_lock = Lock()
-
-    def handle(handler, req, **kwargs):
-        with request_lock:
-            return handler(tx_pub, req, **kwargs)
+    requests = MutuallyExclusiveCallbackGroup()
+    if routine_loader is None:
+        routine_loader = functools.partial(load_routine, node)
 
     # Create a ROS service for sending commands
-    rospy.Service(
-        '~command',
-        srv.Command,
-        functools.partial(handle, do_command),
-    )
+    node.create_service(
+        srv.Command, '~/command', functools.partial(do_command, node, tx_pub),
+        callback_group=requests)
 
     # Create a ROS service for running routines
-    rospy.Service(
-        '~routine',
-        srv.RunRoutine,
-        functools.partial(handle, do_runroutine, load_routine=routine_loader),
-    )
+    node.create_service(
+        srv.RunRoutine, '~/routine',
+        functools.partial(do_runroutine, node, tx_pub, load_routine=routine_loader),
+        callback_group=requests)
 
     connection.connect(wait_until_ready=False)
+    node.get_logger().info('IFCB node started, attempting connection to IFCB...')
 
-    rospy.loginfo('IFCB node started, attempting connection to IFCB...')
 
-    # Keep the program alive while other threads work
+def main(client_factory=create_client, routine_loader=None, args=None) -> None:
+    rclpy.init(args=args)
+    node = rclpy.create_node(f'ifcb_{os.getpid()}_{random.getrandbits(32):08x}')
+    executor = MultiThreadedExecutor(num_threads=2)
     try:
-        rospy.spin()
+        node.declare_parameters('', [
+            ('address', Parameter.Type.STRING),
+            ('data_dir', Parameter.Type.STRING),
+            ('port', 8092),
+            ('routines_dir', Parameter.Type.STRING),
+            ('serial', Parameter.Type.STRING),
+        ])
+
+        configure_node(node, client_factory, routine_loader)
+        # Keep the program alive while other threads work
+        rclpy.spin(node, executor=executor)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
     finally:
-        connection.stop()
+        if connection is not None:
+            connection.stop()
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass
+    main()

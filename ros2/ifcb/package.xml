@@ -28,7 +28,6 @@
 
     <exec_depend>launch_ros</exec_depend>
     <exec_depend>rclpy</exec_depend>
-    <exec_depend>rospy_too</exec_depend>
 
     <test_depend>ament_cmake_pytest</test_depend>
 

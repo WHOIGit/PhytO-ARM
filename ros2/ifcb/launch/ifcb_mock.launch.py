@@ -6,12 +6,10 @@ from launch_ros.actions import Node
 
 
 def launch_ifcb(context):
-    namespace = context.launch_configurations.get('ros_namespace', '').strip('/').replace('/', '.')
-    key = '.'.join(part for part in (namespace, 'ifcb', 'data_dir') if part)
     params_file = LaunchConfiguration('params_file').perform(context)
     params = [params_file] if params_file else []
     return [Node(package='ifcb', executable='ifcb_mock', name='ifcb',
-                 parameters=params + [{key: '/sim/ifcb'}],
+                 parameters=params + [{'data_dir': '/sim/ifcb'}],
                  on_exit=[Shutdown(reason='IFCB mock exited')])]
 
 
