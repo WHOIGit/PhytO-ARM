@@ -1,6 +1,7 @@
 import socket
 import time
 import unittest
+
 from unittest.mock import Mock, patch
 
 from phyto_arm import network_data_capture
@@ -9,6 +10,7 @@ from phyto_arm.network_data_capture import (
     parse_delimited_message, parse_json_array_message, parse_json_dict_message,
     validate_config, validate_subtopic_config, validate_topic_config
 )
+from rclpy.time import Time
 from wr2_msgs.msg import RawData
 
 
@@ -148,12 +150,13 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
 
 class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
     def test_publish_raw_packet(self):
-        stamp = network_data_capture.rospy.Time(12, 345)
+        stamp = Time(seconds=12, nanoseconds=345).to_msg()
+        node = Mock()
+        node.get_clock.return_value.now.return_value.to_msg.return_value = stamp
         payload = b'\x00\x80\xff'
         publisher = Mock()
-        with patch.object(network_data_capture.rospy.Time, 'now', return_value=stamp):
-            network_data_capture.publish_messages(
-                'input', {'data': payload}, {'input': {'raw': publisher}}, 'raw', {})
+        network_data_capture.publish_messages(
+            node, 'input', {'data': payload}, {'input': {'raw': publisher}}, 'raw', {})
 
         packet, = publisher.publish.call_args[0]
         self.assertIsInstance(packet, RawData)
@@ -164,6 +167,7 @@ class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
     def test_convert_to_ros_msg_float(self):
         msg = convert_to_ros_msg(42.5, "float")
         self.assertEqual(msg.data, 42.5)
+        self.assertEqual(convert_to_ros_msg(42, "float").data, 42.0)
 
     def test_convert_to_ros_msg_string(self):
         msg = convert_to_ros_msg("test", "str")

@@ -1,3 +1,5 @@
+import re
+
 from rclpy.parameter import Parameter
 
 
@@ -7,3 +9,11 @@ def declare_number(node, name, default=Parameter.Type.DOUBLE):
     if override is not None and override.type_ in (Parameter.Type.INTEGER, Parameter.Type.DOUBLE):
         return node.declare_parameter(name, override.type_).value
     return node.declare_parameter(name, default).value
+
+
+def declare_matching_parameters(node, pattern, *types):
+    # Humble has no public method to enumerate undeclared deployment-specific names.
+    for name, override in node._parameter_overrides.items():
+        if re.fullmatch(pattern, name):
+            kind = override.type_ if not types or override.type_ in types else types[0]
+            node.declare_parameter(name, kind)

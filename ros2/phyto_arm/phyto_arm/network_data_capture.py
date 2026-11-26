@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 import json
+import os
+import random
 import re
 import select
 import socket
 import time
 
+import rclpy
+
 from dataclasses import dataclass, field as dc_field
 from typing import Any, Dict, List, Tuple
 
-import rospy
-
+from phyto_sim_utils.parameters import declare_matching_parameters, declare_number
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
+from rclpy.node import Node
+from rclpy.parameter import Parameter
+from std_msgs.msg import (
+    Bool, Float64, Float64MultiArray, Int64, Int64MultiArray, Int8MultiArray, String,
+)
 from wr2_msgs.msg import RawData
-from std_msgs.msg import Float64, String, Int64, Bool, Float64MultiArray, Int64MultiArray, Int8MultiArray
+
 
 class ConfigurationError(Exception):
     """Exception raised for config validation errors."""
@@ -157,6 +167,8 @@ def convert_to_ros_msg(value: Any, type_hint: str) -> Any:
         if type_hint == "float":
             if not isinstance(value, (int, float)):
                 raise ConversionError(f"Expected float for type {type_hint}, got {type(value)}")
+            if type(value) is int:
+                value = float(value)
         elif type_hint == "int":
             if not isinstance(value, int):
                 raise ConversionError(f"Expected int for type {type_hint}, got {type(value)}")
@@ -525,7 +537,7 @@ def parse_json_array_message(message: bytes, config: dict) -> dict:
     except json.JSONDecodeError as e:
         raise ParsingError(f"Invalid JSON: {str(e)}") from e
 
-def setup_publishers(config: dict) -> Dict[str, dict]:
+def setup_publishers(node: Node, config: dict) -> Dict[str, dict]:
     """Set up publishers for all topics and subtopics
 
     Args:
@@ -536,9 +548,9 @@ def setup_publishers(config: dict) -> Dict[str, dict]:
         publishers_dict structure:
         {
             "topic_name": {
-                "raw": rospy.Publisher,  # For raw strategy
+                "raw": Publisher,  # For raw strategy
                 "subtopics": {  # For other strategies
-                    "subtopic_name": rospy.Publisher
+                    "subtopic_name": Publisher
                 }
             }
         }
@@ -551,25 +563,19 @@ def setup_publishers(config: dict) -> Dict[str, dict]:
         if topic_config["parsing_strategy"] == "raw":
 
             # For raw strategy, create RawData publisher
-            publishers[topic_name]["raw"] = rospy.Publisher(
-                topic_name,
-                RawData,
-                queue_size=10
-            )
+            publishers[topic_name]["raw"] = node.create_publisher(RawData, topic_name, 10)
         else:
 
             # For other strategies, create publishers for each subtopic
             for subtopic_name, subtopic_config in topic_config["subtopics"].items():
                 msg_type = ROS_TYPE_MAP[subtopic_config["type"]]
-                publishers[topic_name]["subtopics"][subtopic_name] = rospy.Publisher(
-                    f"{topic_name}/{subtopic_name}",
-                    msg_type,
-                    queue_size=10
+                publishers[topic_name]["subtopics"][subtopic_name] = node.create_publisher(
+                    msg_type, f"{topic_name}/{subtopic_name}", 10
                 )
 
     return publishers
 
-def publish_messages(topic_name: str, parsed_data: dict, publishers: dict,
+def publish_messages(node: Node, topic_name: str, parsed_data: dict, publishers: dict,
                     parsing_strategy: str, topic_config: dict) -> None:
     """Publish parsed data to appropriate topics
 
@@ -591,7 +597,7 @@ def publish_messages(topic_name: str, parsed_data: dict, publishers: dict,
         msg = RawData()
         msg.data = list(parsed_data["data"])  # Convert bytes to list of ints
         msg.data_direction = RawData.DIRECTION_DATA_IN
-        msg.io_stamp = rospy.Time.now()
+        msg.io_stamp = node.get_clock().now().to_msg()
 
         publishers[topic_name]["raw"].publish(msg)
     else:
@@ -639,11 +645,11 @@ class TopicStats:
         self.message_rate = len(self.message_times) / self.window_size
         self.error_rate = len(self.error_times) / self.window_size
 
-def log_topic_stats(topic_name: str, stats: TopicStats, print_stats: Bool = False):
+def log_topic_stats(node: Node, topic_name: str, stats: TopicStats, print_stats: Bool = False):
     """Log statistics for a topic"""
 
-    # Choose log function based on print_stats. logwarn will print to stdout
-    log_func = rospy.logwarn if print_stats else rospy.loginfo
+    # Choose log function based on print_stats
+    log_func = node.get_logger().warning if print_stats else node.get_logger().info
 
     log_func(f"Topic {topic_name} stats:")
     log_func(f"  Bytes received: {stats.bytes_received}")
@@ -658,21 +664,36 @@ def log_topic_stats(topic_name: str, stats: TopicStats, print_stats: Bool = Fals
     if stats.last_message_time > 0:
         time_since_last = time.time() - stats.last_message_time
         if time_since_last > 5.0:  # Warning if no messages for 5 seconds
-            rospy.logwarn(f"  No messages received for {time_since_last:.1f} seconds")
+            node.get_logger().warning(f"  No messages received for {time_since_last:.1f} seconds")
 
-def main():
-    rospy.init_node('network_data_capture', anonymous=True)
-
+def configure_node(node: Node) -> None:
     # Load configuration
-    config = rospy.get_param('~', None)
-    if config is None:
-        rospy.logwarn("No network_data_capture configuration found, stopping node")
+    declare_number(node, 'stats_interval')
+    node.declare_parameter('print_stats', Parameter.Type.BOOL)
+    declare_matching_parameters(node, r'topics\.[^.]+\.(connection_type|delimiter|parsing_strategy)',
+                                Parameter.Type.STRING)
+    declare_matching_parameters(node, r'topics\.[^.]+\.port', Parameter.Type.INTEGER)
+    declare_matching_parameters(node, r'topics\.[^.]+\.use_regex_delimiter', Parameter.Type.BOOL)
+    declare_matching_parameters(node, r'topics\.[^.]+\.subtopics\.[^.]+\.field_id',
+                                Parameter.Type.INTEGER, Parameter.Type.STRING)
+    declare_matching_parameters(node, r'topics\.[^.]+\.subtopics\.[^.]+\.type', Parameter.Type.STRING)
+
+    config = {key: value for key in ('stats_interval', 'print_stats')
+              if (value := node.get_parameter_or(key).value) is not None}
+    for name, parameter in node.get_parameters_by_prefix('topics').items():
+        fields = name.split('.')
+        section = config.setdefault('topics', {})
+        for field in fields[:-1]:
+            section = section.setdefault(field, {})
+        section[fields[-1]] = parameter.value
+    if not config:
+        node.get_logger().warning("No network_data_capture configuration found, stopping node")
         exit(0)
 
     try:
         validate_config(config)
     except ConfigurationError as e:
-        rospy.logerr(f"Configuration error: {str(e)}")
+        node.get_logger().error(f"Configuration error: {str(e)}")
         exit(1)
 
     # Create sockets
@@ -687,35 +708,37 @@ def main():
             buffers[topic_name] = b""
             stats[topic_name] = TopicStats()
 
-            rospy.loginfo(f"Created {topic_config['connection_type'].upper()} socket for {topic_name} "
+            node.get_logger().info(f"Created {topic_config['connection_type'].upper()} socket for {topic_name} "
                             f"on port {topic_config['port']}")
         except SocketError as e:
-            rospy.logerr(f"Error creating socket for {topic_name}: {str(e)}")
+            node.get_logger().error(f"Error creating socket for {topic_name}: {str(e)}")
             exit(1)
 
     # Set up publishers
     try:
-        publishers = setup_publishers(config)
+        publishers = setup_publishers(node, config)
     except Exception as e:
-        rospy.logerr(f"Error setting up publishers: {str(e)}")
+        node.get_logger().error(f"Error setting up publishers: {str(e)}")
         exit(1)
 
-    rospy.loginfo("Network Data Capture Node started")
+    node.get_logger().info("Network Data Capture Node started")
 
     # Stats logging timer
     last_stats_time = time.time()
-    stats_interval = rospy.get_param("~stats_interval", 60)  # Log stats every 60 seconds
-    print_stats = rospy.get_param("~print_stats", False)
+    stats_interval = config.get("stats_interval", 60)  # Log stats every 60 seconds
+    print_stats = config.get("print_stats", False)
 
-    while not rospy.is_shutdown():
+    def capture():
+        nonlocal last_stats_time
+        wakeup.trigger()
         current_time = time.time()
 
         try:
             # Read available data
             received_data = read_available_data(sockets)
         except SocketError as e:
-            rospy.logerr(f"Socket error: {str(e)}")
-            continue
+            node.get_logger().error(f"Socket error: {str(e)}")
+            return
 
         # Process data for each topic
         for topic_name, data in received_data.items():
@@ -752,7 +775,7 @@ def main():
                         )
 
                         publish_messages(
-                            topic_name,
+                            node, topic_name,
                             parsed_data,
                             publishers,
                             topic_config["parsing_strategy"],
@@ -761,13 +784,13 @@ def main():
 
                         topic_stats.messages_published += 1
                     except (ParsingError, ValueError, ConversionError) as e:
-                        rospy.logerr(f"Error processing message for {topic_name}: {str(e)}")
+                        node.get_logger().error(f"Error processing message for {topic_name}: {str(e)}")
                         topic_stats.parse_errors += 1
                         topic_stats.error_times.append(current_time)
                         continue
 
             except (BufferError, ParsingError) as e:
-                rospy.logerr(f"Error processing data for {topic_name}: {str(e)}")
+                node.get_logger().error(f"Error processing data for {topic_name}: {str(e)}")
                 topic_stats.error_times.append(current_time)
                 continue
 
@@ -776,15 +799,30 @@ def main():
 
         # Log stats periodically
         if current_time - last_stats_time >= stats_interval:
-            rospy.loginfo("=== Network Data Capture Statistics ===")
+            node.get_logger().info("=== Network Data Capture Statistics ===")
             for topic_name, topic_stats in stats.items():
-                log_topic_stats(topic_name, topic_stats, print_stats)
+                log_topic_stats(node, topic_name, topic_stats, print_stats)
             last_stats_time = current_time
 
+    # Continue polling sockets in wall time while ROS clock callbacks run.
+    wakeup = node.create_guard_condition(capture, callback_group=MutuallyExclusiveCallbackGroup())
+    wakeup.trigger()
+
+
+def main():
+    rclpy.init()
+    node = rclpy.create_node(f'network_data_capture_{os.getpid()}_{random.getrandbits(32):08x}')
+    executor = MultiThreadedExecutor(num_threads=2)
+    try:
+        configure_node(node)
+        rclpy.spin(node, executor=executor)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass
+    main()

@@ -2,7 +2,7 @@ import unittest
 
 import rclpy
 
-from phyto_sim_utils.parameters import declare_number
+from phyto_sim_utils.parameters import declare_matching_parameters, declare_number
 from rclpy.exceptions import InvalidParameterTypeException
 from rclpy.parameter import Parameter
 
@@ -27,3 +27,11 @@ class TestParameterDeclarations(unittest.TestCase):
         self.assertIsNone(declare_number(node, 'optional'))
         with self.assertRaises(InvalidParameterTypeException):
             declare_number(node, 'invalid')
+
+    def test_deployment_names(self):
+        node = self.node_with(**{'topics.deck.port': 4321, 'topics.deck.typo': 2,
+                                'other.port': 9876})
+        declare_matching_parameters(node, r'topics\.[^.]+\.port', Parameter.Type.INTEGER)
+        self.assertEqual(node.get_parameter('topics.deck.port').value, 4321)
+        self.assertFalse(node.has_parameter('topics.deck.typo'))
+        self.assertFalse(node.has_parameter('other.port'))
