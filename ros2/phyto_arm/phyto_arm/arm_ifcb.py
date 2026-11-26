@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 import math
 
-import actionlib
 import numpy as np
-import rospy
+import rclpy
 
 from datetime import datetime, timedelta
 from threading import Event
 
-from phyto_arm.arm_base import ArmBase, Task
-from phyto_arm.msg import DepthProfile, RunIFCBGoal, RunIFCBAction
-from rospy.impl.node import _get_node
+from phyto_arm.arm_base import ArmBase, Task, arm_node
+from phyto_arm_msgs.action import RunIFCB
+from phyto_arm_msgs.msg import DepthProfile
+from phyto_sim_utils.parameters import declare_number
+from rclpy.action import ActionClient
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.clock import ClockType
+from rclpy.duration import Duration
+from rclpy.parameter import Parameter
+from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.time import Time
 from std_msgs.msg import Bool
 
 
@@ -39,12 +46,12 @@ class ArmIFCB(ArmBase):
     #  - speed: the speed to move at (optional, will use config max if not provided)
     def get_next_task(self, last_task):
         # Check if we should pause tasks when IFCB is disconnected
-        pause_on_disconnect = rospy.get_param('tasks/pause_tasks_until_connected', False)
+        pause_on_disconnect = self.node.get_parameter_or('tasks.pause_tasks_until_connected').value
         if pause_on_disconnect and not self.ifcb_connected:
-            rospy.logwarn('IFCB is disconnected. Waiting for connection...')
+            self.node.get_logger().warning('IFCB is disconnected. Waiting for connection...')
             return Task('await_ifcb_connection', await_ifcb_connection)
 
-        if not rospy.get_param('winch_enabled'):
+        if not self.node.get_parameter('winch_enabled').value:
             return Task('no_winch', handle_nowinch)
 
         # If close to scheduled wiz time, prioritize first
@@ -55,11 +62,11 @@ class ArmIFCB(ArmBase):
         # Otherwise, start off at min
         preupcast_tasks = ['scheduled_depth', 'profiler_peak_depth', 'wiz_probe', 'await_ifcb_connection']
         if last_task is None or last_task.name in preupcast_tasks:
-            return Task('upcast', self.start_next_task, rospy.get_param('winch/range/min'))
+            return Task('upcast', self.start_next_task, self.node.get_parameter('winch.range.min').value)
 
         # Then perform a downcast to get a full profile
         if last_task.name == 'upcast':
-            return Task('downcast', handle_downcast, rospy.get_param('winch/range/max'))
+            return Task('downcast', handle_downcast, self.node.get_parameter('winch.range.max').value)
 
         # Then go to peak depth, unless it's scheduled depth time
         if last_task.name == 'downcast':
@@ -91,23 +98,23 @@ def on_profile_msg(msg):
 def on_ifcb_connection_status(msg):
     arm.ifcb_connected = msg.data
     if arm.ifcb_connected:
-        rospy.loginfo('IFCB connection established')
+        arm.node.get_logger().info('IFCB connection established')
         arm.ifcb_connection_event.set()
         arm.ifcb_connection_event.clear()
     else:
-        rospy.logwarn('IFCB connection lost')
+        arm.node.get_logger().warning('IFCB connection lost')
 
 
 def await_ifcb_connection():
-    while not arm.ifcb_connected and not rospy.is_shutdown():
-        rospy.loginfo('Waiting for IFCB connection...')
+    while not arm.ifcb_connected and rclpy.ok(context=arm.node.context):
+        arm.node.get_logger().info('Waiting for IFCB connection...')
         arm.ifcb_connection_event.wait(30)
 
     if arm.ifcb_connected:
-        rospy.loginfo('IFCB connection restored, resuming tasks')
+        arm.node.get_logger().info('IFCB connection restored, resuming tasks')
         arm.start_next_task()
 
-# Convert HH:MM to a rospy.Time datetime. Take into account the current time,
+# Convert HH:MM to a ROS timestamp. Take into account the current time,
 # pushing the requested time to the next day if it's already passed.
 def wiz_to_rostime(hhmm_time):
     today_time = datetime.now().time()
@@ -120,16 +127,14 @@ def wiz_to_rostime(hhmm_time):
     if wiz_time < today_time:
         wiz_date = datetime.now().date() + timedelta(days=1)
 
-    # Create a rospy.Time object
     unix_timestamp = datetime.combine(wiz_date, wiz_time).timestamp()
 
-    # Create a rospy.Time object
-    return rospy.Time.from_sec(unix_timestamp)
+    return Time(seconds=unix_timestamp, clock_type=ClockType.ROS_TIME)
 
 
 def find_next_wiz_time():
     # Get array of HH:MM times
-    wiz_probe_times = rospy.get_param('tasks/wiz_probe/times')
+    wiz_probe_times = arm.node.get_parameter('tasks.wiz_probe.times').value
 
     # Find the next time
     next_time = None
@@ -145,28 +150,28 @@ def find_next_wiz_time():
 
 # Check if it's time to run the wiz probe routine
 def its_wiz_time():
-    prep_window = rospy.Duration(60*rospy.get_param('tasks/wiz_probe/preparation_window'))
+    prep_window = Duration(seconds=60*arm.node.get_parameter('tasks.wiz_probe.preparation_window').value)
 
     # If we're within the preparation window, it's wizin' time
-    return (find_next_wiz_time() - rospy.Time.now()) <= prep_window
+    return (find_next_wiz_time() - arm.node.get_clock().now()) <= prep_window
 
 
 def compute_wiz_depth(peak_depth):
-    wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
-    if rospy.get_param('tasks/wiz_probe/use_profiler_peak'):
+    wiz_depth = arm.node.get_parameter('tasks.wiz_probe.default_depth').value
+    if arm.node.get_parameter('tasks.wiz_probe.use_profiler_peak').value:
         if peak_depth is not None:
-            wiz_depth = peak_depth + rospy.get_param('tasks/wiz_probe/peak_offset')
+            wiz_depth = peak_depth + arm.node.get_parameter('tasks.wiz_probe.peak_offset').value
         else:
-            rospy.logwarn('No profiler peak depth available, using default wiz probe depth')
-            wiz_depth = rospy.get_param('tasks/wiz_probe/default_depth')
+            arm.node.get_logger().warning('No profiler peak depth available, using default wiz probe depth')
+            wiz_depth = arm.node.get_parameter('tasks.wiz_probe.default_depth').value
 
     # Check that adjustments haven't caused us to exceed bounds. Go with bound if so
-    if wiz_depth > rospy.get_param('winch/range/max'):
-        rospy.logwarn('Preferred wiz probe depth exceeds max depth, using max depth')
-        wiz_depth = rospy.get_param('winch/range/max')
-    if wiz_depth < rospy.get_param('winch/range/min'):
-        rospy.logwarn('Preferred wiz probe depth is less than min depth, using min depth')
-        wiz_depth = rospy.get_param('winch/range/min')
+    if wiz_depth > arm.node.get_parameter('winch.range.max').value:
+        arm.node.get_logger().warning('Preferred wiz probe depth exceeds max depth, using max depth')
+        wiz_depth = arm.node.get_parameter('winch.range.max').value
+    if wiz_depth < arm.node.get_parameter('winch.range.min').value:
+        arm.node.get_logger().warning('Preferred wiz probe depth is less than min depth, using min depth')
+        wiz_depth = arm.node.get_parameter('winch.range.min').value
 
     return wiz_depth
 
@@ -176,59 +181,64 @@ def await_wiz_probe(callback):
     next_time = find_next_wiz_time()
 
     # Ensure we're still in the preparation window
-    prep_window = rospy.Duration(60*rospy.get_param('tasks/wiz_probe/preparation_window'))
-    preptime_remaining = next_time - rospy.Time.now()
+    prep_window = Duration(seconds=60*arm.node.get_parameter('tasks.wiz_probe.preparation_window').value)
+    preptime_remaining = next_time - arm.node.get_clock().now()
     if preptime_remaining > prep_window:
-        raise ValueError(f'Next wiz time is {preptime_remaining.to_sec()}s away, should be less than \
-                          {prep_window.to_sec()}s. Preparation window likely too short.')
+        raise ValueError(f'Next wiz time is {preptime_remaining.nanoseconds / 1e9}s away, should be less than \
+                          {prep_window.nanoseconds / 1e9}s. Preparation window likely too short.')
 
     # Wait for the rest of the window + the wiz probe duration
-    rospy.loginfo('Waiting for wiz probe to finish')
-    wiz_duration = 60*rospy.get_param('tasks/wiz_probe/duration')
-    rospy.sleep(wiz_duration + preptime_remaining.to_sec())
+    arm.node.get_logger().info('Waiting for wiz probe to finish')
+    wiz_duration = 60*arm.node.get_parameter('tasks.wiz_probe.duration').value
+    if arm.stopping.wait(wiz_duration + preptime_remaining.nanoseconds / 1e9):
+        return
 
     # TODO: Run IFCB while waiting
 
-    rospy.loginfo('Wiz probe wait time complete')
+    arm.node.get_logger().info('Wiz probe wait time complete')
     callback()
 
 
 def its_scheduled_depth_time(peak_value):
     # Decide if we want to use the scheduled depth
-    scheduled_interval = rospy.Duration(60*rospy.get_param('tasks/scheduled_depth/every'))
+    scheduled_interval = Duration(seconds=60*arm.node.get_parameter('tasks.scheduled_depth.every').value)
 
     run_schedule = False
-    if math.isclose(scheduled_interval.to_sec(), 0.0):  # disabled
+    if math.isclose(scheduled_interval.nanoseconds / 1e9, 0.0):  # disabled
         run_schedule = False
     elif arm.last_scheduled_time is None:
         run_schedule = True
-    elif rospy.Time.now() - arm.last_scheduled_time > scheduled_interval:
+    elif arm.node.get_clock().now() - arm.last_scheduled_time > scheduled_interval:
         run_schedule = True
-    elif peak_value is not None and peak_value < rospy.get_param('tasks/profiler_peak/threshold'):
+    elif peak_value is not None and peak_value < arm.node.get_parameter('tasks.profiler_peak.threshold').value:
         run_schedule = True
     return run_schedule
 
 
 def scheduled_depth():
     scheduled_depths = np.linspace(
-        rospy.get_param('tasks/scheduled_depth/range/first'),
-        rospy.get_param('tasks/scheduled_depth/range/last'),
-        rospy.get_param('tasks/scheduled_depth/range/count'),
+        arm.node.get_parameter('tasks.scheduled_depth.range.first').value,
+        arm.node.get_parameter('tasks.scheduled_depth.range.last').value,
+        arm.node.get_parameter('tasks.scheduled_depth.range.count').value,
     )
 
     target_depth = scheduled_depths[arm.next_scheduled_index % scheduled_depths.shape[0]]
 
-    rospy.loginfo(f'Using scheduled depth of {target_depth:.2f} m')
+    arm.node.get_logger().info(f'Using scheduled depth of {target_depth:.2f} m')
 
     arm.next_scheduled_index += 1
-    arm.last_scheduled_time = rospy.Time.now()
+    arm.last_scheduled_time = arm.node.get_clock().now()
     return target_depth
 
 
 def send_ifcb_action():
-    goal = RunIFCBGoal()
-    ifcb_runner.send_goal(goal)
-    ifcb_runner.wait_for_result()
+    ready = Event()
+    goal = ifcb_runner.send_goal_async(RunIFCB.Goal())
+    goal.add_done_callback(lambda _: ready.set())
+    ready.wait()
+    handle = goal.result()
+    if handle.accepted:
+        handle.get_result()
 
 
 def handle_downcast(move_result):
@@ -239,7 +249,7 @@ def handle_downcast(move_result):
 
         # For short downcasts profiling will likely fail; switch to scheduled depth
         if not notified:
-            rospy.logwarn('No profile data received')
+            arm.node.get_logger().warning('No profile data received')
             arm.profiler_peak_depth = None
             arm.profiler_peak_value = None
             arm.start_next_task()
@@ -250,7 +260,7 @@ def handle_downcast(move_result):
     arm.profiler_peak_value = arm.latest_profile.values[argmax]
     arm.profiler_peak_depth = arm.latest_profile.depths[argmax]
 
-    rospy.loginfo(f'Profile peak is {arm.profiler_peak_value:.2f} at {arm.profiler_peak_depth:.2f} m')
+    arm.node.get_logger().info(f'Profile peak is {arm.profiler_peak_value:.2f} at {arm.profiler_peak_depth:.2f} m')
     arm.start_next_task()
 
 
@@ -267,32 +277,48 @@ def handle_nowinch():
 def main():
     global arm
     global ifcb_runner
+    with arm_node('arm_ifcb') as node:
+        node.declare_parameters('', [
+            ('tasks.pause_tasks_until_connected', Parameter.Type.BOOL),
+            ('tasks.scheduled_depth.range.count', Parameter.Type.INTEGER),
+            ('tasks.wiz_probe.times', Parameter.Type.STRING_ARRAY),
+            ('tasks.wiz_probe.use_profiler_peak', Parameter.Type.BOOL),
+        ])
 
-    rospy.init_node('arm_ifcb', log_level=rospy.DEBUG)
+        for name in (
+            'tasks.profiler_peak.threshold', 'tasks.scheduled_depth.every',
+            'tasks.scheduled_depth.range.first', 'tasks.scheduled_depth.range.last',
+            'tasks.wiz_probe.default_depth', 'tasks.wiz_probe.duration',
+            'tasks.wiz_probe.peak_offset', 'tasks.wiz_probe.preparation_window'
+        ):
+            declare_number(node, name)
 
-    winch_name = None
-    if rospy.get_param('winch_enabled', False):
-        winch_name = rospy.get_namespace() + 'winch/move_to_depth'
-    arm = ArmIFCB(_get_node(), winch_name)
+        winch_name = None
+        if node.get_parameter_or('winch_enabled').value:
+            winch_name = 'winch/move_to_depth'
+        arm = ArmIFCB(node, winch_name)
 
-    # Subscribe to profiler messages that follow each transit
-    rospy.Subscriber('profiler', DepthProfile, on_profile_msg)
+        # Subscribe to profiler messages that follow each transit
+        node.create_subscription(DepthProfile, 'profiler', on_profile_msg, 10)
 
-    # Subscribe to IFCB connection status
-    rospy.Subscriber('/ifcb/connected', Bool, on_ifcb_connection_status)
+        # Subscribe to IFCB connection status
+        latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        node.create_subscription(Bool, '/ifcb/connected', on_ifcb_connection_status, latched)
 
-    # Setup action client for running IFCB
-    ifcb_runner = actionlib.SimpleActionClient('ifcb_runner/sample', RunIFCBAction)
-    rospy.loginfo(f'Arm {rospy.get_name()} awaiting IFCB-run action server')
-    ifcb_runner.wait_for_server()
-    rospy.loginfo(f'Arm {rospy.get_name()} IFCB-run action server acquired')
+        # Setup action client for running IFCB
+        ifcb_runner = ActionClient(node, RunIFCB, 'ifcb_runner/sample',
+                                   callback_group=MutuallyExclusiveCallbackGroup())
+        node.get_logger().info(f'Arm {arm.arm_name} awaiting IFCB-run action server')
+        ifcb_runner.wait_for_server()
+        node.get_logger().info(f'Arm {arm.arm_name} IFCB-run action server acquired')
 
-    # Set a fake timestamp for having run beads and catridge debubble, so that
-    # we don't run it every startup and potentially waste time or bead supply.
-    arm.last_cart_debub_time = rospy.Time.now()
-    arm.last_bead_time = rospy.Time.now()
+        # Set a fake timestamp for having run beads and catridge debubble, so that
+        # we don't run it every startup and potentially waste time or bead supply.
+        arm.last_cart_debub_time = node.get_clock().now()
+        arm.last_bead_time = node.get_clock().now()
 
-    arm.loop()
+        arm.loop()
+
 
 if __name__ == '__main__':
     main()

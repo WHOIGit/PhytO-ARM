@@ -15,7 +15,6 @@
         <push-ros-namespace namespace="arm_ifcb" />
         <node name="arm" pkg="phyto_arm" exec="arm_ifcb.py">
             <param from="$(var params_file)" />
-            <param name="arm_ifcb.winch_enabled" value="$(var ifcb_winch)" />
             <param name="winch_enabled" value="$(var ifcb_winch)" />
         </node>
 

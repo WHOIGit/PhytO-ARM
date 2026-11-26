@@ -1,10 +1,11 @@
-from datetime import datetime
 import unittest
+
+from datetime import datetime
 from unittest.mock import Mock, patch
 
-import rospy
-
 from phyto_arm import arm_ifcb
+from rclpy.parameter import Parameter
+from rclpy.time import Time
 
 
 class TestWizToRosTime(unittest.TestCase):
@@ -17,13 +18,13 @@ class TestWizToRosTime(unittest.TestCase):
         # Calculate the expected ROS time for the next day
         target_time = datetime(2024, 2, 17, 9, 0)  # Target time: Feb 17, 2024, 9:00 AM
         expected_secs_since_epoch = target_time.timestamp()
-        expected_ros_time = rospy.Time.from_sec(expected_secs_since_epoch)
+        expected_ros_time = Time(seconds=expected_secs_since_epoch)
 
         # Call the function under test and get the return value
         result_ros_time = arm_ifcb.wiz_to_rostime("09:00")
 
         # Verify that the result matches the expected ROS time for the next day
-        self.assertEqual(result_ros_time.secs, expected_ros_time.secs, "The returned ROS time does not match the expected time for the next day.")
+        self.assertEqual(result_ros_time.nanoseconds, expected_ros_time.nanoseconds, "The returned ROS time does not match the expected time for the next day.")
 
 
     @patch('phyto_arm.arm_ifcb.datetime', wraps=datetime)
@@ -35,20 +36,20 @@ class TestWizToRosTime(unittest.TestCase):
         # Calculate the expected ROS time for the same day but later
         target_time = datetime(2024, 2, 16, 10, 0)  # Target time: 10:00 AM same day
         expected_secs_since_epoch = target_time.timestamp() + 86400  # Adding one day since 10:00 AM has already passed
-        expected_ros_time = rospy.Time.from_sec(expected_secs_since_epoch)
+        expected_ros_time = Time(seconds=expected_secs_since_epoch)
 
         # Call the function under test with a time before the current mock time to ensure it rolls over to the next day
         result_ros_time = arm_ifcb.wiz_to_rostime("10:00")
 
         # Verify that the result matches the expected ROS time for the next day due to time rollover
-        self.assertEqual(result_ros_time.secs, expected_ros_time.secs, "The returned ROS time should roll over to the next day when the target time is before the current time.")
+        self.assertEqual(result_ros_time.nanoseconds, expected_ros_time.nanoseconds, "The returned ROS time should roll over to the next day when the target time is before the current time.")
 
 # TODO: Finish this test case. Mocking datetime.now() causes this particular
 # function to break as it tries to compare instances of MagicMock.
 # class TestFindNextWizTime(unittest.TestCase):
-#     @patch('phyto_arm.arm_ifcb.rospy')
-#     def test_find_next_wiz_time(self, mock_rospy):
-#         mock_rospy.get_param.return_value = ["12:00", "15:00", "18:00"]
+#     @patch('phyto_arm.arm_ifcb.arm')
+#     def test_find_next_wiz_time(self, mock_arm):
+#         mock_arm.node.get_parameter.return_value = Parameter('value', value=["12:00", "15:00", "18:00"])
 #         # Now is 14:00
 #         mock_now = datetime(2024, 2, 16, 14, 0)
 #         # Next wiz time should be 15:00
@@ -56,83 +57,79 @@ class TestWizToRosTime(unittest.TestCase):
 #         with patch('phyto_arm.arm_ifcb.datetime', wraps=datetime) as mock_datetime:
 #             mock_datetime.now.return_value = mock_now
 #             next_time = arm_ifcb.find_next_wiz_time()
-#             self.assertEqual(next_time.secs, expected, "The next wiz time is not correct.")
+#             self.assertEqual(next_time.nanoseconds / 1e9, expected, "The next wiz time is not correct.")
 
 
 class TestItsWizTime(unittest.TestCase):
-    @patch('phyto_arm.arm_ifcb.rospy')
-    def test_its_wiz_time_true(self, mock_rospy):
-        mock_rospy.get_param.return_value = 10  # Preparation window in minutes
-        mock_rospy.Duration.return_value = rospy.Duration(600)  # 10 minutes in seconds
-        with patch('phyto_arm.arm_ifcb.find_next_wiz_time') as mock_find_next_wiz_time, \
-             patch('phyto_arm.arm_ifcb.rospy.Time.now') as mock_rospy_time_now:
-            mock_find_next_wiz_time.return_value = rospy.Time.from_sec(datetime(2024, 2, 16, 12, 10).timestamp())
-            mock_rospy_time_now.return_value = rospy.Time.from_sec(datetime(2024, 2, 16, 12, 0).timestamp())
+    @patch('phyto_arm.arm_ifcb.arm')
+    def test_its_wiz_time_true(self, mock_arm):
+        mock_arm.node.get_parameter.return_value = Parameter('value', value=10)  # Preparation window in minutes
+        with patch('phyto_arm.arm_ifcb.find_next_wiz_time') as mock_find_next_wiz_time:
+            mock_find_next_wiz_time.return_value = Time(seconds=datetime(2024, 2, 16, 12, 10).timestamp())
+            mock_arm.node.get_clock.return_value.now.return_value = Time(seconds=datetime(2024, 2, 16, 12, 0).timestamp())
             self.assertTrue(arm_ifcb.its_wiz_time(), "It should be wiz time.")
 
 
-    @patch('phyto_arm.arm_ifcb.rospy')
-    def test_its_wiz_time_false(self, mock_rospy):
-        mock_rospy.get_param.return_value = 5  # Preparation window in minutes
-        mock_rospy.Duration.return_value = rospy.Duration(300)  # 5 minutes in seconds
-        with patch('phyto_arm.arm_ifcb.find_next_wiz_time') as mock_find_next_wiz_time, \
-             patch('phyto_arm.arm_ifcb.rospy.Time.now') as mock_rospy_time_now:
-            mock_find_next_wiz_time.return_value = rospy.Time.from_sec(datetime(2024, 2, 16, 12, 10).timestamp())
-            mock_rospy_time_now.return_value = rospy.Time.from_sec(datetime(2024, 2, 16, 12, 0).timestamp())
+    @patch('phyto_arm.arm_ifcb.arm')
+    def test_its_wiz_time_false(self, mock_arm):
+        mock_arm.node.get_parameter.return_value = Parameter('value', value=5)  # Preparation window in minutes
+        with patch('phyto_arm.arm_ifcb.find_next_wiz_time') as mock_find_next_wiz_time:
+            mock_find_next_wiz_time.return_value = Time(seconds=datetime(2024, 2, 16, 12, 10).timestamp())
+            mock_arm.node.get_clock.return_value.now.return_value = Time(seconds=datetime(2024, 2, 16, 12, 0).timestamp())
             self.assertFalse(arm_ifcb.its_wiz_time(), "It should not be wiz time yet.")
 
 class TestComputeWizDepth(unittest.TestCase):
-    @patch('phyto_arm.arm_ifcb.rospy')
-    def test_use_profiler_peak_disabled(self, mock_rospy):
-        mock_rospy.get_param.return_value = False  # Disable use_profiler_peak
+    @patch('phyto_arm.arm_ifcb.arm')
+    def test_use_profiler_peak_disabled(self, mock_arm):
+        mock_arm.node.get_parameter.return_value = Parameter('value', value=False)  # Disable use_profiler_peak
         default_depth = 100  # Set a default depth for when profiler_peak usage is disabled
-        mock_rospy.get_param.return_value = default_depth
+        mock_arm.node.get_parameter.return_value = Parameter('value', value=default_depth)
         result = arm_ifcb.compute_wiz_depth(50)  # The input value shouldn't matter in this case
         self.assertEqual(result, default_depth, "Should return default depth when use_profiler_peak is disabled.")
 
-    @patch('phyto_arm.arm_ifcb.rospy')
-    def test_no_profiler_peak_depth_available(self, mock_rospy):
-        mock_rospy.get_param.side_effect = [200, True, 200, 250, 10]  # Enable use_profiler_peak, set default depth to 200
+    @patch('phyto_arm.arm_ifcb.arm')
+    def test_no_profiler_peak_depth_available(self, mock_arm):
+        mock_arm.node.get_parameter.side_effect = [Parameter('value', value=v) for v in [200, True, 200, 250, 10]]  # Enable use_profiler_peak, set default depth to 200
         result = arm_ifcb.compute_wiz_depth(None)  # No peak depth available
         self.assertEqual(result, 200, "Should return default depth when no profiler peak depth is available.")
 
-    @patch('phyto_arm.arm_ifcb.rospy')
-    def test_preferred_depth_within_winch_range(self, mock_rospy):
-        mock_rospy.get_param.side_effect = lambda param: {
-            'tasks/wiz_probe/use_profiler_peak': True,
-            'tasks/wiz_probe/peak_offset': 10,
-            'winch/range/max': 300,
-            'winch/range/min': 100,
-            'tasks/wiz_probe/default_depth': 200
-        }[param]
+    @patch('phyto_arm.arm_ifcb.arm')
+    def test_preferred_depth_within_winch_range(self, mock_arm):
+        mock_arm.node.get_parameter.side_effect = lambda name: Parameter(name, value={
+            'tasks.wiz_probe.use_profiler_peak': True,
+            'tasks.wiz_probe.peak_offset': 10,
+            'winch.range.max': 300,
+            'winch.range.min': 100,
+            'tasks.wiz_probe.default_depth': 200
+        }[name])
         peak_depth = 150
         expected_depth = 160  # peak_depth + offset
         result = arm_ifcb.compute_wiz_depth(peak_depth)
         self.assertEqual(result, expected_depth, "Should return preferred depth within winch range.")
 
-    @patch('phyto_arm.arm_ifcb.rospy')
-    def test_preferred_depth_exceeds_max_depth(self, mock_rospy):
-        mock_rospy.get_param.side_effect = lambda param: {
-            'tasks/wiz_probe/use_profiler_peak': True,
-            'tasks/wiz_probe/peak_offset': 50,
-            'winch/range/max': 200,
-            'winch/range/min': 50,
-            'tasks/wiz_probe/default_depth': 150
-        }[param]
+    @patch('phyto_arm.arm_ifcb.arm')
+    def test_preferred_depth_exceeds_max_depth(self, mock_arm):
+        mock_arm.node.get_parameter.side_effect = lambda name: Parameter(name, value={
+            'tasks.wiz_probe.use_profiler_peak': True,
+            'tasks.wiz_probe.peak_offset': 50,
+            'winch.range.max': 200,
+            'winch.range.min': 50,
+            'tasks.wiz_probe.default_depth': 150
+        }[name])
         peak_depth = 160
         expected_depth = 200  # Max depth
         result = arm_ifcb.compute_wiz_depth(peak_depth)
         self.assertEqual(result, expected_depth, "Should return max depth if preferred depth exceeds max depth.")
 
-    @patch('phyto_arm.arm_ifcb.rospy')
-    def test_preferred_depth_below_min_depth(self, mock_rospy):
-        mock_rospy.get_param.side_effect = lambda param: {
-            'tasks/wiz_probe/use_profiler_peak': True,
-            'tasks/wiz_probe/peak_offset': -20,
-            'winch/range/max': 250,
-            'winch/range/min': 100,
-            'tasks/wiz_probe/default_depth': 150
-        }[param]
+    @patch('phyto_arm.arm_ifcb.arm')
+    def test_preferred_depth_below_min_depth(self, mock_arm):
+        mock_arm.node.get_parameter.side_effect = lambda name: Parameter(name, value={
+            'tasks.wiz_probe.use_profiler_peak': True,
+            'tasks.wiz_probe.peak_offset': -20,
+            'winch.range.max': 250,
+            'winch.range.min': 100,
+            'tasks.wiz_probe.default_depth': 150
+        }[name])
         peak_depth = 110
         expected_depth = 100  # Min depth
         result = arm_ifcb.compute_wiz_depth(peak_depth)
@@ -140,69 +137,58 @@ class TestComputeWizDepth(unittest.TestCase):
 
 
 class TestAwaitWizProbe(unittest.TestCase):
-    @patch('phyto_arm.arm_ifcb.rospy')
-    def test_await_wiz_probe(self, mock_rospy):
-        mock_rospy.get_param.side_effect = [10, 20]  # Preparation window in minutes, duration in minutes
-        mock_rospy.Duration.return_value = rospy.Duration(600)  # 10 minutes in seconds
-        with patch('phyto_arm.arm_ifcb.find_next_wiz_time') as mock_find_next_wiz_time, \
-             patch('phyto_arm.arm_ifcb.rospy.Time.now') as mock_rospy_time_now, \
-             patch('phyto_arm.arm_ifcb.rospy.sleep') as mock_sleep:
+    @patch('phyto_arm.arm_ifcb.arm')
+    def test_await_wiz_probe(self, mock_arm):
+        mock_arm.node.get_parameter.side_effect = [Parameter('value', value=v) for v in [10, 20]]  # Preparation window in minutes, duration in minutes
+        mock_arm.stopping.wait.return_value = False
+        with patch('phyto_arm.arm_ifcb.find_next_wiz_time') as mock_find_next_wiz_time:
 
             mock_callback = Mock()
             # Next wiz time is 12:10
-            mock_find_next_wiz_time.return_value = rospy.Time.from_sec(datetime(2024, 2, 16, 12, 10).timestamp())
+            mock_find_next_wiz_time.return_value = Time(seconds=datetime(2024, 2, 16, 12, 10).timestamp())
             # Now is 12:05
-            mock_rospy_time_now.return_value = rospy.Time.from_sec(datetime(2024, 2, 16, 12, 5).timestamp())
+            mock_arm.node.get_clock.return_value.now.return_value = Time(seconds=datetime(2024, 2, 16, 12, 5).timestamp())
             arm_ifcb.await_wiz_probe(mock_callback)
             # Sleep for 5 minute remaining window + 20 minute duration
-            mock_sleep.assert_called_once_with(5 * 60 + 20 * 60)  # 2 minutes for wiz duration
+            mock_arm.stopping.wait.assert_called_once_with(5 * 60 + 20 * 60)  # 2 minutes for wiz duration
             mock_callback.assert_called_once()
 
 
 class TestItsScheduledDepthTime(unittest.TestCase):
-    @patch('phyto_arm.arm_ifcb.rospy')
     @patch('phyto_arm.arm_ifcb.arm')
-    def test_its_scheduled_depth_time_disabled(self, mock_arm, mock_rospy):
-        mock_rospy.get_param.return_value = 0  # Scheduled interval set to 0 to disable
-        mock_rospy.Duration.return_value = rospy.Duration(0)
+    def test_its_scheduled_depth_time_disabled(self, mock_arm):
+        mock_arm.node.get_parameter.return_value = Parameter('value', value=0)  # Scheduled interval set to 0 to disable
         self.assertFalse(arm_ifcb.its_scheduled_depth_time(None), "Scheduled depth should not run when disabled.")
 
 
-    @patch('phyto_arm.arm_ifcb.rospy')
     @patch('phyto_arm.arm_ifcb.arm')
-    def test_its_scheduled_depth_time_first_run(self, mock_arm, mock_rospy):
-        mock_rospy.get_param.return_value = 10  # Interval in minutes
-        mock_rospy.Duration.return_value = rospy.Duration(600)
+    def test_its_scheduled_depth_time_first_run(self, mock_arm):
+        mock_arm.node.get_parameter.return_value = Parameter('value', value=10)  # Interval in minutes
         mock_arm.last_scheduled_time = None
         self.assertTrue(arm_ifcb.its_scheduled_depth_time(None), "Scheduled depth should run on the first attempt.")
 
 
-    @patch('phyto_arm.arm_ifcb.rospy')
     @patch('phyto_arm.arm_ifcb.arm')
-    def test_its_scheduled_depth_time_interval_passed(self, mock_arm, mock_rospy):
-        mock_rospy.get_param.return_value = 10  # Interval in minutes
-        mock_rospy.Duration.return_value = rospy.Duration(600)
-        mock_arm.last_scheduled_time = rospy.Time.from_sec(0)  # Simulate an old timestamp
-        with patch('phyto_arm.arm_ifcb.rospy.Time.now', return_value=rospy.Time.from_sec(601)):
-            self.assertTrue(arm_ifcb.its_scheduled_depth_time(None), "Scheduled depth should run when the interval has passed.")
+    def test_its_scheduled_depth_time_interval_passed(self, mock_arm):
+        mock_arm.node.get_parameter.return_value = Parameter('value', value=10)  # Interval in minutes
+        mock_arm.last_scheduled_time = Time(seconds=0)  # Simulate an old timestamp
+        mock_arm.node.get_clock.return_value.now.return_value = Time(seconds=601)
+        self.assertTrue(arm_ifcb.its_scheduled_depth_time(None), "Scheduled depth should run when the interval has passed.")
 
 
-    @patch('phyto_arm.arm_ifcb.rospy')
     @patch('phyto_arm.arm_ifcb.arm')
-    def test_its_scheduled_depth_time_peak_below_threshold(self, mock_arm, mock_rospy):
-        mock_rospy.get_param.side_effect = [10, 0.5]  # Interval in minutes and peak value threshold
-        mock_rospy.Duration.return_value = rospy.Duration(600)
-        mock_arm.last_scheduled_time = rospy.Time.from_sec(100)
-        with patch('phyto_arm.arm_ifcb.rospy.Time.now', return_value=rospy.Time.from_sec(200)):
-            self.assertTrue(arm_ifcb.its_scheduled_depth_time(0.1), "Scheduled depth should run when peak value is below threshold.")
+    def test_its_scheduled_depth_time_peak_below_threshold(self, mock_arm):
+        mock_arm.node.get_parameter.side_effect = [Parameter('value', value=v) for v in [10, 0.5]]  # Interval in minutes and peak value threshold
+        mock_arm.last_scheduled_time = Time(seconds=100)
+        mock_arm.node.get_clock.return_value.now.return_value = Time(seconds=200)
+        self.assertTrue(arm_ifcb.its_scheduled_depth_time(0.1), "Scheduled depth should run when peak value is below threshold.")
 
 
 # TODO: Figure out why get_param mocking seems to break here
 # class TestScheduledDepth(unittest.TestCase):
-#     @patch('phyto_arm.arm_ifcb.rospy')
 #     @patch('phyto_arm.arm_ifcb.arm')
-#     def test_scheduled_depth(self, mock_arm, mock_rospy):
-#         mock_rospy.get_param.side_effect = [10, 20, 5]  # Range first, last, count
+#     def test_scheduled_depth(self, mock_arm):
+#         mock_arm.node.get_parameter.side_effect = [Parameter('value', value=v) for v in [10, 20, 5]]  # Range first, last, count
 #         mock_arm.next_scheduled_index = 0
 #         target_depth = arm_ifcb.scheduled_depth()
 #         self.assertEqual(target_depth, 10.0, "The first scheduled depth should be the first element in the range.")
@@ -217,6 +203,6 @@ class TestItsScheduledDepthTime(unittest.TestCase):
 #         self.assertEqual(target_depth, 10.0, "The scheduled depth should loop back to the first element after reaching the end of the range.")
 
 #         # Ensure last_scheduled_time is updated correctly
-#         with patch('phyto_arm.arm_ifcb.rospy.Time.now', return_value=rospy.Time.from_sec(1000)):
-#             arm_ifcb.scheduled_depth()
-#             self.assertEqual(mock_arm.last_scheduled_time.secs, 1000, "The last scheduled time should be updated to the current time.")
+#         mock_arm.node.get_clock.return_value.now.return_value = Time(seconds=1000)
+#         arm_ifcb.scheduled_depth()
+#         self.assertEqual(mock_arm.last_scheduled_time.nanoseconds / 1e9, 1000, "The last scheduled time should be updated to the current time.")

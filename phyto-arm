@@ -115,6 +115,8 @@ def convert_to_ros2_params(config, launch_name=None):
                 peak['offset_steps'] = [float(step) for step in peak['offset_steps']]
                 tasks['profiler_peak'] = peak
             arm_params['tasks'] = tasks
+        elif settings.get('tasks'):
+            arm_params['tasks'] = settings['tasks']
         if arm_params:
             params[f'/{arm}/arm'] = {'ros__parameters': arm_params}
 
