@@ -127,6 +127,9 @@ def convert_to_ros2_params(config, launch_name=None):
 
     # Native nodes read parameters relative to their own node name.
     ifcb_arm = config.get('arm_ifcb') or {}
+    maintenance = ifcb_arm.get('ifcb_maintenance')
+    if maintenance:
+        params['/arm_ifcb/ifcb_runner'] = {'ros__parameters': {'ifcb_maintenance': maintenance}}
     profiler = dict(ifcb_arm.get('profiler') or {})
     if ifcb_arm.get('ctd_topic') is not None:
         profiler['ctd_topic'] = ifcb_arm['ctd_topic']

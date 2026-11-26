@@ -31,10 +31,10 @@ def generate_test_description():
         IncludeLaunchDescription(PythonLaunchDescriptionSource(str(launch))),
         Node(package='phyto_arm', executable='ifcb_runner.py', name='ifcb_runner',
              namespace='arm_ifcb', parameters=[{
-                 'arm_ifcb.ifcb_maintenance.bead_interval': 0,
-                 'arm_ifcb.ifcb_maintenance.cartridge_debubble_interval': 0,
-                 'arm_ifcb.ifcb_maintenance.clean_interval': 0,
-                 'arm_ifcb.ifcb_maintenance.flush_after_sample': False,
+                 'ifcb_maintenance.bead_interval': 0,
+                 'ifcb_maintenance.cartridge_debubble_interval': 0,
+                 'ifcb_maintenance.clean_interval': 0,
+                 'ifcb_maintenance.flush_after_sample': False,
              }]),
         ReadyToTest(),
     ])
