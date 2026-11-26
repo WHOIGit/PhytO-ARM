@@ -645,3 +645,7 @@ The config file controls where the bag files are written:
 This results in files in the `/mnt/data/rosbags/` directory with names like `phyto-arm_hades_2022-04-01-14-47-11_0.bag`. The name includes the timestamp of when PhytO-ARM was started, plus a numeric counter. A new bag is created, incrementing the counter, when a configured size limit is reached.
 
 A bag file with the suffix `.active` is currently being written, or was left in an incomplete state by a previous session that was terminated abruptly. Such files can sometimes be repaired.
+
+# Errata
+
+**RBR Maestro3 conductivity.** Before commit [0e227f8](https://github.com/WHOIGit/PhytO-ARM/commit/0e227f8aa5b32d3a9001d0fa8d2f8a8773d8e122), the RBR driver copied readings in mS/cm directly into `Ctd.conductivity`, whose unit is S/m. For bags recorded by an affected version with `conductivity(mS/cm)`, multiply the recorded aggregate field by 0.1 to recover S/m. The native `~rbr/conductivity` channel uses the instrument unit recorded with each measurement.
