@@ -80,13 +80,13 @@ def convert_to_ros2_params(config, launch_name=None):
 
     params = {'/**': {'ros__parameters': filtered_params}}
 
-    # The simulated drum uses its arm's winch geometry.
     if launch_name in ('sim_arm_ifcb', 'sim_arm_chanos'):
         arm = launch_name[len('sim_'):]
-        for key in ('warm_layer_depth', 'water_surface_z'):
-            source = f'{arm}.ctd.{key}'
-            if source in filtered_params:
-                filtered_params[f'{arm}.ctd_sim.{key}'] = filtered_params[source]
+        ctd = (config.get(arm) or {}).get('ctd')
+        if ctd:
+            params[f'/{arm}/ctd_sim'] = {'ros__parameters': flatten_dict(ctd)}
+
+        # The simulated drum uses its arm's winch geometry.
         drum = dict((config.get(arm) or {}).get('winch_drum') or {})
         for key in ('gear_ratio', 'spool_circumference'):
             source = f'{arm}.winch.{key}'

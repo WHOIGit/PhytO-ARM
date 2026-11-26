@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 import math
 
-import rospy
+import rclpy
 
 from ds_sensor_msgs.msg import Ctd, DepthPressure
 from geometry_msgs.msg import PointStamped
+from phyto_sim_utils.parameters import declare_number
+from rclpy.executors import ExternalShutdownException
 
 
 # Sample the water column at position, the probe's timestamped PointStamped.
 # surface_z is the water surface height in meters in the same frame as position.
-# Set ~warm_layer_depth to the depth in meters below the surface where temperature
+# Set warm_layer_depth to the depth in meters below the surface where temperature
 # peaks. With no setting, the water is warmest at the surface.
 def sample_ctd(position, surface_z, warm_layer_depth=None):
     ctd = Ctd()
@@ -25,13 +27,13 @@ def sample_ctd(position, surface_z, warm_layer_depth=None):
     depth.pressure = 1025 * 9.80665 * depth.depth / 10000
     depth.pressure_raw = depth.pressure
     depth.pressure_raw_unit = DepthPressure.UNIT_PRESSURE_DBAR
-    depth.pressure_covar = -1
+    depth.pressure_covar = -1.0
     depth.tare = 0.0
     depth.latitude = DepthPressure.DEPTH_PRESSURE_NO_DATA
 
     ctd.pressure = depth.pressure
-    ctd.conductivity_covar = ctd.pressure_covar = ctd.salinity_covar = -1
-    ctd.sound_speed_covar = ctd.temperature_covar = -1
+    ctd.conductivity_covar = ctd.pressure_covar = ctd.salinity_covar = -1.0
+    ctd.sound_speed_covar = ctd.temperature_covar = -1.0
     if immersion < 0:
         ctd.conductivity = ctd.salinity = Ctd.CTD_NO_DATA
         ctd.sound_speed = ctd.temperature = Ctd.CTD_NO_DATA
@@ -59,25 +61,31 @@ def sample_ctd(position, surface_z, warm_layer_depth=None):
 
 
 def main():
-    rospy.init_node('ctd_sim')
-    surface_z = rospy.get_param('~water_surface_z', 0.0)
-
-    warm_layer_depth = rospy.get_param('~warm_layer_depth', None)
-    ctd_pub = rospy.Publisher('ctd/ctd', Ctd, queue_size=5)
-    depth_pub = rospy.Publisher('ctd/depth', DepthPressure, queue_size=5)
+    rclpy.init()
+    node = rclpy.create_node('ctd_sim')
 
     # Publish both CTD messages from the same physics observation
     def on_position(msg):
         if not math.isfinite(msg.point.z):
-            rospy.logwarn_throttle(5, 'Skipping non-finite CTD height')
+            node.get_logger().warning('Skipping non-finite CTD height', throttle_duration_sec=5)
             return
         ctd, depth = sample_ctd(msg, surface_z, warm_layer_depth)
         ctd_pub.publish(ctd)
         depth_pub.publish(depth)
 
-    rospy.Subscriber('sim/ctd_position', PointStamped, on_position,
-                     queue_size=5)
-    rospy.spin()
+    try:
+        surface_z = declare_number(node, 'water_surface_z', 0.0)
+        warm_layer_depth = declare_number(node, 'warm_layer_depth')
+        ctd_pub = node.create_publisher(Ctd, 'ctd/ctd', 5)
+        depth_pub = node.create_publisher(DepthPressure, 'ctd/depth', 5)
+
+        node.create_subscription(PointStamped, 'sim/ctd_position', on_position, 5)
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':
