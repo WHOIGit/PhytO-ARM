@@ -10,7 +10,7 @@ from ament_index_python.packages import get_package_share_directory
 from aml_ctd_msgs.msg import AmlMeasurement
 from dli_power_switch_msgs.msg import OutletStatus
 from ds_sensor_msgs.msg import Ctd, DepthPressure
-from gazebo_msgs.srv import GetEntityState
+from geometry_msgs.msg import Pose, Vector3Stamped
 from gps_msgs.msg import GPSFix
 from jvl_motor_msgs.msg import Motion
 from jvl_motor_msgs.srv import ZeroCmd
@@ -18,6 +18,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 from launch_testing.actions import ReadyToTest
 from phyto_arm_msgs.action import MoveToDepth
 from pyModbusTCP.client import ModbusClient
@@ -40,10 +41,10 @@ def generate_test_description():
     return LaunchDescription([
         DeclareLaunchArgument('gpsd', default_value='true'),
         DeclareLaunchArgument('gpsd_port', default_value='16544'),
-        DeclareLaunchArgument('gazebo_port', default_value='16543'),
         DeclareLaunchArgument('motor_modbus_port', default_value=DEFAULT_MOTOR_PORT),
-        SetEnvironmentVariable('GAZEBO_MASTER_URI',
-                               ['http://127.0.0.1:', LaunchConfiguration('gazebo_port')]),
+        SetEnvironmentVariable('IGN_PARTITION', ['winch_test_', LaunchConfiguration('motor_modbus_port')]),
+        Node(package='ros_gz_bridge', executable='parameter_bridge',
+             arguments=['/model/ifcb/pose@geometry_msgs/msg/Pose[ignition.msgs.Pose']),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(str(launch)), launch_arguments={
             'ctd': 'aml',
             'dli_port': '16545',
@@ -63,8 +64,6 @@ class TestGazeboWinch(RosTest):
         self.client = ActionClient(self.node, MoveToDepth, 'winch/move_to_depth')
         self.addCleanup(self.client.destroy)
         self.assertTrue(self.client.wait_for_server(timeout_sec=40))
-        self.link_state = self.node.create_client(GetEntityState, '/gazebo/get_entity_state')
-        self.assertTrue(self.link_state.wait_for_service(timeout_sec=30))
         port = int(test_args.get('motor_modbus_port', DEFAULT_MOTOR_PORT))
         self.bus = ModbusClient(host='127.0.0.1', port=port, timeout=2, auto_open=True)
         self.addCleanup(self.bus.close)
@@ -75,10 +74,7 @@ class TestGazeboWinch(RosTest):
         return struct.unpack('<i', struct.pack('<HH', *words))[0]
 
     def probe_depth(self):
-        request = GetEntityState.Request(name='ifcb::body', reference_frame='world')
-        response = self.call(self.link_state, request)
-        self.assertTrue(response.success)
-        pose = response.state.pose
+        pose = self.wait_for_message('/model/ifcb/pose', Pose, timeout=5)
         q = pose.orientation
         rotation = Rotation.from_quat((q.x, q.y, q.z, q.w))
         offset = rotation.apply((0.185, 0, -0.1))[2]
@@ -138,6 +134,10 @@ class TestGazeboWinch(RosTest):
 
     def test_gps_fix(self):
         model = self.wait_for_message('sim/gps', NavSatFix, timeout=15)
+
+        velocity = self.wait_for_message('sim/gps_velocity', Vector3Stamped, timeout=5)
+        self.assertEqual(velocity.header.frame_id, model.header.frame_id)
+        self.assertEqual((velocity.vector.x, velocity.vector.y, velocity.vector.z), (0, 0, 0))
 
         # Wait for gpsd to acquire a position and altitude from the receiver
         for _ in range(8):

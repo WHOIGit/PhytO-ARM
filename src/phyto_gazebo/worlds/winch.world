@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<sdf version="1.6">
+<sdf version="1.8">
   <world name="default">
     <spherical_coordinates>
       <surface_model>EARTH_WGS84</surface_model>
@@ -8,11 +8,12 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
-    <plugin name="gazebo_state" filename="libgazebo_ros_state.so">
-      <ros><namespace>/gazebo</namespace></ros>
-    </plugin>
+    <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system" name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="ignition::gazebo::systems::SceneBroadcaster"/>
+    <plugin filename="ignition-gazebo-navsat-system" name="ignition::gazebo::systems::NavSat"/>
     <gravity>0 0 -9.81</gravity>
-    <physics name="ode" type="ode">
+    <physics name="dart" type="ignored">
       <max_step_size>0.002</max_step_size>
       <real_time_update_rate>500</real_time_update_rate>
     </physics>
@@ -30,26 +31,50 @@
       <specular>0.17 0.18 0.17 1</specular>
     </light>
     <gui>
-      <camera name="cast_view">
-        <pose>2.5 -6.3 1.3 0 0.275 2.04</pose>
-        <view_controller>orbit</view_controller>
-      </camera>
+      <plugin filename="MinimalScene" name="3D View">
+        <ignition-gui>
+          <property type="bool" key="showTitleBar">false</property>
+        </ignition-gui>
+        <engine>ogre2</engine>
+        <ambient_light>0.65 0.68 0.7</ambient_light>
+        <background_color>0.67 0.80 0.84</background_color>
+        <camera_pose>2.5 -6.3 1.3 0 0.275 2.04</camera_pose>
+      </plugin>
+      <plugin filename="GzSceneManager" name="Scene Manager">
+        <ignition-gui>
+          <property type="string" key="state">floating</property>
+          <property type="bool" key="visible">false</property>
+        </ignition-gui>
+      </plugin>
+      <plugin filename="InteractiveViewControl" name="Interactive view control">
+        <ignition-gui>
+          <property type="string" key="state">floating</property>
+          <property type="bool" key="visible">false</property>
+        </ignition-gui>
+      </plugin>
+      <plugin filename="MarkerManager" name="Marker manager">
+        <ignition-gui>
+          <property type="string" key="state">floating</property>
+          <property type="bool" key="visible">false</property>
+        </ignition-gui>
+      </plugin>
+      <plugin filename="WorldControl" name="World control">
+        <ignition-gui>
+          <property type="string" key="state">floating</property>
+          <property type="bool" key="showTitleBar">false</property>
+          <anchors target="3D View"><line own="left" target="left"/><line own="bottom" target="bottom"/></anchors>
+        </ignition-gui>
+      </plugin>
     </gui>
 
     <!-- The fixed barge keeps the line geometry independent of sea state -->
     <model name="barge">
       <static>true</static>
       <link name="structure">
-        <sensor name="gps" type="gps">
+        <sensor name="gps" type="navsat">
+          <topic>/sim/gps</topic>
           <always_on>true</always_on>
           <update_rate>1</update_rate>
-          <plugin name="gps_sensor" filename="libgazebo_ros_gps_sensor.so">
-            <ros>
-              <remapping>~/out:=/sim/gps</remapping>
-              <remapping>~/vel:=/sim/gps_velocity</remapping>
-            </ros>
-            <frame_name>barge</frame_name>
-          </plugin>
         </sensor>
         <collision name="hull">
           <pose>-2.13 0 0 0 0 0</pose>
@@ -252,14 +277,6 @@
             <diffuse>0.1 0.22 0.3 1</diffuse>
           </material>
         </visual>
-        <visual name="drum_stripe">
-          <pose>-1.79 -0.262 0.68 0 0 0</pose>
-          <geometry><box><size>0.035 0.004 0.33</size></box></geometry>
-          <material>
-            <ambient>0.89 0.91 0.86 1</ambient>
-            <diffuse>0.89 0.91 0.86 1</diffuse>
-          </material>
-        </visual>
         <visual name="gearbox">
           <pose>-1.79 -0.39 0.68 1.5708 0 0</pose>
           <geometry>
@@ -370,32 +387,6 @@
             <cylinder>
               <radius>0.009</radius>
               <length>1.76264</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>0.99 0.79 0.3 1</ambient>
-            <diffuse>0.99 0.79 0.3 1</diffuse>
-          </material>
-        </visual>
-        <visual name="upper_line">
-          <pose>0 0 0.85 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.009</radius>
-              <length>0.66</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>0.99 0.79 0.3 1</ambient>
-            <diffuse>0.99 0.79 0.3 1</diffuse>
-          </material>
-        </visual>
-        <visual name="lower_line">
-          <pose>0 0 0.19 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.009</radius>
-              <length>0.66</length>
             </cylinder>
           </geometry>
           <material>
@@ -745,10 +736,16 @@
           </material>
         </visual>
       </link>
+      <plugin filename="ignition-gazebo-pose-publisher-system" name="ignition::gazebo::systems::PosePublisher">
+        <publish_nested_model_pose>true</publish_nested_model_pose>
+        <publish_link_pose>false</publish_link_pose>
+        <update_frequency>10</update_frequency>
+      </plugin>
       <plugin name="winch_tether" filename="libphyto_tether.so">
         <anchor>0 0 1.18</anchor>
         <lifting_eye>0 0 0.56</lifting_eye>
         <initial_length>1.32</initial_length>
+        <drum_pose>-1.79 -0.262 0.68 0 0 0</drum_pose>
         <spool_circumference>0.6604</spool_circumference>
         <stiffness>8000</stiffness>
         <damping>700</damping>

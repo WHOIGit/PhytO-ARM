@@ -1,4 +1,0 @@
-#!/bin/sh
-
-# Run gzclient directly so closing the window stops the ROS 2 launch.
-exec gzclient

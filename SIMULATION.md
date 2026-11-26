@@ -24,7 +24,7 @@ The arm profiles the water column, chooses a sampling depth, and holds there thr
 
 ## Gazebo
 
-With Gazebo Classic 11 installed and `phyto_gazebo` built in your workspace, start the simulator in Gazebo mode:
+With Gazebo Fortress installed and `phyto_gazebo` built in your workspace, start the simulator in Gazebo mode:
 
 ```bash
 ros2 launch phyto_arm simulator.launch.py gazebo:=true
@@ -97,8 +97,7 @@ These steps require Docker on the Linux ROS host and lab access to both the IFCB
 **Tether.** To control the line length directly, launch just the world in a separate ROS domain:
 
 ```bash
-ros2 launch gazebo_ros gazebo.launch.py \
-    world:="$(ros2 pkg prefix --share phyto_gazebo)/worlds/winch.world"
+ign gazebo -s -r "$(ros2 pkg prefix --share phyto_gazebo)/worlds/winch.world"
 ```
 
 In another terminal, pay out line, read the probe position, then haul it back. The position is in metres, with the water surface at `z = 0`.

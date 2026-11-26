@@ -1,6 +1,6 @@
 """Run the winch, CTD and instruments against the Gazebo barge."""
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Shutdown
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, OpaqueFunction, Shutdown
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -13,6 +13,13 @@ def include(package, filename, *, condition=None, **arguments):
     path = PathJoinSubstitution([FindPackageShare(package), 'launch', filename])
     return IncludeLaunchDescription(PythonLaunchDescriptionSource(path),
                                     condition=condition, launch_arguments=arguments.items())
+
+
+def start_server(context, world):
+    args = ['ign', 'gazebo', '-s']
+    if not IfCondition(LaunchConfiguration('paused')).evaluate(context):
+        args.append('-r')
+    return [ExecuteProcess(cmd=[*args, world], output='screen', on_exit=[Shutdown()])]
 
 
 def generate_launch_description():
@@ -34,11 +41,12 @@ def generate_launch_description():
         DeclareLaunchArgument('paused', default_value='false'),
 
         SetParameter(name='use_sim_time', value=True),
-        include('gazebo_ros', 'gzserver.launch.py', world=world,
-                pause=LaunchConfiguration('paused'), server_required='true',
-                extra_gazebo_args=' --ros-args --param publish_rate:=100.0'),
-        Node(package='phyto_gazebo', executable='view_winch', name='gazebo_gui',
-             condition=IfCondition(LaunchConfiguration('gui')), on_exit=[Shutdown()]),
+        OpaqueFunction(function=start_server, args=[world]),
+        ExecuteProcess(cmd=['ign', 'gazebo', '-g'], output='screen',
+                       condition=IfCondition(LaunchConfiguration('gui')), on_exit=[Shutdown()]),
+        Node(package='ros_gz_bridge', executable='parameter_bridge',
+             arguments=['/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock']),
+        Node(package='phyto_gazebo', executable='barge_gps_bridge'),
         include('ifcb', 'ifcb_mock.launch.py',
                 condition=IfCondition(LaunchConfiguration('mock_ifcb'))),
 

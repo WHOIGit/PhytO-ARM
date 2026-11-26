@@ -96,12 +96,7 @@ FROM base-with-build-tools AS with-deps
 # Install native extensions with the distro Python and keep the remaining
 # Python dependencies outside the distribution's package-managed environment.
 COPY --from=generate-dependencies /tmp/apt-packages.txt /tmp/apt-packages.txt
-COPY deps/gazebo11-non-amd64.asc deps/install-gazebo-humble-arm64.sh deps/ros2-humble-arm64-deps.rosinstall ./deps/
-RUN if [ "${ROS_DISTRO}:$(dpkg --print-architecture)" = humble:arm64 ]; then \
-        deps/install-gazebo-humble-arm64.sh; \
-    else \
-        apt-get update; \
-    fi \
+RUN apt-get update \
  && apt-get install -y $(sed 's/^apt://' /tmp/apt-packages.txt) \
  && rm -rf /var/lib/apt/lists/*
 
