@@ -1,6 +1,6 @@
 # PhytO-ARM
 
-PhytO-ARM is robot operating system (ROS)-based toolkit for integration of Imaging FlowCytobot ([IFCB][mclane]) and other ocean sensors that are commonly deployed by the [Brosnahan Lab][blab]. The supported ROS release is [Noetic Ninjemys][noetic].
+PhytO-ARM is robot operating system (ROS)-based toolkit for integration of Imaging FlowCytobot ([IFCB][mclane]) and other ocean sensors that are commonly deployed by the [Brosnahan Lab][blab]. The supported ROS 2 release is [Humble Hawksbill][humble].
 
 There are instructions for assembling a profiling configuration at our accompanying [PhytO-ARM][parm] website. The profiling system consists of an IFCB, an [AML ctd][aml], and a winch built from a [JVL servo motor][jvl] and parts from [Conedrive][cdrive] and [Waterman Industries][wiparts]. Once assembled, code provided here enables a variety of continuous sampling behaviors including continuous CTD profiling and targeted collection of IFCB samples at chlorophyll maxima. Other scientific payloads are also supported, and PhytO-ARM can coordinate an arbitrary number of winches running concurrently.
 
@@ -10,7 +10,7 @@ During and after deployments, system operators can review system data using stan
 
   [mclane]: https://mclanelabs.com/imaging-flowcytobot/
   [blab]: https://www2.whoi.edu/site/brosnahanlab/
-  [noetic]: http://wiki.ros.org/noetic
+  [humble]: https://docs.ros.org/en/humble/
   [parm]: https://phyto-arm.whoi.edu
   [aml]: https://amloceanographic.com/instrumentation
   [jvl]: https://www.jvl.dk/703/mac400-integrated-servo-motor
@@ -72,6 +72,20 @@ Alternatively, the container image can be built with
   [hub]: https://hub.docker.com/repository/docker/whoi/phyto-arm
 
 
+#### Testing a local ROS 2 package in the container
+
+To try changes to `src/aml_ctd`, mount the package into a separate colcon workspace in the image built from this branch.
+
+```bash
+docker run --rm -it \
+    --mount type=bind,source="$(pwd)/src/aml_ctd",target=/work/src/aml_ctd,readonly \
+    --workdir /work --entrypoint /bin/bash whoi/phyto-arm -c '
+        source /app/install/setup.bash &&
+        colcon build --packages-select aml_ctd &&
+        source install/setup.bash &&
+        exec bash --norc'
+```
+
 ### Install as a service
 
     sudo ln -sf $(pwd)/phyto-arm.service /etc/systemd/system/phyto-arm.service
@@ -84,7 +98,7 @@ Alternatively, the container image can be built with
 
 ### Using ROS Launchpad (NEW)
 
-ROS Launchpad is a simple web dashboard for managing ROS processes and config. The default Docker command will start it up, so simply starting the container is sufficient. `./scripts/docker_run.sh -d` will also run the dashboard.
+ROS Launchpad is a web dashboard for managing ROS processes and config. Its [ROS 2 port is pending](https://github.com/WHOIGit/ros-launchpad/issues/1). The ROS 2 container starts Bash by default.
 
 ### Using `phyto-arm`
 
@@ -158,11 +172,19 @@ To launch all three simultaneously as separate panes in a tmux session, run the 
 
 PhytO-ARM can run with simulated hardware. To run automatic IFCB casts or operate the winch in Gazebo, follow the [simulation guide](SIMULATION.md). In an existing deployment container, use `sim_arm_ifcb` or `sim_arm_chanos` as the launch name in the `phyto-arm start` commands above.
 
+### SeaTrac
+
+The SeaTrac arm uses the native ROS 2 `seatrac_node`. Its UDP adapter publishes inbound vessel data to `/seatrac/comms/in` and subscribes to outbound data on `/seatrac/comms/out`. The Starlink manager reads power and outlet telemetry from the driver. Set the UDP ports, destination address and Starlink outlet number under `seatrac` in the deployment YAML.
+
+In a sourced deployment workspace, use `./phyto-arm start seatrac configs/example.yaml` to start just SeaTrac and the Starlink manager, or select `arm_seatrac` to include the IFCB arm. Supply the deployment's actual configuration file when connecting to the vessel.
+
 ### Unit tests
 
-To run unit tests, execute
+From the root of a built ROS 2 workspace:
+
 ```bash
-docker run -it --rm whoi/phyto-arm:latest /bin/bash -c "source devel/setup.bash && catkin test phyto_arm"
+colcon test --packages-select aml_ctd dli_power_switch ifcb jvl_motor phyto_arm phyto_sim_utils
+colcon test-result --verbose
 ```
 
 ## Configuration
@@ -191,16 +213,16 @@ When running in a container, ensure the config YAML refers to the Docker host's 
 
 ### Changing config at runtime
 
-The entries in the config file are loaded into the ROS [Parameter Server][]. Some parameters can be dynamically changed while the nodes are running:
+The launcher loads the config file into the nodes as [ROS 2 parameters][]. Some parameters can be dynamically changed while the nodes are running:
 
-    $ source devel/setup.bash
-    $ rosparam get /conductor/schedule/every
-    60
-    $ rosparam set /profiler/data_topic /ctd/aml/port3/chloroblue
+    $ source install/setup.bash
+    $ ros2 param get /lock_manager max_moving_winches
+    Integer value is: 1
+    $ ros2 param set /arm_ifcb/profiler data_topic /ctd/aml/port3/chloroblue
 
 Be sure to make the corresponding edits to the config file to persist changes beyond the current session.
 
-  [Parameter Server]: https://wiki.ros.org/Parameter%20Server
+  [ROS 2 parameters]: https://docs.ros.org/en/humble/Concepts/Basic/About-Parameters.html
 
 
 ## Instrument-specific configurations
@@ -338,7 +360,7 @@ PhytO-ARM has evolved to handle multiple mission types and deployment configurat
 
 PhytO-ARM has been modularized to support any configuration of winch and scientific payload. Scientific payloads are isolated into distinct "arms", each of which may have a winch providing movement for that arm. All arms should implement `ArmBase`, an interface class which handles winch movement logic and coordinates movement between arms by communicating with a central `lock_manager` node. 
 
-`lock_manager` is primarily to limit how many winches can move concurrently, as configured by the parameter `/lock_manager/max_moving_winches`. This is primarily to accommodate missions which may require inter-arm coordination, or to prevent overdraw of power on battery-powered setups.
+`lock_manager` is primarily to limit how many winches can move concurrently, as configured by the `max_moving_winches` parameter on `/lock_manager`. This is primarily to accommodate missions which may require inter-arm coordination, or to prevent overdraw of power on battery-powered setups.
 
 PhytO-ARM comes with two arm implementations included, see `arm_ifcb.py` and `arm_chanos.py` in the `phyto_arm` package. Any number of arms is supported however, as illustrated below. Each box represents a set of nodes with an independent launch file.
 
@@ -449,7 +471,7 @@ pa -- Trigger (TCP) --> acquire
 
 ## Node Inventory
 
-Note that ROS path conventions are used, such that paths beginning with `/` are absolute, paths beginning with `~` start at the node, and paths without a prefix are relative to their namespace. Global namespace is used for main nodes, while `arm_ifcb` and `arm_chanos` namespaces are used for the IFCB and Chanos arms, respectively.
+Note that ROS path conventions are used, such that paths beginning with `/` are absolute, paths beginning with `~/` start at the node, and paths without a prefix are relative to their namespace. Global namespace is used for main nodes, while `arm_ifcb` and `arm_chanos` namespaces are used for the IFCB and Chanos arms, respectively.
 
 ### Behavior nodes
 
@@ -457,19 +479,19 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
 
   - `lock_manager`: Winch traffic control center, limits number of concurrent winch movements.
     - Publishes:
-      - `~acquire` for arms to request permission to move their winches
-      - `~release` for arms to release permission to move
-      - `~check` for arms to check whether they might have a dangling lock (e.g. after a crash or user stop)
+      - `~/acquire` for arms to request permission to move their winches
+      - `~/release` for arms to release permission to move
+      - `~/check` for arms to check whether they might have a dangling lock (e.g. after a crash or user stop)
 
   - `arm_base`: Common task management capabilities for payloads, such as determining whether to move winch and enforcing geofence limits.
     - Publishes:
-      - `~task`: Name of the current task being executed by the arm.
+      - `task`: Name of the current task being executed by the arm.
 
   - `arm_ifcb`: Orchestrates IFCB payload behaviors
     - Subscribes:
       - `ifcb_runner/sample` to run IFCB sampling actions
       - `profiler` for profile data, especially phy peak
-      - `winch/move_to_depth/result` to determine the success of a transit
+      - the `winch/move_to_depth` action result to determine the success of a transit
       - `lock_manager/acquire` for getting clearance to move a winch. Some configurations may not permit simultaneous winch movements
       - `lock_manager/release` to inform the semaphore that movement has completed
       - `lock_manager/check` check for dangling locks
@@ -479,14 +501,13 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
       - `/ifcb/in` for routine instrumentation events
       - `/ifcb/is_routine_running` for the last reported routine state
     - Publishes:
-      - `~state` current state for debugging purposes
-      - `~sample/goal` action server for running IFCB sampling routines
-      - `~sample/feedback` sampling action feedback
-      - `~sample/result` sampling action result
+      - `~/state` current state for debugging purposes
+    - Action server:
+      - `~/sample` for running IFCB sampling routines and obtaining their results
 
   - `arm_chanos`: Orchestrates Chanos sensor payload behaviors
     - Subscribes:
-      - `winch/move_to_depth/result` to determine the success of a transit
+      - the `winch/move_to_depth` action result to determine the success of a transit
       - `lock_manager/acquire` for getting clearance to move a winch
       - `lock_manager/release` to inform the semaphore that movement has completed
       - `lock_manager/check` to check for dangling locks
@@ -495,9 +516,9 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
     - Subscribes:
       - user-chosen topic provided in config
     - Publishes:
-      - `~` with *resampled* profile data
-      - `~downcast` as above, but only downcasts
-      - `~downcast` as above, but only upcasts
+      - `profiler` with *resampled* profile data
+      - `~/downcast` as above, but only downcasts
+      - `~/upcast` as above, but only upcasts
 
   - `web`: Web API for attaching metadata to IFCB bins
     - Subscribes:
@@ -507,12 +528,11 @@ These nodes implement the core PhytO-ARM "algorithm" for sampling and are specif
     - Subscribes:
       - `ctd/depth` for monitoring depth
       - `motor/motion` for monitoring motor state
-      - `winch/move_to_depth/goal` for setting the goal depth
-      - `winch/move_to_depth/cancel` for canceling the current goal
+    - Action server:
+      - `winch/move_to_depth` for sending depth goals, canceling moves, and receiving feedback and results
     - Publishes:
-      - `winch/move_to_depth/feedback` with progress updates
-      - `winch/move_to_depth/status` with the status of the current goal
-      - `winch/move_to_depth/result` with the result of the goal
+      - `winch/move_to_depth/goal` when a move is accepted
+      - `winch/move_to_depth/result` when a move finishes
 
 ### Device nodes (drivers)
 
@@ -521,16 +541,16 @@ These nodes perform lower-level interactions with hardware components. These nod
 
   - `camera`: Video stream
     - Publishes:
-      - `~image/compressed` with the compressed video feed
+      - `~/image/compressed` with the compressed video feed
 
   - `ctd`: Driver for the AML or RBR maestro3 CTD
     - Subscribes:
       - `ctd_comms/in` for receiving data from CTD.
     - Publishes:
-      - `~ctd` with conductivity, temperature, and pressure data
-      - `~depth` with depth and pressure data
-      - `~aml/derive/xyz` with derived values (for AML only)
-      - `~aml/port#/xyz` with measured values (for AML only)
+      - `ctd` with conductivity, temperature, and pressure data
+      - `~/depth` with depth and pressure data
+      - `~/aml/derive/xyz` with derived values (for AML only)
+      - `~/aml/port#/xyz` with measured values (for AML only)
 
   - `ctd_comms`: Bridge for CTD serial communications
     - Publishes:
@@ -547,44 +567,40 @@ These nodes perform lower-level interactions with hardware components. These nod
 
   - `ifcb`: Bridge for the IFCB websocket API
     - Publishes:
-      - `~in` for messages received from the IFCB
-      - `~is_routine_running` for the latched running or stopped state
-      - `~out` for messages sent to the IFCB
-      - `~image` for full-frame images
-      - `~roi/image` for detected ROI images only
-      - `~roi/image/raw` republished ROI as raw (if classifier enabled)
-      - `~roi/markers` with rectangular bounds of ROIs
+      - `~/in` for messages received from the IFCB
+      - `~/is_routine_running` for the latched running or stopped state
+      - `~/out` for messages sent to the IFCB
+      - `~/image/compressed` for full-frame images
+      - `~/roi/image/compressed` for detected ROI images only
+      - `~/roi/image/raw` republished ROI as raw (if classifier enabled)
+      - `~/roi/markers` with rectangular bounds of ROIs
     - Services:
-      - `~command` to send a message to the IFCB
-      - `~routine` to send a routine to the IFCB
+      - `~/command` to send a message to the IFCB
+      - `~/routine` to send a routine to the IFCB
 
   - `motor`: Driver for the JVL motor
     - Publishes:
-      - `~electrical` with electrical registers
-      - `~error` with error registers
-      - `~motion` with motion registers
+      - `~/electrical` with electrical registers
+      - `~/error` with error registers
+      - `~/motion` with motion registers
     - Services:
-      - `~set_position` to set the motor's position
-      - `~set_position_envelope` to set position limits
-      - `~set_velocity` to set the motor's velocity
-      - `~stop` to stop the motor
+      - `~/set_position` to set the motor's position
+      - `~/set_position_envelope` to set position limits
+      - `~/set_velocity` to set the motor's velocity
+      - `~/stop` to stop the motor
 
 
 ### System nodes
 
 These nodes provide functionality for recording data and connecting to other tools like Foxglove Studio.
 
-  - `rosbag_record`: Records ROS traffic to ROS bag files
+  - `ros2 bag record`: Records ROS traffic to ROS bag files
     - Publishes:
-      - `/begin_write` when a new bag file is created
+      - `/events/write_split` when the recorder splits a bag on Humble
 
   - `rosbridge_websocket`: Rosbridge server for Foxglove Studio
 
-  - `rosout`: Logging mechanism
-    - Subscribes:
-      - `/rosout` for log messages from each node
-    - Publishes:
-      - `/rosout_agg` with copies of all log messages
+  - Each node publishes its log messages on `/rosout`.
 
 
 
@@ -618,7 +634,7 @@ In Studio, the connection address is `ws://<PhytO-ARM host address>:9090` if con
 
 ## Data Logs
 
-Data is logged to the ROS bag format using the `rosbag record` command. Bag files can also be viewed with Foxglove Studio.
+Data is logged to the ROS bag format using the `ros2 bag record` command. Bag files can also be viewed with Foxglove Studio.
 
 Almost all internal ROS traffic is logged, with the exception of the camera feed (due to storage requirements) and ROS service calls (due to technical limtations).
 
@@ -627,10 +643,10 @@ The config file controls where the bag files are written:
     launch_args:
         rosbag_prefix: /mnt/data/rosbags/phyto-arm_hades
 
-This results in files in the `/mnt/data/rosbags/` directory with names like `phyto-arm_hades_2022-04-01-14-47-11_0.bag`. The name includes the timestamp of when PhytO-ARM was started, plus a numeric counter. A new bag is created, incrementing the counter, when a configured size limit is reached.
+Each recorder run creates a timestamped directory such as `/mnt/data/rosbags/phyto-arm_hades_2026-01-02-03-04-05-123456` and writes numbered `.mcap` files inside it. Each file contains indexed, zstd-compressed chunks and can be opened directly in Foxglove.
 
-A bag file with the suffix `.active` is currently being written, or was left in an incomplete state by a previous session that was terminated abruptly. Such files can sometimes be repaired.
+The recorder writes `metadata.yaml` when it closes the bag. An abrupt shutdown can leave the directory without this file.
 
 # Errata
 
-**RBR Maestro3 conductivity.** Before commit [0e227f8](https://github.com/WHOIGit/PhytO-ARM/commit/0e227f8aa5b32d3a9001d0fa8d2f8a8773d8e122), the RBR driver copied readings in mS/cm directly into `Ctd.conductivity`, whose unit is S/m. For bags recorded by an affected version with `conductivity(mS/cm)`, multiply the recorded aggregate field by 0.1 to recover S/m. The native `~rbr/conductivity` channel uses the instrument unit recorded with each measurement.
+**RBR Maestro3 conductivity.** Before commit [0e227f8](https://github.com/WHOIGit/PhytO-ARM/commit/0e227f8aa5b32d3a9001d0fa8d2f8a8773d8e122), the RBR driver copied readings in mS/cm directly into `Ctd.conductivity`, whose unit is S/m. For bags recorded by an affected version with `conductivity(mS/cm)`, multiply the recorded aggregate field by 0.1 to recover S/m. The native `~/rbr/conductivity` channel uses the instrument unit recorded with each measurement.

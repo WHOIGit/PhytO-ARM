@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-from datetime import datetime, timedelta, timezone
-from functools import reduce
-from operator import xor
 import socket
 import subprocess
 
-import rospy
+import rclpy
+
+from datetime import datetime, timedelta, timezone
+from functools import reduce
+from operator import xor
 
 from phyto_sim_utils.gps import receive_fixes
+from rclpy.executors import ExternalShutdownException
+from rclpy.parameter import Parameter
 from sensor_msgs.msg import NavSatStatus
 
 
@@ -41,29 +44,41 @@ def nmea_fix(fix, utc):
 
 
 def main():
-    rospy.init_node('gps_sim')
-    port = rospy.get_param('~port')
-    address = ('127.0.0.1', port)
+    rclpy.init()
+    node = rclpy.create_node('gps_sim')
+
     epoch = None
 
     # Anchor receiver UTC at the first fix, then advance on ROS time
     def on_fix(fix):
         nonlocal epoch
-        elapsed = timedelta(seconds=fix.header.stamp.to_sec())
+        elapsed = timedelta(seconds=fix.header.stamp.sec + fix.header.stamp.nanosec / 1e9)
         if epoch is None:
             epoch = datetime.now(timezone.utc) - elapsed
         receiver.sendto(nmea_fix(fix, epoch + elapsed), address)
 
-    # gpsd reads NMEA over UDP and serves clients over TCP on the same port
-    device = f'udp://127.0.0.1:{port}'
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
-        with subprocess.Popen(['gpsd', '-N', '-n', '-b', '-S', str(port),
-                               device]) as daemon:
-            rospy.on_shutdown(daemon.terminate)
-            receive_fixes(on_fix)
-            daemon.wait()
-            if not rospy.is_shutdown():
-                raise RuntimeError('gpsd exited while the simulator was active')
+    try:
+        node.declare_parameter('port', Parameter.Type.INTEGER)
+        port = node.get_parameter('port').value
+        address = ('127.0.0.1', port)
+        # gpsd reads NMEA over UDP and serves clients over TCP on the same port
+        device = f'udp://127.0.0.1:{port}'
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
+            with subprocess.Popen(['gpsd', '-N', '-n', '-b', '-S', str(port),
+                                   device]) as daemon:
+                try:
+                    receive_fixes(node, on_fix)
+                    while rclpy.ok() and daemon.poll() is None:
+                        rclpy.spin_once(node, timeout_sec=0.1)
+                    if rclpy.ok():
+                        raise RuntimeError('gpsd exited while the simulator was active')
+                finally:
+                    daemon.terminate()
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':

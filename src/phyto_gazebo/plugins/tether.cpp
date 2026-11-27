@@ -1,39 +1,49 @@
 // A massless winch line pulls at the lifting eye when it is stretched
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
+#include <chrono>
 #include <functional>
 #include <memory>
-#include <string>
+#include <vector>
 
-#include <gazebo/common/Events.hh>
-#include <gazebo/common/Plugin.hh>
-#include <gazebo/msgs/msgs.hh>
-#include <gazebo/physics/physics.hh>
-#include <gazebo/transport/transport.hh>
-#include <geometry_msgs/PointStamped.h>
-#include <ros/callback_queue.h>
-#include <ros/ros.h>
-#include <std_msgs/Float64.h>
+#include <geometry_msgs/msg/point_stamped.hpp>
+#include <ignition/gazebo/Link.hh>
+#include <ignition/gazebo/Model.hh>
+#include <ignition/gazebo/System.hh>
+#include <ignition/gazebo/Util.hh>
+#include <ignition/gazebo/World.hh>
+#include <ignition/gazebo/components/Pose.hh>
+#include <ignition/msgs/Utility.hh>
+#include <ignition/msgs/marker.pb.h>
+#include <ignition/plugin/Register.hh>
+#include <ignition/transport/Node.hh>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/float64.hpp>
 
-namespace gazebo
+namespace phyto_gazebo
 {
+namespace sim = ignition::gazebo;
+using ignition::math::Pose3d;
 using ignition::math::Vector3d;
+using SimTime = std::chrono::steady_clock::duration;
 
-class Tether : public ModelPlugin
+class Tether : public sim::System, public sim::ISystemConfigure, public sim::ISystemPreUpdate
 {
-  public: void Load(physics::ModelPtr model, sdf::ElementPtr sdf) override
+  public: void Configure(const sim::Entity &entity, const std::shared_ptr<const sdf::Element> &sdf,
+                         sim::EntityComponentManager &ecm, sim::EventManager &) override
   {
     // The probe collision locates the CTD within the moving payload
-    body = model->GetLink("body");
-    const auto probe = body ? body->GetCollision("probe") : nullptr;
-    if (!probe || !ros::isInitialized())
+    body = sim::Link(sim::Model(entity).LinkByName(ecm, "body"));
+    const auto probe = body.CollisionByName(ecm, "probe");
+    if (probe == sim::kNullEntity)
     {
-      gzerr << "The tether needs the payload, CTD probe and gazebo_ros\n";
+      ignerr << "The tether needs the payload and CTD probe\n";
       return;
     }
-
-    probeOffset = probe->RelativePose().Pos();
+    probeOffset = ecm.Component<sim::components::Pose>(probe)->Data().Pos();
+    body.EnableVelocityChecks(ecm);
+    gravity = sim::World(sim::worldEntity(ecm)).Gravity(ecm).value();
+    drumPose = sdf->Get<Pose3d>("drum_pose");
 
     // The anchor is fixed in the world and the lifting eye moves with the body
     anchor = sdf->Get<Vector3d>("anchor");
@@ -49,30 +59,42 @@ class Tether : public ModelPlugin
     displacedMass = sdf->Get<double>("displaced_mass");
 
     // Consume length commands on the physics thread at the start of each step
-    node = std::make_unique<ros::NodeHandle>();
-    node->setCallbackQueue(&queue);
-    lineSub = node->subscribe("sim/line_length", 1, &Tether::SetLength, this);
-    ctdPub = node->advertise<geometry_msgs::PointStamped>(
-        "sim/ctd_position", 1);
+    context = std::make_shared<rclcpp::Context>();
+    context->init(0, nullptr);
+    node = std::make_shared<rclcpp::Node>("winch_tether", rclcpp::NodeOptions().context(context));
+    rclcpp::ExecutorOptions options;
+    options.context = context;
+    executor = std::make_unique<rclcpp::executors::SingleThreadedExecutor>(options);
+    executor->add_node(node);
+    lineSub = node->create_subscription<std_msgs::msg::Float64>(
+        "sim/line_length", 1, std::bind(&Tether::SetLength, this, std::placeholders::_1));
 
-    // Gazebo clients receive drum and line geometry over the visual topic
-    transport.reset(new transport::Node());
-    transport->Init(model->GetWorld()->Name());
-    visualPub = transport->Advertise<msgs::Visual>("~/visual");
-    update = event::Events::ConnectWorldUpdateBegin(
-        std::bind(&Tether::Step, this, std::placeholders::_1));
+    // Recover the last drum position if it was published before the world loaded.
+    initialLineSub = node->create_subscription<std_msgs::msg::Float64>(
+        "sim/line_length", rclcpp::QoS(1).transient_local(),
+        [this](std_msgs::msg::Float64::ConstSharedPtr msg) {
+          if (initialLineSub)
+            SetLength(msg);
+        });
+    ctdPub = node->create_publisher<geometry_msgs::msg::PointStamped>(
+        "sim/ctd_position", 1);
   }
 
-  private: void SetLength(const std_msgs::Float64ConstPtr &msg)
+  private: void SetLength(std_msgs::msg::Float64::ConstSharedPtr msg)
   {
     if (std::isfinite(msg->data) && msg->data >= 0)
+    {
+      initialLineSub.reset();
       length = msg->data;
+    }
   }
 
-  private: void Step(const common::UpdateInfo &info)
+  public: void PreUpdate(const sim::UpdateInfo &info, sim::EntityComponentManager &ecm) override
   {
-    queue.callAvailable(ros::WallDuration(0));
-    const auto pose = body->WorldPose();
+    if (!executor || info.paused)
+      return;
+    executor->spin_some();
+    const auto pose = sim::worldPose(body.Entity(), ecm);
     const auto liftingEye = pose.Pos() + pose.Rot().RotateVector(eye);
     const auto span = liftingEye - anchor;
     const double distance = span.Length();
@@ -82,68 +104,55 @@ class Tether : public ModelPlugin
     if (distance > length)
     {
       const auto direction = span / distance;
-      const double speed = direction.Dot(body->WorldLinearVel(eye));
+      const double speed = direction.Dot(body.WorldLinearVelocity(ecm, eye).value());
       const double tension = std::max(0.0, stiffness * (distance - length)
                                             + damping * speed);
-      body->AddForceAtWorldPosition(-tension * direction, liftingEye);
+      body.AddWorldForce(ecm, -tension * direction, eye);
     }
 
     // Approximate the submerged part of the upright 1.02 m housing
     const double submerged = std::clamp((0.51 - pose.Pos().Z()) / 1.02,
                                         0.0, 1.0);
-    const auto velocity = body->WorldLinearVel() - current;
+    const auto velocity = body.WorldLinearVelocity(ecm).value() - current;
     const auto drag = -(18.0 + 32.0 * velocity.Length()) * velocity;
-    const auto buoyancy = -displacedMass * body->GetWorld()->Gravity();
-    body->AddForce(submerged * (buoyancy + drag));
-    body->AddTorque(-5.0 * submerged * body->WorldAngularVel());
+    const auto buoyancy = -displacedMass * gravity;
+    body.AddWorldWrench(ecm, submerged * (buoyancy + drag),
+                        -5.0 * submerged * body.WorldAngularVelocity(ecm).value());
 
     // Sample the probe at 10 Hz and draw the line at 25 Hz in simulated time
     if (Due(info.simTime, lastSample, 0.1))
     {
-      geometry_msgs::PointStamped sample;
-      sample.header.stamp = ros::Time(info.simTime.sec, info.simTime.nsec);
+      geometry_msgs::msg::PointStamped sample;
+      sample.header.stamp = rclcpp::Time(std::chrono::duration_cast<std::chrono::nanoseconds>(info.simTime).count());
       sample.header.frame_id = "world";
       const auto probe = pose.Pos() + pose.Rot().RotateVector(probeOffset);
       sample.point.x = probe.X();
       sample.point.y = probe.Y();
       sample.point.z = probe.Z();
-      ctdPub.publish(sample);
+      ctdPub->publish(sample);
       lastSample = info.simTime;
     }
 
     // The physics runs at full rate even when no viewer is connected
-    if (!visualPub->HasConnections() || !Due(info.simTime, lastVisual, 0.04))
+    if (!Due(info.simTime, lastVisual, 0.04))
       return;
     lastVisual = info.simTime;
-    if (!visualsReady && !FindVisuals())
+    std::vector<ignition::transport::ServicePublisher> viewers;
+    if (!transport.ServiceInfo("/marker", viewers))
       return;
 
     DrawLine(liftingEye, span, distance);
     const double angle = 2.0 * M_PI * (length - initialLength) / circumference;
-    auto stripe = stripePose;
+    auto stripe = drumPose;
     stripe.Rot() = ignition::math::Quaterniond(0, angle, 0) * stripe.Rot();
-    structure->SetVisualPose(stripeId, stripe);
+    DrawMarker(3, ignition::msgs::Marker::BOX, stripe, {0.035, 0.004, 0.33},
+               {0.89f, 0.91f, 0.86f});
   }
 
   // Publish immediately when Gazebo rewinds the clock
-  private: static bool Due(const common::Time &now, const common::Time &last,
-                           double period)
+  private: static bool Due(SimTime now, SimTime last, double period)
   {
-    return now < last || now - last >= common::Time(period);
-  }
-
-  // Gazebo identifies the original SDF visuals by their server-assigned IDs
-  private: bool FindVisuals()
-  {
-    const auto barge = body->GetWorld()->ModelByName("barge");
-    if (!barge)
-      return false;
-    structure = barge->GetLink("structure");
-    visualsReady = structure && structure->VisualId("upper_line", upperId)
-                   && structure->VisualId("lower_line", lowerId)
-                   && structure->VisualId("drum_stripe", stripeId)
-                   && structure->VisualPose(stripeId, stripePose);
-    return visualsReady;
+    return now < last || now - last >= std::chrono::duration<double>(period);
   }
 
   // The two visible halves bow out when the paid-out line is slack
@@ -162,11 +171,11 @@ class Tether : public ModelPlugin
                                          * (length + distance));
       elbow += bend.Normalized() * bow;
     }
-    DrawSegment("upper_line", upperId, anchor, elbow);
-    DrawSegment("lower_line", lowerId, elbow, end);
+    DrawSegment(1, anchor, elbow);
+    DrawSegment(2, elbow, end);
   }
 
-  private: void DrawSegment(const std::string &name, uint32_t id,
+  private: void DrawSegment(unsigned int id,
                             const Vector3d &a, const Vector3d &b)
   {
     // A Gazebo cylinder is centered on its local Z axis
@@ -176,39 +185,42 @@ class Tether : public ModelPlugin
                                     delta.Z());
     const double yaw = std::atan2(delta.Y(), delta.X());
 
-    // Update the existing barge visual between the segment endpoints
-    msgs::Visual visual;
-    const auto parent = structure->GetScopedName();
-    visual.set_name(parent + "::" + name);
-    visual.set_id(id);
-    visual.set_parent_name(parent);
-    visual.set_parent_id(structure->GetId());
-    msgs::Set(visual.mutable_pose(), ignition::math::Pose3d(
-        center, ignition::math::Quaterniond(0, pitch, yaw)));
-    auto geometry = visual.mutable_geometry();
-    geometry->set_type(msgs::Geometry::CYLINDER);
-    auto cylinder = geometry->mutable_cylinder();
-    cylinder->set_radius(0.009);
-    cylinder->set_length(std::max(delta.Length(), 1e-6));
-    visualPub->Publish(visual);
+    DrawMarker(id, ignition::msgs::Marker::CYLINDER,
+               Pose3d(center, ignition::math::Quaterniond(0, pitch, yaw)),
+               {0.018, 0.018, std::max(delta.Length(), 1e-6)}, {0.99f, 0.79f, 0.3f});
   }
 
-  private: physics::LinkPtr body, structure;
-  private: bool visualsReady = false;
-  private: uint32_t upperId, lowerId, stripeId;
-  private: ignition::math::Pose3d stripePose;
-  private: Vector3d anchor, current, eye, probeOffset;
+  private: void DrawMarker(unsigned int id, ignition::msgs::Marker::Type type,
+                           const Pose3d &pose, const Vector3d &scale,
+                           const ignition::math::Color &color)
+  {
+    ignition::msgs::Marker marker;
+    marker.set_ns("phyto_winch");
+    marker.set_id(id);
+    marker.set_type(type);
+    marker.set_action(ignition::msgs::Marker::ADD_MODIFY);
+    ignition::msgs::Set(marker.mutable_pose(), pose);
+    ignition::msgs::Set(marker.mutable_scale(), scale);
+    ignition::msgs::Set(marker.mutable_material()->mutable_ambient(), color);
+    ignition::msgs::Set(marker.mutable_material()->mutable_diffuse(), color);
+    transport.Request("/marker", marker);
+  }
+
+  private: sim::Link body;
+  private: Pose3d drumPose;
+  private: Vector3d anchor, current, eye, gravity, probeOffset;
   private: double circumference, damping, displacedMass, initialLength;
   private: double length, stiffness;
-  private: common::Time lastSample, lastVisual;
-  private: ros::CallbackQueue queue;
-  private: std::unique_ptr<ros::NodeHandle> node;
-  private: ros::Subscriber lineSub;
-  private: ros::Publisher ctdPub;
-  private: transport::NodePtr transport;
-  private: transport::PublisherPtr visualPub;
-  private: event::ConnectionPtr update;
+  private: SimTime lastSample{}, lastVisual{};
+  private: rclcpp::Context::SharedPtr context;
+  private: rclcpp::Node::SharedPtr node;
+  private: std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor;
+  private: rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr lineSub, initialLineSub;
+  private: rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr ctdPub;
+  private: ignition::transport::Node transport;
 };
-
-GZ_REGISTER_MODEL_PLUGIN(Tether)
 }
+
+IGNITION_ADD_PLUGIN(phyto_gazebo::Tether, ignition::gazebo::System,
+                    phyto_gazebo::Tether::ISystemConfigure, phyto_gazebo::Tether::ISystemPreUpdate)
+IGNITION_ADD_PLUGIN_ALIAS(phyto_gazebo::Tether, "winch_tether")

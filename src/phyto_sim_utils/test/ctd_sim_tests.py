@@ -2,8 +2,7 @@ import os
 import sys
 import unittest
 
-import rospy
-
+from builtin_interfaces.msg import Time
 from ds_sensor_msgs.msg import Ctd, DepthPressure
 from geometry_msgs.msg import PointStamped
 
@@ -16,8 +15,8 @@ class TestCTDSim(unittest.TestCase):
     def sample(self, z, surface_z=0.0, warm_layer_depth=None):
         position = PointStamped()
         position.header.frame_id = 'world'
-        position.header.stamp = rospy.Time(12, 345)
-        position.point.z = z
+        position.header.stamp = Time(sec=12, nanosec=345)
+        position.point.z = float(z)
         return sample_ctd(position, surface_z, warm_layer_depth)
 
     def test_synchronized_pressure_and_depth(self):
@@ -29,7 +28,7 @@ class TestCTDSim(unittest.TestCase):
         self.assertEqual(depth.pressure_raw_unit,
                          DepthPressure.UNIT_PRESSURE_DBAR)
         for msg in (ctd, depth):
-            self.assertEqual(msg.header.stamp, rospy.Time(12, 345))
+            self.assertEqual(msg.header.stamp, Time(sec=12, nanosec=345))
             self.assertEqual(msg.ds_header.io_time, msg.header.stamp)
             self.assertEqual(msg.header.frame_id, 'world')
 

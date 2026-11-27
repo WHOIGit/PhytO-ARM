@@ -1,7 +1,76 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+set -euo pipefail
 
-export IFCB_HOST_IMAGE="${IFCB_HOST_IMAGE:-ifcb/ifcbacquire:3.0.0}"
+# The lab checkout supplies the camera frames, serial emulators and Host tools.
+lab=$(cd "$1" && pwd -P)
+camera_image=${IFCB_CAMERA_IMAGE:-phyto/aravis-ifcb:local}
+host_image=${IFCB_HOST_IMAGE:-ifcb/ifcbacquire:3.0.0}
+docker image inspect "$camera_image" "$host_image" >/dev/null
+results=${IFCB_RESULTS_DIR:-$HOME/ifcb-sim/runs}
+mkdir -p "$results"
+session=$(mktemp -d "$(cd "$results" && pwd -P)/run.XXXXXXXX")
+mkdir -p "$session/data/testing/beads" "$session/routines"
+echo "IFCB simulation output: $session"
 
-# The replay launcher accepts launch arguments but not ROS node remappings
-exec "$1/ros/run.sh" simulate
+network=phyto-ifcb-${session##*.}
+camera=$network-camera
+host=$network-host
+launcher=
+cleanup() {
+    trap '' INT TERM
+    if [[ -n $launcher ]]; then
+        kill -INT "$launcher" 2>/dev/null || true
+        wait "$launcher" 2>/dev/null || true
+    fi
+    if docker container inspect "$host" >/dev/null 2>&1; then
+        docker stop -t 30 "$host" >/dev/null || true
+        docker logs "$host" > "$session/host.log" 2>&1 || true
+        docker rm -fv "$host" >/dev/null || true
+    fi
+    if docker container inspect "$camera" >/dev/null 2>&1; then
+        docker logs "$camera" > "$session/camera.log" 2>&1 || true
+        docker rm -fv "$camera" >/dev/null || true
+    fi
+    docker network rm "$network" >/dev/null || true
+}
+
+# The Host discovers the GigE camera on a private jumbo-frame bridge.
+docker network create --opt com.docker.network.bridge.enable_ip_masquerade=false \
+    --opt com.docker.network.driver.mtu=9000 "$network" >/dev/null
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+docker run -d --pull=never --name "$camera" --network "$network" \
+    --network-alias camera --mac-address 00:0a:47:00:00:02 \
+    -v "$lab/fixture/frames:/fixture:ro" "$camera_image" /fixture >/dev/null
+docker run -d --pull=never --name "$host" --network "$network" --user root \
+    -v "$lab/fixture/Settings.txt:/session/Settings.txt:ro" \
+    -v "$lab/fixture/replay.json:/session/replay.json:ro" -v "$lab/tools:/tools:ro" \
+    -v "$session/data:/data/ifcbdata" --entrypoint python3 "$host_image" \
+    -B -u /tools/host-replay.py --mode simulate --forced-image 1 >/dev/null
+docker cp "$host:/home/ifcb/IFCBacquire/Host/Routines/." "$session/routines"
+python3 "$lab/ros/scale_waits.py" 1 "$session/routines"
+
+# The first refresh starts the camera after IFCBacquire has opened the serial ports.
+deadline=$((SECONDS + 90))
+until docker logs "$host" 2>&1 | grep -F 'Feature generation switched OFF.' >/dev/null; do
+    if (( SECONDS >= deadline )) || [[ $(docker inspect -f '{{.State.Running}}' "$host") != true ]]; then
+        echo "IFCBacquire failed to initialize. See $session/host.log" >&2
+        exit 1
+    fi
+    sleep 1
+done
+serial=111-111-$(sed -n 's/^ImagerID://p' "$lab/fixture/Settings.txt" | tr -d '\r')
+docker exec --user 1000:1000 "$host" timeout 100 python3 /tools/signalr_client.py \
+    --instrument "$serial" --output /tmp/camera-start.jsonl --command refresh --seconds 90 \
+    --until 'reportevent:Camera switched ON.' --require-completion > "$session/camera-start.log"
+
+address=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$host")
+# Let the background launch handle SIGINT and stop its own nodes.
+set -m
+ros2 launch phyto_arm ifcb_emulator.launch.py address:="$address" serial:="$serial" \
+    routines_dir:="$session/routines" &
+launcher=$!
+set +m
+wait "$launcher"
+launcher=

@@ -10,7 +10,7 @@ while getopts ":bdh" opt; do
             COMMAND='bash'
             ;;
         d)
-            # Use container default (dashboard)
+            # Use the container default (bash)
             COMMAND=''
             ;;
         h)
@@ -47,7 +47,6 @@ docker run "${DOCKER_FLAGS[@]}" \
     --publish 8080:8080/tcp \
     --publish 9090:9090/tcp \
     --publish 8098:8098/tcp \
-    --publish 11311:11311/tcp \
     --publish 12345:12345/udp \
     --mount type=bind,source="$(pwd)"/configs,target=/app/configs,readonly \
     --mount type=bind,source="$CONFIG",target=/app/mounted_config.yaml,readonly \

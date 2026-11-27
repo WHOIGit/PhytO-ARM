@@ -1,18 +1,17 @@
-import os
 import socket
-import sys
 import time
 import unittest
+
 from unittest.mock import Mock, patch
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-import network_data_capture
-from network_data_capture import (
+from phyto_arm import network_data_capture
+from phyto_arm.network_data_capture import (
     append_to_buffer, convert_to_ros_msg, extract_messages,
     parse_delimited_message, parse_json_array_message, parse_json_dict_message,
     validate_config, validate_subtopic_config, validate_topic_config
 )
+from rclpy.time import Time
+from wr2_msgs.msg import RawData
 
 
 class TestNetworkDataCaptureValidation(unittest.TestCase):
@@ -150,9 +149,25 @@ class TestNetworkDataCaptureValidation(unittest.TestCase):
 
 
 class TestNetworkDataCaptureMessageProcessing(unittest.TestCase):
+    def test_publish_raw_packet(self):
+        stamp = Time(seconds=12, nanoseconds=345).to_msg()
+        node = Mock()
+        node.get_clock.return_value.now.return_value.to_msg.return_value = stamp
+        payload = b'\x00\x80\xff'
+        publisher = Mock()
+        network_data_capture.publish_messages(
+            node, 'input', {'data': payload}, {'input': {'raw': publisher}}, 'raw', {})
+
+        packet, = publisher.publish.call_args[0]
+        self.assertIsInstance(packet, RawData)
+        self.assertEqual(packet.io_stamp, stamp)
+        self.assertEqual(packet.data_direction, RawData.DIRECTION_DATA_IN)
+        self.assertEqual(bytes(packet.data), payload)
+
     def test_convert_to_ros_msg_float(self):
         msg = convert_to_ros_msg(42.5, "float")
         self.assertEqual(msg.data, 42.5)
+        self.assertEqual(convert_to_ros_msg(42, "float").data, 42.0)
 
     def test_convert_to_ros_msg_string(self):
         msg = convert_to_ros_msg("test", "str")

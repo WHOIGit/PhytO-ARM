@@ -1,45 +1,46 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
     <name>phyto_gazebo</name>
     <version>0.1.0</version>
     <description>Gazebo simulation of the winch and IFCB/CTD</description>
     <maintainer email="rgovostes@whoi.edu">Ryan Govostes</maintainer>
     <license>GPL-3.0</license>
 
-    <buildtool_depend>catkin</buildtool_depend>
-    <build_depend>gazebo_dev</build_depend>
+    <buildtool_depend>ament_cmake</buildtool_depend>
     <depend>geometry_msgs</depend>
-    <depend>roscpp</depend>
+    <depend>ignition-gazebo6</depend>
+    <depend>ignition-transport11</depend>
+    <depend>rclcpp</depend>
+    <depend>sensor_msgs</depend>
     <depend>std_msgs</depend>
 
     <exec_depend>aml_ctd</exec_depend>
     <exec_depend>dli_power_switch</exec_depend>
-    <exec_depend>ds_sensor_msgs</exec_depend>
-    <exec_depend>gazebo_ros</exec_depend>
-    <exec_depend>hector_gazebo_plugins</exec_depend>
     <exec_depend>ifcb</exec_depend>
+    <exec_depend>ignition-fortress</exec_depend>
     <exec_depend>jvl_motor</exec_depend>
+    <exec_depend>launch_ros</exec_depend>
     <exec_depend>phyto_arm</exec_depend>
     <exec_depend>phyto_sim_utils</exec_depend>
-    <exec_depend>rospy</exec_depend>
-    <exec_depend>sensor_msgs</exec_depend>
+    <exec_depend>ros_gz_bridge</exec_depend>
 
-    <test_depend>actionlib</test_depend>
-    <test_depend>actionlib_msgs</test_depend>
-    <test_depend>aml_ctd</test_depend>
-    <test_depend>dli_power_switch</test_depend>
+    <test_depend>action_msgs</test_depend>
+    <test_depend>ament_index_python</test_depend>
+    <test_depend>aml_ctd_msgs</test_depend>
+    <test_depend>dli_power_switch_msgs</test_depend>
     <test_depend>ds_sensor_msgs</test_depend>
-    <test_depend>gazebo_msgs</test_depend>
-    <test_depend>gps_common</test_depend>
+    <test_depend>gps_msgs</test_depend>
     <test_depend>gpsd</test_depend>
-    <test_depend>ifcb</test_depend>
-    <test_depend>jvl_motor</test_depend>
-    <test_depend>phyto_arm</test_depend>
-    <test_depend>python3-nose</test_depend>
-    <test_depend>rostest</test_depend>
-    <test_depend>tf</test_depend>
+    <test_depend>ifcb_msgs</test_depend>
+    <test_depend>jvl_motor_msgs</test_depend>
+    <test_depend>launch_testing</test_depend>
+    <test_depend>launch_testing_ament_cmake</test_depend>
+    <test_depend>phyto_arm_msgs</test_depend>
+    <test_depend>python3-scipy</test_depend>
+    <test_depend>rclpy</test_depend>
+    <test_depend>wr2_msgs</test_depend>
 
     <export>
-        <gazebo_ros plugin_path="${prefix}/../../lib" />
+        <build_type>ament_cmake</build_type>
     </export>
 </package>

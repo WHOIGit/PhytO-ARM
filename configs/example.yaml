@@ -128,14 +128,11 @@ arm_ifcb:
     ctd_topic: '/arm_ifcb/ctd/depth'
 
 
-    #  Note these values are not read by PhytO-ARM, they are sought by
-    #  the included ds_util_nodes package, which publishes CTD data reads.
-    #  https://bitbucket.org/whoidsl/ds_base/src/master/ds_util_nodes/
     ctd_comms:
         connection:
-            type: "SERIAL"
-            port: "/dev/ttyS3"
-            baud: 115200
+            connection_type: "serial"
+            serial_port: "/dev/ttyS3"
+            baudrate: 115200
             data_bits: 8
 
 
@@ -291,6 +288,7 @@ classifier: #optional
     triton_server_url: "172.17.0.1:9001/"
     classifier_model: "ifcb_iv3_onnx"
 
+# Each camera key is its ROS node name under /camera.
 camera:
     fore_camera: #optional
         video_stream_url: "rtsp://admin:example_password@192.168.13.123/"
@@ -348,10 +346,10 @@ digital_logger: #optional
 seatrac: #optional
   comms:
     connection:
-      type: "UDP"
-      udp_rx: 62001
-      udp_tx: 62001
-      udp_address: "10.1.20.88"
+      connection_type: "udp"
+      listen_port: 62001
+      destination_address: "10.1.20.88"
+      destination_port: 62001
 
   outlets:
     - name: "starlink"

@@ -1,26 +1,35 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
     <name>phyto_sim_utils</name>
     <version>0.1.0</version>
-    <description>Shared launch utilities for PhytO-ARM simulators</description>
+    <description>Shared utilities for PhytO-ARM simulators</description>
     <maintainer email="rgovostes@whoi.edu">Ryan Govostes</maintainer>
     <license>GPL-3.0</license>
 
-    <buildtool_depend>catkin</buildtool_depend>
-
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
     <exec_depend>aml_ctd</exec_depend>
     <exec_depend>ds_sensor_msgs</exec_depend>
     <exec_depend>geometry_msgs</exec_depend>
-    <exec_depend>gps_common</exec_depend>
+    <exec_depend>gps_msgs</exec_depend>
+    <exec_depend>gpsd</exec_depend>
     <exec_depend>gpsd_client</exec_depend>
+    <exec_depend>launch_ros</exec_depend>
     <exec_depend>python3-yaml</exec_depend>
     <exec_depend>rbr_maestro3_ctd</exec_depend>
-    <exec_depend>roslaunch</exec_depend>
-    <exec_depend>rospy</exec_depend>
+    <exec_depend>rclcpp_components</exec_depend>
+    <exec_depend>rclpy</exec_depend>
     <exec_depend>sensor_msgs</exec_depend>
     <exec_depend>std_msgs</exec_depend>
 
-    <test_depend>ds_sensor_msgs</test_depend>
-    <test_depend>python3-nose</test_depend>
-    <test_depend>rostest</test_depend>
+    <test_depend>ament_cmake_pytest</test_depend>
+    <test_depend>ament_index_python</test_depend>
+    <test_depend>builtin_interfaces</test_depend>
+    <test_depend>launch</test_depend>
+    <test_depend>launch_testing</test_depend>
+    <test_depend>launch_testing_ament_cmake</test_depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
 </package>

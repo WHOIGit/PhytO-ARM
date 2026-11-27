@@ -1,49 +1,45 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(phyto_arm)
 
-find_package(
-  catkin REQUIRED COMPONENTS
-    message_generation
-    actionlib_msgs
-    sensor_msgs
-    std_msgs
-    ds_core_msgs
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+
+# Install Python modules
+ament_python_install_package(${PROJECT_NAME})
+install(PROGRAMS ../../phyto-arm DESTINATION bin)
+install(FILES ../../phyto-arm DESTINATION ${PYTHON_INSTALL_DIR}/${PROJECT_NAME} RENAME deployment.py)
+install(FILES ../../configs/example.yaml DESTINATION share/${PROJECT_NAME}/configs)
+
+# Install Python executables
+install(PROGRAMS
+  phyto_arm/arm_base.py
+  phyto_arm/arm_chanos.py
+  phyto_arm/arm_ifcb.py
+  phyto_arm/ifcb_runner.py
+  phyto_arm/lock_manager.py
+  phyto_arm/network_data_capture.py
+  phyto_arm/profiler_node.py
+  phyto_arm/seatrac_starlink_manager.py
+  phyto_arm/web_node.py
+  phyto_arm/winch_node.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-add_action_files(
-  DIRECTORY action
-  FILES
-  MoveToDepth.action
-  RunIFCB.action
+# Install launch files
+install(DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+  FILES_MATCHING PATTERN "*.launch.py" PATTERN "*.params.yaml"
 )
 
-add_message_files(
-  FILES
-  ConductorState.msg
-  ConductorStates.msg
-  DepthProfile.msg
-)
-
-add_service_files(
-  FILES
-  LockOperation.srv
-  LockCheck.srv
-)
-
-generate_messages(
-  DEPENDENCIES
-  actionlib_msgs
-  std_msgs
-  ds_core_msgs
-)
-
-if (CATKIN_ENABLE_TESTING)
-  find_package(rostest REQUIRED)
-  catkin_add_nosetests(tests DEPENDENCIES ${PROJECT_NAME}_generate_messages_py)
-  add_rostest(test/chanos_cast.test DEPENDENCIES ${PROJECT_NAME}_generate_messages_py)
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  find_package(launch_testing_ament_cmake REQUIRED)
+  add_launch_test(test/chanos_cast_test.py TIMEOUT 40)
+  add_launch_test(test/winch_shutdown_test.py TIMEOUT 40)
+  foreach(module arm_chanos arm_ifcb lock_manager network_data_capture
+                 seatrac_starlink_manager)
+    ament_add_pytest_test(${module}_tests tests/${module}_tests.py)
+  endforeach()
 endif()
 
-catkin_package()
-
-install(PROGRAMS src/winch_node.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+ament_package()

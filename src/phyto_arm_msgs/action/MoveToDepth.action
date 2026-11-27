@@ -1,0 +1,25 @@
+# MoveToDepth
+# This action instructs the motor to lower to the current depth.
+
+# Goal
+
+float32 depth  # m
+float32 velocity  # m/s
+
+---
+
+# Result
+
+# The matching DepthProfile carries this same UUID.
+string uuid
+
+builtin_interfaces/Duration time_elapsed
+
+---
+
+# Feedback
+
+builtin_interfaces/Duration time_elapsed
+
+float32 depth  # m
+float32 velocity  # m/s

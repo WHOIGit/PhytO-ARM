@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
     <name>ifcb</name>
     <version>1.0.0</version>
     <description>Driver for an IFCB</description>
@@ -13,18 +14,24 @@
     <author email="mbrosnahan@whoi.edu">Michael Brosnahan</author>
     <author email="rgovostes@whoi.edu">Ryan Govostes</author>
 
-    <buildtool_depend>catkin</buildtool_depend>
-    <test_depend>rosunit</test_depend>
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-    <exec_depend>rospy</exec_depend>
-
-    <!-- Most of these are for publishing images and markers -->
-    <exec_depend>foxglove_msgs</exec_depend>  <!-- for ImageMarkerArray -->
-    <exec_depend>geometry_msgs</exec_depend>
-    <exec_depend>sensor_msgs</exec_depend>
-    <exec_depend>std_msgs</exec_depend>
-    <exec_depend>visualization_msgs</exec_depend>
-
-    <!-- We use the DsHeader and RawData message type -->
+    <depend>ifcb_msgs</depend>
+    <depend>geometry_msgs</depend>
+    <depend>sensor_msgs</depend>
+    <depend>std_msgs</depend>
+    <depend>visualization_msgs</depend>
     <depend>ds_core_msgs</depend>
+    <depend>foxglove_msgs</depend>
+    <depend>wr2_msgs</depend>
+
+    <exec_depend>launch_ros</exec_depend>
+    <exec_depend>rclpy</exec_depend>
+
+    <test_depend>ament_cmake_pytest</test_depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
 </package>

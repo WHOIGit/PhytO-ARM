@@ -1,0 +1,24 @@
+- git:
+    local-name: wr2_asio
+    uri: https://git.whoi.edu/whoi-ros/wr2_asio.git
+    version: 4323d9e930928d107b44fd35cbde8a5a14a24371
+
+- git:
+    local-name: wr2_base
+    uri: https://git.whoi.edu/whoi-ros/wr2_base.git
+    version: 408ef15919ec34eb1d37804b08fd92ca01438654
+
+- git:
+    local-name: wr2_msgs
+    uri: https://git.whoi.edu/whoi-ros/wr2_msgs.git
+    version: 5712cca06b294aa370efb3ceb53a2cdd2e971b9f
+
+- git:
+    local-name: foxglove_schemas
+    uri: https://github.com/foxglove/schemas.git
+    version: 3bac3cab1aad594eeb8404ea0338e7eaedfb0a22
+
+- git:
+    local-name: seatrac
+    uri: https://github.com/WHOIGit/seatrac-api.git
+    version: 6903f98628b278fb036cd93bd8922f7f142c0149

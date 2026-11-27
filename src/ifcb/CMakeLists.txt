@@ -1,44 +1,25 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(ifcb)
 
-# Mind the ordering!
-# https://wiki.ros.org/catkin/CMakeLists.txt#Overall_Structure_and_Ordering
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 
-find_package(
-  catkin REQUIRED COMPONENTS
-    message_generation
-    geometry_msgs
-    sensor_msgs
-    std_msgs
-    visualization_msgs
-    ds_core_msgs
-    foxglove_msgs
+# Install Python package
+ament_python_install_package(${PROJECT_NAME})
+
+# Install Python executables
+install(PROGRAMS
+  scripts/ifcb
+  scripts/ifcb_logfilter
+  scripts/ifcb_mock
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-catkin_python_setup()
+install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 
-add_service_files(
-  FILES
-  Command.srv
-  RunRoutine.srv
-)
-
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  ds_core_msgs
-)
-
-catkin_package()
-
-catkin_install_python(
-  PROGRAMS nodes/ifcb nodes/ifcb_logfilter nodes/ifcb_mock
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-install(DIRECTORY launch
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-
-if (CATKIN_ENABLE_TESTING)
-  catkin_add_nosetests(tests)
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(${PROJECT_NAME}_tests tests)
 endif()
+
+ament_package()

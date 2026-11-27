@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+import datetime
+import math
+import os
+import random
+import re
+
+import rclpy
+
+from ds_sensor_msgs.msg import Ctd, DepthPressure
+from rbr_maestro3_ctd_msgs.msg import RbrMeasurement
+from rcl_interfaces.msg import ParameterDescriptor
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.time import Time
+from wr2_msgs.msg import RawData
+
+
+# Converts an arbitrary string to a ROS-safe name.
+# TODO: Copied from aml_ctd_node.py; move to a common library.
+def ros_safe(s, keep_slashes=False):
+    # Spaces and optionally slashes to underscores
+    s = s.replace(' ', '_')
+    if not keep_slashes:
+        s = s.replace('/', '_')
+
+    # Split up camelCase, without breaking acronyms
+    s = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\g<1>_\g<2>', s)
+    s = re.sub(r'([a-z])([A-Z])', r'\g<1>_\g<2>', s)
+
+    # Drop other characters and reduce to lowercase
+    s = re.sub(r'[^a-z0-9_]', '', s.lower())
+    if not re.match(r'^[a-z]', s):
+        s = 'x' + s  # must start with a letter
+    return s
+
+
+
+def configure_node(node: Node) -> None:
+    # Load the list of channels to publish from the ROS parameters. The
+    # channels list should correspond with the `outputformat channelslist`
+    # configuration of the instrument.
+    #
+    # The channels are parsed into a (channel, unit) tuple:
+    #     O2_concentration(umol/L) -> ('O2_concentration', 'umol/L')
+    #
+    # TODO: Query the instrument for its outputformat configuration.
+    channels = node.declare_parameter(
+        'channels', descriptor=ParameterDescriptor(dynamic_typing=True)).value
+    if channels is None:
+        channels = []
+    if isinstance(channels, str):
+        channels = channels.split('|')
+    channels = [
+        tuple(c.strip(')').split('(')) if '(' in c else (c, '')
+        for c in channels
+    ]
+
+    
+    # Check a few channel types we are inflexible about
+    has_depth = False
+    conductivity_scale = 1.0
+    for c, u in channels:
+        if c.lower() == 'conductivity':
+            conductivity_scale = {'mS/cm': 0.1, 'S/m': 1.0}[u]  # Ctd uses S/m
+        if c.lower() == 'depth':
+            has_depth = True
+            assert u == 'm'
+        if c.lower() == 'pressure':
+            assert u == 'dbar'
+
+
+    # Create publishers for each channel
+    ctd_publisher = node.create_publisher(Ctd, node.get_name(), 5)
+    if has_depth:
+        depth_publisher = node.create_publisher(DepthPressure, '~/depth', 5)
+    channel_publishers = [
+        node.create_publisher(RbrMeasurement, f'~/rbr/{ros_safe(c)}', 5)
+        for c, u in channels
+    ]
+
+    def handle_message(msg):
+        # Crummy parser
+        fields = [ x.strip() for x in bytes(msg.data).split(b',') ]
+        if len(fields) != len(channels) + 1:
+            node.get_logger().warning('Discarding malformed RBR message - expected '
+                                      f'{len(channels)+1} fields but received '
+                                      f'{len(fields)}')
+            return
+
+        try:
+            # Parse all channel values as floats
+            values = {
+                c.lower(): float(x) for (c, u), x in zip(channels, fields[1:])
+            }
+
+            # Parse the timestamp as UTC
+            timestamp = datetime.datetime.strptime(fields[0].decode(),
+                                                   '%Y-%m-%d %H:%M:%S.%f')
+            timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
+        except ValueError as e:
+            node.get_logger().warning(f'Discarding RBR message due to error during parsing: {e}')
+            return
+
+
+        # Construct the Ctd message
+        ctd = Ctd()
+        ctd.conductivity = values.get('conductivity', math.nan) * conductivity_scale
+        ctd.temperature = values.get('temperature', math.nan)
+        ctd.pressure = values.get('pressure', math.nan)
+
+        # Clear fields with no measurement
+        ctd.salinity = math.nan
+        ctd.sound_speed = math.nan
+
+        # Set covariance fields to -1, the standard "not valid" value
+        ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
+            ctd.salinity_covar = ctd.sound_speed_covar = -1.0
+
+
+        # Construct the DepthPressure message
+        dp = DepthPressure()
+        dp.depth = values.get('depth', math.nan)
+        dp.latitude = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.tare = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.pressure_raw = values.get('pressure', math.nan)
+        dp.pressure_raw_unit = DepthPressure.UNIT_PRESSURE_DBAR
+        dp.pressure = values.get('pressure', math.nan)
+
+        # Construct the RbrMeasurement messages
+        rbr_msgs = []
+        for c, u in channels:
+            rbr_msg = RbrMeasurement()
+            rbr_msg.channel = c
+            rbr_msg.unit = u
+            rbr_msg.value = values[c.lower()]
+            rbr_msgs.append(rbr_msg)
+
+
+        # Assemble all messages and their publishers
+        all_msgs = [(ctd, ctd_publisher)]
+        all_msgs.extend(zip(rbr_msgs, channel_publishers))
+        if has_depth:
+            all_msgs.append((dp, depth_publisher))
+
+        # Set the appropriate message timestamps and publish
+        fraction, seconds = math.modf(timestamp.timestamp())
+        stamp = Time(seconds=int(seconds), nanoseconds=int(fraction * 1e9)).to_msg()
+        for m, publisher in all_msgs:
+            # The standard ROS header timestamp reflects when the instrument
+            # says the sample was taken. The DsHeader reflects the I/O time.
+            m.header.stamp = stamp
+            m.ds_header.io_time = msg.io_stamp
+
+            publisher.publish(m)
+
+    node.create_subscription(RawData, '~/in', handle_message, 10)
+
+
+def main():
+    # Initialize the ROS node
+    rclpy.init()
+    node = rclpy.create_node(f'rbr_maestro3_ctd_{os.getpid()}_{random.getrandbits(32):08x}')
+    try:
+        configure_node(node)
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
+
+
+if __name__ == '__main__':
+    main()

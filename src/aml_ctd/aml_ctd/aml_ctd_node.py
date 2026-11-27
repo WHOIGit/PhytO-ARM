@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+import math
+import os
+import random
+import re
+
+import rclpy
+
+from aml_ctd import amlxparser
+from aml_ctd_msgs.msg import AmlMeasurement
+from ds_sensor_msgs.msg import Ctd, DepthPressure
+from rclpy.executors import ExternalShutdownException
+from rclpy.time import Time
+from wr2_msgs.msg import RawData
+
+
+# Converts an arbitrary string to a ROS-safe name.
+def ros_safe(s, keep_slashes=False):
+    # Spaces and optionally slashes to underscores
+    s = s.replace(' ', '_')
+    if not keep_slashes:
+        s = s.replace('/', '_')
+
+    # Split up camelCase, without breaking acronyms
+    s = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\g<1>_\g<2>', s)
+    s = re.sub(r'([a-z])([A-Z])', r'\g<1>_\g<2>', s)
+
+    # Drop other characters and reduce to lowercase
+    s = re.sub(r'[^a-z0-9_]', '', s.lower())
+    if not re.match(r'^[a-z]', s):
+        s = 'x' + s  # must start with a letter
+    return s
+
+
+def main():
+    # Initialize the ROS node
+    rclpy.init()
+    node = rclpy.create_node(f'aml_ctd_{os.getpid()}_{random.getrandbits(32):08x}')
+
+    def handle_message(msg):
+        # Parse the message data
+        # FIXME: Unsure if we ought to decode to a string or leave as bytes
+        try:
+            parsed = amlxparser.parseAMLx(bytes(msg.data).decode())
+        except:
+            node.get_logger().error(f'Failed to parse: {bytes(msg.data).decode()}')
+            return
+
+        # Create a lookup table of measurements
+        data = {}
+        for v in parsed.values():
+            if isinstance(v, dict):
+                data.update({
+                    k: vv for k, vv in v.items()
+                    if isinstance(vv, amlxparser.Measurement)
+                })
+
+        # Validate assumptions about the measurement units
+        assert data['Depth'].unit == 'm' if 'Depth' in data else True
+        assert data['Cond'].unit == 'mS/cm' if 'Cond' in data else True
+        assert data['TempCT'].unit == 'C' if 'TempCT' in data else True
+        assert data['Pressure'].unit in ('dbar', 'dBar') if 'Pressure' in data else True
+        assert data['SV'].unit == 'm/s' if 'SV' in data else True
+
+        # The parser assumes the timestamp is in UTC
+        timestamp = parsed['mux']['time']
+
+        # Construct AmlMeasurement messages from amlxparser.Measurement objects
+        aml_msgs = []
+        for obj in data.values():
+            aml_msg = AmlMeasurement()
+            for field in set(obj._fields) - {'rawname', 'rawunit', 'rawvalue'}:
+                setattr(aml_msg, field, getattr(obj, field))
+
+            # Special case: String fields cannot be None
+            aml_msg.rawname = obj.rawname or ''
+            aml_msg.rawunit = obj.rawunit or ''
+
+            # Special case: rawvalue might be an integer or a float or None
+            if obj.rawvalue is None:
+                aml_msg.rawvalue_f = math.nan
+            elif isinstance(obj.rawvalue, float):
+                aml_msg.rawvalue_f = obj.rawvalue
+            elif isinstance(obj.rawvalue, int):
+                aml_msg.rawvalue_i = obj.rawvalue
+            else:
+                raise TypeError(f'Unexpected rawvalue {type(obj.rawvalue)}')
+
+            aml_msgs.append(aml_msg)
+
+        # Construct the Ctd message
+        ctd = Ctd()
+         # convert to S/m
+        ctd.conductivity = data['Cond'].value * 0.1 if 'Cond' in data else Ctd.CTD_NO_DATA
+        ctd.temperature = data['TempCT'].value if 'TempCT' in data else Ctd.CTD_NO_DATA
+        ctd.pressure = data['Pressure'].value if 'Pressure' in data else Ctd.CTD_NO_DATA
+        ctd.sound_speed = data['SV'].value if 'SV' in data else Ctd.CTD_NO_DATA
+
+        # Clear fields with no measurement
+        ctd.salinity = math.nan
+
+        # Set covariance fields to -1, the standard "not valid" value
+        ctd.conductivity_covar = ctd.temperature_covar = ctd.pressure_covar = \
+            ctd.salinity_covar = ctd.sound_speed_covar = -1.0
+
+        # Construct the DepthPressure message
+        dp = DepthPressure()
+        dp.depth = data['Depth'].value if 'Depth' in data else \
+            DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.latitude = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        dp.tare = DepthPressure.DEPTH_PRESSURE_NO_DATA
+        if 'Pressure' in data:
+            dp.pressure_raw = data['Pressure'].value
+            dp.pressure_raw_unit = DepthPressure.UNIT_PRESSURE_DBAR
+            dp.pressure = data['Pressure'].value
+
+        # Set the appropriate message timestamps and metadata
+        fraction, seconds = math.modf(timestamp.timestamp())
+        stamp = Time(seconds=int(seconds), nanoseconds=int(fraction * 1e9)).to_msg()
+        for m in [ctd, dp] + aml_msgs:
+            # Associate a frame_id so we can connect these messages together
+            m.header.frame_id = f'msg{parsed["msgnum"]}'
+
+            # The standard ROS header timestamp reflects when the instrument
+            # says the sample was taken. The DsHeader reflects the I/O time.
+            m.header.stamp = stamp
+            m.ds_header.io_time = msg.io_stamp
+
+        # Publish the messages
+        publishers['~ctd'].publish(ctd)
+        if 'Pressure' in data: publishers['~depth'].publish(dp)
+        for m in aml_msgs:
+            top = f'~/aml/{ros_safe(m.port)}/{ros_safe(m.name)}'
+            if top not in publishers:
+                publishers[top] = node.create_publisher(type(m), top, 5)
+            publishers[top].publish(m)
+
+    try:
+        # Create a mapping of topics to publish on
+        publishers = {
+            '~ctd': node.create_publisher(Ctd, node.get_name(), 5),
+            '~depth': node.create_publisher(DepthPressure, '~/depth', 5),
+        }
+
+        # TODO:
+        # To start logging we should just need to send b"\r\r\rMMONITOR\r" (sic)
+
+        # Subscribe to incoming comms messages
+        node.create_subscription(RawData, '~/in', handle_message, 10)
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
+
+
+if __name__ == '__main__':
+    main()

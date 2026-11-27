@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+import ifcb.node
+
+
+if __name__ == '__main__':
+    ifcb.node.main()

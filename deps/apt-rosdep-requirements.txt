@@ -1,0 +1,27 @@
+# Auto-generated rosdep apt requirements
+# DO NOT EDIT MANUALLY - regenerate with scripts/generate-requirements.sh
+#
+# Last updated: 2026-11-26 22:13:52 UTC
+
+gpsd
+gstreamer1.0-libav
+gstreamer1.0-plugins-good
+ignition-fortress
+libboost-all-dev
+libboost-dev
+libgstreamer-plugins-good1.0-0
+libignition-gazebo6-dev
+libignition-transport11-dev
+python3-aiohttp
+python3-flask
+python3-geopy
+python3-scipy
+ros-humble-backward-ros
+ros-humble-compressed-image-transport
+ros-humble-gps-msgs
+ros-humble-gpsd-client
+ros-humble-gscam
+ros-humble-image-transport
+ros-humble-ros-gz-bridge
+ros-humble-rosbag2-storage-mcap
+ros-humble-rosbridge-suite

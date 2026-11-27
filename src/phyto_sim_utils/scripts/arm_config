@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print one arm's settings as YAML for roslaunch.
+"""Print one arm's settings as YAML for ros2 launch.
 
 Both arms share a configuration file. Loading only the requested section
 keeps the second launch from overwriting the first arm's ROS parameters.

@@ -1,30 +1,32 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.5)
 project(phyto_sim_utils)
 
-find_package(catkin REQUIRED)
-catkin_python_setup()
-catkin_package()
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 
-install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-install(PROGRAMS scripts/arm_config scripts/wait_for_socket
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
+ament_python_install_package(${PROJECT_NAME})
 
-install(PROGRAMS scripts/run_ifcb_emulator
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
-catkin_install_python(PROGRAMS
-  scripts/ctd_sim.py
+install(PROGRAMS
+  scripts/arm_config
   scripts/gps_sim.py
   scripts/gpsd_client_mock
+  scripts/run_ifcb_emulator
+  scripts/wait_for_socket
+  scripts/ctd_sim.py
   scripts/vertical_line.py
   scripts/winch_drum.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  DESTINATION lib/${PROJECT_NAME}
+)
 
-if(CATKIN_ENABLE_TESTING)
-  find_package(ds_sensor_msgs REQUIRED)
-  find_package(rostest REQUIRED)
-  add_rostest(test/gpsd_client_mock.test)
-  catkin_add_nosetests(test/ctd_sim_tests.py DEPENDENCIES
-    ${ds_sensor_msgs_EXPORTED_TARGETS})
-  catkin_add_nosetests(test/winch_drum_tests.py)
+install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  find_package(launch_testing_ament_cmake REQUIRED)
+  ament_add_pytest_test(ctd_sim_tests test/ctd_sim_tests.py)
+  ament_add_pytest_test(parameters_tests test/parameters_tests.py)
+  ament_add_pytest_test(winch_drum_tests test/winch_drum_tests.py)
+  add_launch_test(test/gpsd_client_mock_test.py TIMEOUT 20)
 endif()
+
+ament_package()
